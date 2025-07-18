@@ -2,7 +2,7 @@ package com.example.wherewego.domain.courses.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
 import com.example.wherewego.common.enums.CourseTheme;
-import com.example.wherewego.domain.coursePlaces.entity.CoursePlace;
+import com.example.wherewego.domain.places.entity.Place;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -15,8 +15,8 @@ import java.util.List;
 
 @Getter
 @Entity
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Table(name = "courses")
 public class Course extends BaseEntity {
@@ -37,15 +37,18 @@ public class Course extends BaseEntity {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "course_themes", joinColumns = @JoinColumn(name = "course_id"))
-    @Column(name = "theme")
     @Enumerated(EnumType.STRING)
-    private List<CourseTheme> themes = new ArrayList<>();
+    @Column(name = "theme", nullable = false)
+    private List<CourseTheme> courseThemes = new ArrayList<>();
 
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String region;
 
     @Column(nullable = false)
     private int likeCount = 0;
+
+    @Column(nullable = false)
+    private int courseBookmarkCount = 0;
 
     @Column(nullable = false)
     private double averageRating = 0.00;
@@ -59,24 +62,29 @@ public class Course extends BaseEntity {
     @Column(nullable = false)
     private int dailyScore = 0;
 
-    @Column(name = "is_public", nullable = false)
-    private Boolean isPublic = false;
+    @Column(nullable = false)
+    private boolean isPublic = false;
 
-    //코스가 가진 CoursePlace 목록
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CoursePlace> coursePlaces = new ArrayList<>();
+    @OrderBy("visitOrder ASC")
+    private List<Place> places = new ArrayList<>();
 
 
-
-    //좋아요 수, 조회 수, 댓글 수 카운트&음수 방지
+    // 카운트 관련 메서드
     public void increaseLikeCount() {
         this.likeCount++;
     }
 
     public void decreaseLikeCount() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
+        if (this.likeCount > 0) this.likeCount--;
+    }
+
+    public void increaseBookmarkCount() {
+        this.courseBookmarkCount++;
+    }
+
+    public void decreaseBookmarkCount() {
+        if (this.courseBookmarkCount > 0) this.courseBookmarkCount--;
     }
 
     public void increaseViewCount() {
@@ -88,10 +96,6 @@ public class Course extends BaseEntity {
     }
 
     public void decreaseCommentCount() {
-        if (this.commentCount > 0) {
-            this.commentCount--;
-        }
+        if (this.commentCount > 0) this.commentCount--;
     }
-
-
 }

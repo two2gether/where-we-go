@@ -1,7 +1,6 @@
-package com.example.wherewego.domain.comments.entity;
+package com.example.wherewego.domain.courses.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,12 +9,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "comments")
-public class Comment extends BaseEntity {
+@Table(name = "ratings")
+public class Rating extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long commentId;
+    private Long ratingId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -25,19 +24,17 @@ public class Comment extends BaseEntity {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String content;
+    @Column(nullable = false)
+    private int rating;
 
-
-    public Comment(User user, Course course, String content) {
+    public Rating(User user, Course course, int rating) {
         this.user = user;
         this.course = course;
-        this.content = content;
+        this.rating = rating;
     }
 
-
     //수정용
-    public void updateContent(String content) {
-        this.content = content;
+    public void updateRating(int rating) {
+        this.rating = rating;
     }
 }

@@ -1,7 +1,7 @@
-package com.example.wherewego.domain.likes.entity;
+package com.example.wherewego.domain.places.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.domain.courses.entity.Course;
+import com.example.wherewego.domain.placeReferences.entity.PlaceReference;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,23 +10,23 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "likes")
-public class Like extends BaseEntity {
+@Table(name = "place_bookmarks")
+public class PlaceBookmark extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long likeId;
+    private Long placeBookmarkId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    @JoinColumn(name = "reference_id", nullable = false)
+    private PlaceReference placeReference;
 
-    public Like(User user, Course course) {
+    public PlaceBookmark(User user, PlaceReference placeReference) {
         this.user = user;
-        this.course = course;
+        this.placeReference = placeReference;
     }
 }
