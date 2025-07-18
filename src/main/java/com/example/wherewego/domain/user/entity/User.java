@@ -19,7 +19,7 @@ public class User extends BaseEntity {
     private String email;
 
     @Column(length = 255)
-    private String password;  // 소셜 로그인시 null 허용
+    private String password;
 
     @Column(nullable = false, length = 50)
     private String nickname;

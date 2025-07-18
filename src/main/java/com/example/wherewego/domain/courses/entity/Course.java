@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,11 +36,8 @@ public class Course extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "course_themes", joinColumns = @JoinColumn(name = "course_id"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "theme", nullable = false)
-    private List<CourseTheme> courseThemes = new ArrayList<>();
+    @Column(length = 50)
+    private String theme;
 
     @Column(nullable = false, length = 50)
     private String region;
@@ -48,10 +46,10 @@ public class Course extends BaseEntity {
     private int likeCount = 0;
 
     @Column(nullable = false)
-    private int courseBookmarkCount = 0;
+    private int bookmarkCount = 0;
 
-    @Column(nullable = false)
-    private double averageRating = 0.00;
+    @Column(nullable = false, precision = 3, scale = 2)
+    private BigDecimal averageRating = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private int viewCount = 0;
@@ -80,11 +78,11 @@ public class Course extends BaseEntity {
     }
 
     public void increaseBookmarkCount() {
-        this.courseBookmarkCount++;
+        this.bookmarkCount++;
     }
 
     public void decreaseBookmarkCount() {
-        if (this.courseBookmarkCount > 0) this.courseBookmarkCount--;
+        if (this.bookmarkCount > 0) this.bookmarkCount--;
     }
 
     public void increaseViewCount() {

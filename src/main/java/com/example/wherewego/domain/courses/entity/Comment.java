@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "comments")
+@Table(name = "course_comments")
 public class Comment extends BaseEntity {
 
     @Id
@@ -17,6 +17,7 @@ public class Comment extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

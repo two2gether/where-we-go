@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "ratings")
+@Table(name = "course_ratings")
 public class Rating extends BaseEntity {
 
     @Id

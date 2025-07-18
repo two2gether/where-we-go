@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "likes")
+@Table(name = "course_likes")
 public class Like extends BaseEntity {
 
     @Id
