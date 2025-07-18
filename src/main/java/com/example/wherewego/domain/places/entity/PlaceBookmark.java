@@ -1,7 +1,6 @@
 package com.example.wherewego.domain.places.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.domain.placeReferences.entity.PlaceReference;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,7 +14,7 @@ public class PlaceBookmark extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long placeBookmarkId;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -23,10 +22,10 @@ public class PlaceBookmark extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_id", nullable = false)
-    private PlaceReference placeReference;
+    private Place place;
 
-    public PlaceBookmark(User user, PlaceReference placeReference) {
+    public PlaceBookmark(User user, Place place) {
         this.user = user;
-        this.placeReference = placeReference;
+        this.place = place;
     }
 }
