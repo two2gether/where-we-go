@@ -70,6 +70,12 @@ public class KakaoPlaceResponse {
         @JsonProperty("category_name")
         private String categoryName;
         
+        @JsonProperty("category_group_code")
+        private String categoryGroupCode;
+        
+        @JsonProperty("category_group_name")
+        private String categoryGroupName;
+        
         @JsonProperty("phone")
         private String phone;
         
@@ -119,6 +125,28 @@ public class KakaoPlaceResponse {
         
         @JsonProperty("pageable_count")
         private Integer pageableCount;
+        
+        @JsonProperty("same_name")
+        private SameName sameName;
+    }
+    
+    /**
+     * 동명 지역 정보를 담는 내부 클래스
+     */
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SameName {
+        
+        @JsonProperty("region")
+        private java.util.List<String> region;
+        
+        @JsonProperty("keyword")
+        private String keyword;
+        
+        @JsonProperty("selected_region")
+        private String selectedRegion;
     }
 
 
