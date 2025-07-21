@@ -54,7 +54,7 @@ class KakaoPlaceServiceIntegrationTest {
         
         PlaceDetailResponse firstPlace = result.get(0);
         assertThat(firstPlace.getName()).containsIgnoringCase("스타벅스");
-        assertThat(firstPlace.getApiPlaceId()).isNotNull();
+        assertThat(firstPlace.getPlaceId()).isNotNull();
         assertThat(firstPlace.getLatitude()).isNotNull();
         assertThat(firstPlace.getLongitude()).isNotNull();
         assertThat(firstPlace.getDistance()).isNotNull();

@@ -135,7 +135,10 @@ public class KakaoPlaceService implements PlaceSearchService {
 	}
 
 	@Override
-	public PlaceDetailResponse getPlaceDetail(String apiPlaceId) {
+	public PlaceDetailResponse getPlaceDetail(String placeId) {
+		// TODO: 향후 단일 장소 상세 조회 API 구현 시 사용
+		// 현재는 검색 API를 통해서만 장소 정보 조회
+		log.debug("단일 장소 상세 조회 - placeId: {}", placeId);
 		return null;
 	}
 
@@ -176,8 +179,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 		
 		try {
 			PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
-				.placeId(null)  // 아직 DB에 저장 안함
-				.apiPlaceId(document.getId())
+				.placeId(document.getId())  // 카카오 API place_id 직접 사용
 				.name(document.getPlaceName())
 				.category(document.getCategoryGroupName())  // category_group_name 직접 사용
 				.address(document.getAddressName())
@@ -186,6 +188,8 @@ public class KakaoPlaceService implements PlaceSearchService {
 				.latitude(parseDouble(document.getLatitude()))
 				.longitude(parseDouble(document.getLongitude()))
 				.placeUrl(document.getPlaceUrl())
+				.averageRating(0.0)  // 기본값, 통계 없을 때
+				.reviewCount(0)     // 기본값, 통계 없을 때
 				.bookmarkCount(0)
 				.isBookmarked(false);
 				
@@ -196,6 +200,13 @@ public class KakaoPlaceService implements PlaceSearchService {
 				.depth3(document.getRegion3DepthName())
 				.build();
 			builder.region(region);
+			
+			// regionSummary 생성 (예: "서울 강남구")
+			String regionSummary = generateRegionSummary(
+					document.getRegion1DepthName(), 
+					document.getRegion2DepthName()
+			);
+			builder.regionSummary(regionSummary);
 			
 			// 거리 계산
 			if (userLat != null && userLon != null && 
@@ -229,6 +240,43 @@ public class KakaoPlaceService implements PlaceSearchService {
 			log.warn("Double 변환 실패: {}", value);
 			return null;
 		}
+	}
+
+	/**
+	 * 지역 요약 문자열 생성 (예: "서울 강남구")
+	 */
+	private String generateRegionSummary(String depth1, String depth2) {
+		if (depth1 == null && depth2 == null) {
+			return "";
+		}
+		
+		// "특별시", "광역시", "도" 등 제거하고 간단하게 표시
+		String simplifiedDepth1 = simplifyRegionName(depth1);
+		
+		if (simplifiedDepth1 != null && depth2 != null) {
+			return simplifiedDepth1 + " " + depth2;
+		} else if (simplifiedDepth1 != null) {
+			return simplifiedDepth1;
+		} else {
+			return depth2;
+		}
+	}
+	
+	/**
+	 * 지역명 단순화 (서울특별시 → 서울)
+	 */
+	private String simplifyRegionName(String regionName) {
+		if (regionName == null) {
+			return null;
+		}
+		
+		return regionName
+			.replace("특별시", "")
+			.replace("광역시", "")
+			.replace("특별자치시", "")
+			.replace("특별자치도", "")
+			.replace("도", "")
+			.trim();
 	}
 
 	/**
