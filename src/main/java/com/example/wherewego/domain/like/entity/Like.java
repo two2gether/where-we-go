@@ -1,6 +1,7 @@
-package com.example.wherewego.domain.courses.entity;
+package com.example.wherewego.domain.like.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
