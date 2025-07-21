@@ -9,18 +9,17 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController("/api/courses")
+@RestController
 @RequiredArgsConstructor
+@RequestMapping("/courses")
 public class CourseController {
     // 속성
     private final CourseService courseService;
-    private final UserDetailsService userDetailsService;
 
     // 기능
     // 코스 생성
@@ -28,7 +27,7 @@ public class CourseController {
     public ResponseEntity<ApiResponse<CourseCreateResponseDto>> registerCourse(
             @RequestBody @Valid CourseCreateRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetailsService userDetailsService
-            ) {
+    ) {
 //        Long userId = userDetailsService.getUserId();
         // TODO 나중에 userDetail 받아와서 수정하기
         Long userId = 1L;
