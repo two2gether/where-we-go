@@ -4,6 +4,7 @@ package com.example.wherewego.global.config;
 import com.example.wherewego.domain.auth.security.CustomUserDetailsService;
 import com.example.wherewego.domain.auth.security.JwtAuthenticationFilter;
 import com.example.wherewego.domain.auth.security.JwtUtil;
+import com.example.wherewego.domain.auth.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -50,7 +52,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+        return new JwtAuthenticationFilter(jwtUtil, userDetailsService, tokenBlacklistService);
     }
 
     @Bean
