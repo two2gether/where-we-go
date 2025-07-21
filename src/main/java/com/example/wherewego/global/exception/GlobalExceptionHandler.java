@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 
 
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -63,7 +64,7 @@ public class GlobalExceptionHandler {
         log.error("잘못된 요청: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("잘못된 요청입니다."));
+                .body(ApiResponse.error(e.getMessage()));
     }
 
     /**
