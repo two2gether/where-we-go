@@ -36,6 +36,5 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 생성되었습니다.", responseDto));
     }
 
-    // 코스 조회
 
 }
