@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.courses.service;
 
-import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
@@ -9,11 +8,8 @@ import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -44,4 +40,7 @@ public class CourseService {
         // 저장된 Course -> CourseCreateResponseDto 로 변환(Mapper 사용)
         return CourseMapper.toDto(savedCourse);
     }
+
+    // 코스 조회
+    
 }

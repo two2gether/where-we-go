@@ -1,6 +1,6 @@
 package com.example.wherewego.domain.courses.controller;
 
-import com.example.wherewego.domain.auth.security.CustomUserDetailsService;
+import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.service.CourseService;
@@ -21,19 +21,21 @@ public class CourseController {
     // 속성
     private final CourseService courseService;
 
-    // 기능
-    // 코스 생성
+    /**
+     * 코스 생성 api
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<CourseCreateResponseDto>> registerCourse(
             @RequestBody @Valid CourseCreateRequestDto requestDto,
-            @AuthenticationPrincipal CustomUserDetailsService userDetailsService
+            @AuthenticationPrincipal CustomUserDetail userDetail
     ) {
-//        Long userId = userDetailsService.getUserId();
-        // TODO 나중에 userDetail 받아와서 수정하기
-        Long userId = 1L;
+        Long userId = userDetail.getUser().getId();
 
         CourseCreateResponseDto responseDto = courseService.createCourse(requestDto, userId);
 
         return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 생성되었습니다.", responseDto));
     }
+
+    // 코스 조회
+
 }
