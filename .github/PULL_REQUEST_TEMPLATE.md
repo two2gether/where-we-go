@@ -1,12 +1,3 @@
----
-name: Feature request
-about: 이 프로젝트에 대한 아이디어를 제안하세요
-title: "[Feature]"
-labels: "\U0001F680 feature"
-assignees: ''
-
----
-
 ## ✅ 작업 개요 (What)
 어떤 기능을 개발하는지 간단히 요약해주세요.
 
