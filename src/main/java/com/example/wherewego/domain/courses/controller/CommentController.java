@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
@@ -28,7 +29,7 @@ public class CommentController {
 	public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
 		@PathVariable Long courseId,
 		@RequestBody @Valid CommentRequestDto requestDto,
-		@AuthenticationPrincipal UserDetailsImpl userDetails) {
+		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
 		Long userId = userDetails.getUser().getId();
 

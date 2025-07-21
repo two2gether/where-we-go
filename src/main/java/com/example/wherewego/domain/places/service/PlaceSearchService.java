@@ -28,10 +28,10 @@ public interface PlaceSearchService {
     /**
      * 특정 장소의 상세 정보 조회
      * 
-     * @param apiPlaceId 외부 API의 장소 ID
+     * @param placeId 장소 ID (카카오 API place_id)
      * @return 장소 상세 정보
      */
-    PlaceDetailResponse getPlaceDetail(String apiPlaceId);
+    PlaceDetailResponse getPlaceDetail(String placeId);
 
     /**
      * 서비스 제공자 정보 반환
