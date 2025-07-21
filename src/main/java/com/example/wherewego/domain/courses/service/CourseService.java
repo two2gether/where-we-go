@@ -6,7 +6,10 @@ import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
+import com.example.wherewego.domain.user.entity.User;
+import com.example.wherewego.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,7 @@ import java.util.List;
 public class CourseService {
     // 속성
     private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
 
     // 기능
     @Transactional

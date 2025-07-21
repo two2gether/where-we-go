@@ -29,4 +29,21 @@ public class CourseCreateRequestDto {
 
     // 기본값 = false(null일 경우)
     private boolean isPublic = false;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<CourseTheme> getTheme() {
+        return theme;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
 }

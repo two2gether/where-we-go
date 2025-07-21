@@ -3,6 +3,7 @@ package com.example.wherewego.domain.courses.mapper;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
+import com.example.wherewego.domain.user.entity.User;
 
 public class CourseMapper {
 
@@ -12,13 +13,13 @@ public class CourseMapper {
                 .userId(course.getUser().getId())
                 .title(course.getTitle())
                 .description(course.getDescription())
-                .theme(course.getCourseThemes())
+                .theme(course.getTheme())
                 .region(course.getRegion())
                 .likeCount(course.getLikeCount())
                 .averageRating(course.getAverageRating())
                 .viewCount(course.getViewCount())
                 .commentCount(course.getCommentCount())
-                .isPublic(course.isPublic())
+                .isPublic(course.getIsPublic())
                 .createdAt(course.getCreatedAt())
                 .build();
     }
@@ -27,9 +28,9 @@ public class CourseMapper {
         return Course.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .courseThemes(request.getTheme())
+                .theme(request.getTheme())
                 .region(request.getRegion())
-                .isPublic(request.getIsPublic())
+                .isPublic(request.isPublic())
                 .user(user)
                 .build();
     }
