@@ -19,10 +19,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "place_reviews", uniqueConstraints = {
-    // 사용자당 같은 장소 중복 리뷰 방지
-    @UniqueConstraint(name = "uk_user_place_review", columnNames = {"user_id", "place_id"})
-})
+@Table(name = "place_reviews", 
+    uniqueConstraints = {
+        // 사용자당 같은 장소 중복 리뷰 방지
+        @UniqueConstraint(name = "uk_user_place_review", columnNames = {"user_id", "place_id"})
+    },
+    indexes = {
+        // 조회 성능을 위한 인덱스
+        @Index(name = "idx_place_id", columnList = "place_id"),
+        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_rating", columnList = "rating")
+    }
+)
 public class PlaceReview extends BaseEntity {
 
     @Id
@@ -35,7 +43,7 @@ public class PlaceReview extends BaseEntity {
     private User user;
 
     // 카카오 API 장소 ID (문자열)
-    @Column(name = "place_id", nullable = false, length = 50)
+    @Column(name = "place_id", nullable = false, length = 20)
     private String placeId;
 
     // 평점 (1-5점)

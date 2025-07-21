@@ -42,7 +42,7 @@ public class PlaceBookmark extends BaseEntity {
     private User user;
 
     // 카카오 API 장소 ID (문자열)
-    @Column(name = "place_id", nullable = false, length = 50)
+    @Column(name = "place_id", nullable = false, length = 20)
     private String placeId;
 
     // 북마크 생성을 위한 생성자

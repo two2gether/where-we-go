@@ -13,10 +13,10 @@ import lombok.NoArgsConstructor;
  *
  * 응답 예시:
  * {
- *   "placeId": 1,
- *   "apiPlaceId": "253451",
+ *   "placeId": "253451",
  *   "name": "스타벅스 강남점",
  *   "category": "카페",
+ *   "regionSummary": "서울 강남구",
  *   "region": {
  *     "depth1": "서울특별시",
  *     "depth2": "강남구",
@@ -28,8 +28,10 @@ import lombok.NoArgsConstructor;
  *   "latitude": 37.498095,
  *   "longitude": 127.027610,
  *   "distance": 123,
+ *   "averageRating": 4.2,
+ *   "reviewCount": 156,
  *   "placeUrl": "http://place.map.kakao.com/253451",
- *   "bookmarkCount": 23,
+ *   "bookmarkCount": 89,
  *   "isBookmarked": false
  * }
  */
@@ -39,10 +41,10 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PlaceDetailResponse {
 
-	private Long placeId;
-	private String apiPlaceId;
+	private String placeId;
 	private String name;
 	private String category;
+	private String regionSummary;
 	private Region region;
 	private String address;
 	private String roadAddress;
@@ -50,6 +52,8 @@ public class PlaceDetailResponse {
 	private Double latitude;
 	private Double longitude;
 	private Integer distance;
+	private Double averageRating;
+	private Integer reviewCount;
 	private String placeUrl;
 	private Integer bookmarkCount;
 	private Boolean isBookmarked;

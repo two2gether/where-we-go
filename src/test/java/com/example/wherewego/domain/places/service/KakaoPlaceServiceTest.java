@@ -71,7 +71,7 @@ class KakaoPlaceServiceTest {
         
         PlaceDetailResponse firstPlace = result.get(0);
         assertThat(firstPlace.getName()).isEqualTo("테스트카페");
-        assertThat(firstPlace.getApiPlaceId()).isEqualTo("TEST001");
+        assertThat(firstPlace.getPlaceId()).isEqualTo("TEST001");
         assertThat(firstPlace.getCategory()).isEqualTo("카페");
         assertThat(firstPlace.getAddress()).isEqualTo("서울 테스트구 테스트로 123");
         assertThat(firstPlace.getRoadAddress()).isEqualTo("서울 테스트구 테스트로 123");
@@ -82,6 +82,11 @@ class KakaoPlaceServiceTest {
         assertThat(firstPlace.getDistance()).isNotNull();
         assertThat(firstPlace.getBookmarkCount()).isEqualTo(0);
         assertThat(firstPlace.getIsBookmarked()).isFalse();
+        
+        // 새로 추가된 필드들 검증
+        assertThat(firstPlace.getAverageRating()).isEqualTo(0.0);  // 기본값
+        assertThat(firstPlace.getReviewCount()).isEqualTo(0);      // 기본값
+        assertThat(firstPlace.getRegionSummary()).isEqualTo("서울 테스트구");  // 자동 생성
         
         // 지역 정보 검증
         assertThat(firstPlace.getRegion().getDepth1()).isEqualTo("서울");
@@ -211,6 +216,31 @@ class KakaoPlaceServiceTest {
     }
 
     @Test
+    @DisplayName("regionSummary 생성 테스트 - 지역명을 올바르게 단순화한다")
+    void searchPlaces_RegionSummaryGeneration() throws Exception {
+        // given
+        PlaceSearchRequest request = createSearchRequest("맛집", null, null);
+        KakaoPlaceResponse mockResponse = createMockKakaoResponseForRegionTest();
+        
+        setupMockWebClient(mockResponse);
+
+        // when
+        List<PlaceDetailResponse> result = kakaoPlaceService.searchPlaces(request);
+
+        // then
+        assertThat(result).hasSize(3);
+        
+        // 서울특별시 강남구 → 서울 강남구
+        assertThat(result.get(0).getRegionSummary()).isEqualTo("서울 강남구");
+        
+        // 부산광역시 해운대구 → 부산 해운대구  
+        assertThat(result.get(1).getRegionSummary()).isEqualTo("부산 해운대구");
+        
+        // 제주특별자치도 제주시 → 제주 제주시
+        assertThat(result.get(2).getRegionSummary()).isEqualTo("제주 제주시");
+    }
+
+    @Test
     @DisplayName("잘못된 데이터 처리 - 위도/경도 변환 실패 시에도 장소 정보는 반환한다")
     void searchPlaces_InvalidCoordinates() throws Exception {
         // given
@@ -236,7 +266,7 @@ class KakaoPlaceServiceTest {
         // when & then
         assertThat(kakaoPlaceService.getProviderName()).isEqualTo("kakao");
         assertThat(kakaoPlaceService.isServiceAvailable()).isTrue();
-        assertThat(kakaoPlaceService.getPlaceDetail("test")).isNull(); // 아직 미구현
+        assertThat(kakaoPlaceService.getPlaceDetail("test")).isNull(); // TODO로 남겨둠
     }
 
     // === Helper Methods ===
@@ -359,6 +389,49 @@ class KakaoPlaceServiceTest {
         return KakaoPlaceResponse.builder()
                 .documents(documents)
                 .meta(KakaoPlaceResponse.Meta.builder().totalCount(1).build())
+                .build();
+    }
+
+    private KakaoPlaceResponse createMockKakaoResponseForRegionTest() {
+        List<KakaoPlaceResponse.PlaceDocument> documents = List.of(
+                KakaoPlaceResponse.PlaceDocument.builder()
+                        .id("REGION001")
+                        .placeName("서울맛집")
+                        .categoryGroupName("음식점")
+                        .addressName("서울특별시 강남구 테스트로")
+                        .region1DepthName("서울특별시")
+                        .region2DepthName("강남구")
+                        .region3DepthName("역삼동")
+                        .longitude("127.0")
+                        .latitude("37.5")
+                        .build(),
+                KakaoPlaceResponse.PlaceDocument.builder()
+                        .id("REGION002")
+                        .placeName("부산맛집")
+                        .categoryGroupName("음식점")
+                        .addressName("부산광역시 해운대구 테스트로")
+                        .region1DepthName("부산광역시")
+                        .region2DepthName("해운대구")
+                        .region3DepthName("우동")
+                        .longitude("129.0")
+                        .latitude("35.1")
+                        .build(),
+                KakaoPlaceResponse.PlaceDocument.builder()
+                        .id("REGION003")
+                        .placeName("제주맛집")
+                        .categoryGroupName("음식점")
+                        .addressName("제주특별자치도 제주시 테스트로")
+                        .region1DepthName("제주특별자치도")
+                        .region2DepthName("제주시")
+                        .region3DepthName("이도동")
+                        .longitude("126.5")
+                        .latitude("33.5")
+                        .build()
+        );
+
+        return KakaoPlaceResponse.builder()
+                .documents(documents)
+                .meta(KakaoPlaceResponse.Meta.builder().totalCount(3).build())
                 .build();
     }
 
