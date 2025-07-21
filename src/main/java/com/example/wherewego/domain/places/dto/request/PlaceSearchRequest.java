@@ -21,12 +21,10 @@ import lombok.NoArgsConstructor;
  *
  * 요청 예시:
  * {
- *   "query": "스타벅스",
- *   "category": "카페",
+ *   "query": "강남 스타벅스",
  *   "region": {
  *     "depth1": "서울특별시",
- *     "depth2": "강남구",
- *     "depth3": "역삼동"
+ *     "depth2": "강남구"
  *   },
  *   "userLocation": {
  *     "latitude": 37.5665,
@@ -37,8 +35,7 @@ import lombok.NoArgsConstructor;
  *     "page": 1,
  *     "size": 15
  *   },
- *   "sort": "distance",
- *   "apiProvider": "auto"
+ *   "sort": "distance"
  * }
  */
 @Getter
@@ -51,9 +48,6 @@ public class PlaceSearchRequest {
 	@Size(min = 1, max = 100, message = "검색 키워드는 1-100자 이내여야 합니다")
 	private String query;
 
-	@Size(max = 50, message = "카테고리는 50자 이하여야 합니다")
-	private String category;
-
 	@Valid
 	private Region region;
 
@@ -65,7 +59,6 @@ public class PlaceSearchRequest {
 
 	private String sort;
 
-	private String apiProvider;
 
 	/**
 	 * 지역 정보를 담는 내부 클래스

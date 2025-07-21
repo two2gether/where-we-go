@@ -82,11 +82,6 @@ public class KakaoPlaceService implements PlaceSearchService {
 						builder.queryParam("radius", radius);
 					}
 
-					// 카테고리 파라미터 추가
-					if (request.getCategory() != null && !request.getCategory().trim().isEmpty()) {
-						builder.queryParam("category_group_code", request.getCategory());
-					}
-
 					java.net.URI finalUri = builder.build();
 					log.info("카카오 API 요청 URL: {}", finalUri.toString());
 					return finalUri;
@@ -182,7 +177,6 @@ public class KakaoPlaceService implements PlaceSearchService {
 		try {
 			PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
 				.placeId(null)  // 아직 DB에 저장 안함
-				.apiProvider("kakao")
 				.apiPlaceId(document.getId())
 				.name(document.getPlaceName())
 				.category(document.getCategoryGroupName())  // category_group_name 직접 사용

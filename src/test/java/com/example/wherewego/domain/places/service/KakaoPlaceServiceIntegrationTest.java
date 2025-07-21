@@ -54,7 +54,6 @@ class KakaoPlaceServiceIntegrationTest {
         
         PlaceDetailResponse firstPlace = result.get(0);
         assertThat(firstPlace.getName()).containsIgnoringCase("스타벅스");
-        assertThat(firstPlace.getApiProvider()).isEqualTo("kakao");
         assertThat(firstPlace.getApiPlaceId()).isNotNull();
         assertThat(firstPlace.getLatitude()).isNotNull();
         assertThat(firstPlace.getLongitude()).isNotNull();
@@ -128,7 +127,6 @@ class KakaoPlaceServiceIntegrationTest {
         // given
         PlaceSearchRequest request = PlaceSearchRequest.builder()
                 .query("커피")
-                .category("CE7")  // 카페 카테고리 코드
                 .pagination(PlaceSearchRequest.Pagination.builder()
                         .page(1)
                         .size(3)

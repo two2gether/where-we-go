@@ -19,10 +19,17 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "place_bookmarks", uniqueConstraints = {
-    // 사용자당 같은 장소 중복 북마크 방지
-    @UniqueConstraint(name = "uk_user_place_bookmark", columnNames = {"user_id", "place_id"})
-})
+@Table(name = "place_bookmarks", 
+    uniqueConstraints = {
+        // 사용자당 같은 장소 중복 북마크 방지
+        @UniqueConstraint(name = "uk_user_place_bookmark", columnNames = {"user_id", "place_id"})
+    },
+    indexes = {
+        // 조회 성능을 위한 인덱스
+        @Index(name = "idx_place_id", columnList = "place_id"),
+        @Index(name = "idx_user_id", columnList = "user_id")
+    }
+)
 public class PlaceBookmark extends BaseEntity {
 
     @Id
@@ -34,14 +41,13 @@ public class PlaceBookmark extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 북마크된 장소 (다대일 관계)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "place_id", nullable = false)
-    private Place place;
+    // 카카오 API 장소 ID (문자열)
+    @Column(name = "place_id", nullable = false, length = 50)
+    private String placeId;
 
     // 북마크 생성을 위한 생성자
-    public PlaceBookmark(User user, Place place) {
+    public PlaceBookmark(User user, String placeId) {
         this.user = user;
-        this.place = place;
+        this.placeId = placeId;
     }
 }

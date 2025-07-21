@@ -71,7 +71,6 @@ class KakaoPlaceServiceTest {
         
         PlaceDetailResponse firstPlace = result.get(0);
         assertThat(firstPlace.getName()).isEqualTo("테스트카페");
-        assertThat(firstPlace.getApiProvider()).isEqualTo("kakao");
         assertThat(firstPlace.getApiPlaceId()).isEqualTo("TEST001");
         assertThat(firstPlace.getCategory()).isEqualTo("카페");
         assertThat(firstPlace.getAddress()).isEqualTo("서울 테스트구 테스트로 123");

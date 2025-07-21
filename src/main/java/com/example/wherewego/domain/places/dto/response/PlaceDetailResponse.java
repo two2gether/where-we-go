@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
  * 응답 예시:
  * {
  *   "placeId": 1,
- *   "apiProvider": "kakao",
  *   "apiPlaceId": "253451",
  *   "name": "스타벅스 강남점",
  *   "category": "카페",
@@ -41,7 +40,6 @@ import lombok.NoArgsConstructor;
 public class PlaceDetailResponse {
 
 	private Long placeId;
-	private String apiProvider;
 	private String apiPlaceId;
 	private String name;
 	private String category;
