@@ -29,5 +29,5 @@ public class CourseCreateRequestDto {
 	private String region;
 
 	// 기본값 = false(null일 경우)
-	private boolean isPublic = false;
+	private boolean isPublic;
 }
