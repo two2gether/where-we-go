@@ -16,6 +16,8 @@ import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.wherewego.global.exception.CustomException;
+import com.example.wherewego.common.enums.ErrorCode;
 
 @Slf4j
 @Service
@@ -104,7 +106,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 				kakaoResponse = objectMapper.readValue(rawJsonResponse, KakaoPlaceResponse.class);
 			} catch (Exception e) {
 				log.error("JSON 파싱 에러: {}", e.getMessage());
-				return Collections.emptyList();
+				throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
 			}
 
 			// 🔍 실제 API 응답 확인용 로그
@@ -128,9 +130,12 @@ public class KakaoPlaceService implements PlaceSearchService {
 
 			return convertToPlaceDetailResponses(kakaoResponse, userLat,
 				userLon);
+		} catch (CustomException e) {
+			// 이미 처리된 예외는 그대로 재전파
+			throw e;
 		} catch (Exception e) {
 			log.error("카카오 API 호출 실패", e);
-			return Collections.emptyList();
+			throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
 		}
 	}
 
