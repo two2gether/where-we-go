@@ -44,6 +44,14 @@ public class CommentService {
 		return toDto(comment);
 	}
 
+	// 코스 댓글 삭제
+	public void deleteComment(Long commentId, Long userId) {
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+		commentRepository.delete(comment);
+	}
+
 	private CommentResponseDto toDto(Comment comment) {
 		return CommentResponseDto.of(comment);
 	}
