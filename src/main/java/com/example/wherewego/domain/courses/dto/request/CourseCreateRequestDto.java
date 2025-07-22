@@ -1,6 +1,9 @@
 package com.example.wherewego.domain.courses.dto.request;
 
+import java.util.List;
+
 import com.example.wherewego.common.enums.CourseTheme;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -8,42 +11,23 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class CourseCreateRequestDto {
 
-    @NotBlank(message = "제목은 필수입니다.")
-    private String title;
+	@NotBlank(message = "제목은 필수입니다.")
+	private String title;
 
-    private String description;
+	private String description;
 
-    @Size(max = 5, message = "테마는 최대 5개까지 선택 가능합니다.")
-    private List<CourseTheme> theme;
+	@Size(max = 5, message = "테마는 최대 5개까지 선택 가능합니다.")
+	private List<CourseTheme> themes;
 
-    @NotBlank(message = "지역은 필수입니다.")
-    private String region;
+	@NotBlank(message = "지역은 필수입니다.")
+	private String region;
 
-    // 기본값 = false(null일 경우)
-    private boolean isPublic = false;
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public List<CourseTheme> getTheme() {
-        return theme;
-    }
-
-    public String getRegion() {
-        return region;
-    }
-
+	// 기본값 = false(null일 경우)
+	private boolean isPublic = false;
 }
