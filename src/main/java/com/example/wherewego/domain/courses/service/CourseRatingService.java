@@ -23,13 +23,14 @@ public class CourseRatingService {
 
     @Transactional
     public CourseRatingResponseDto courseRatingCreate(Long userId, Long courseId, CourseRatingRequestDto request) {
+        // 코스 존재 검사
+        Course course = courseService.getCourseById(courseId);
+        User user = userService.getUserById(userId);
         // 평점 중복 등록 검사
         if(ratingRepository.existsByUserIdAndCourseId(userId, courseId)) {
             throw new CustomException(ErrorCode.RATING_ALREADY_EXISTS);
         }
         // 저장
-        User user = userService.getUserById(userId);
-        Course course = courseService.getCourseById(courseId);
         Rating rating = new Rating(user, course, request.getRating());
         Rating savedRating = ratingRepository.save(rating);
         // Course 평균 평점 업데이트

@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface CourseRatingRepository extends JpaRepository<Rating, Long> {
     boolean existsByUserIdAndCourseId(Long userId, Long courseId);
     Optional<Rating> findByUserIdAndCourseId(Long userId, Long courseId);
-    // 평점 계산 (JPQL)
+    // 평점 계산 (JPQL) - null이면 0반환
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM Rating r WHERE r.course.id = :courseId")
     double findAverageByCourseId(@Param("courseId") Long courseId);
 }
