@@ -2,9 +2,11 @@ package com.example.wherewego.domain.user.service;
 
 
 
+import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,5 +24,10 @@ public class UserService {
                 .createdAt(u.getCreatedAt())
                 .build();
 
+    }
+
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
