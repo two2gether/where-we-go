@@ -1,14 +1,14 @@
-package com.example.wherewego.domain.like.dto;
+package com.example.wherewego.domain.courses.dto;
 
 import lombok.Getter;
 
 @Getter
-public class LikeResponseDto {
+public class CourseLikeResponseDto {
     private Long id; // likeId
     private Long userId;
     private Long courseId;
 
-    public LikeResponseDto(Long id, Long userId, Long courseId) {
+    public CourseLikeResponseDto(Long id, Long userId, Long courseId) {
         this.id = id;
         this.userId = userId;
         this.courseId = courseId;

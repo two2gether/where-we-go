@@ -1,11 +1,11 @@
-package com.example.wherewego.domain.like.service;
+package com.example.wherewego.domain.courses.service;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseRepository;
-import com.example.wherewego.domain.like.dto.LikeResponseDto;
-import com.example.wherewego.domain.like.entity.Like;
-import com.example.wherewego.domain.like.repository.LikeRepository;
+import com.example.wherewego.domain.courses.dto.CourseLikeResponseDto;
+import com.example.wherewego.domain.courses.entity.Like;
+import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -15,14 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class LikeService {
+public class CourseLikeService {
 
-    private final LikeRepository likeRepository;
+    private final CourseLikeRepository likeRepository;
     private final UserService userService;
     private final CourseRepository courseRepository; // TODO service로 변경
 
     @Transactional
-    public LikeResponseDto create(Long userId, Long courseId) {
+    public CourseLikeResponseDto courseLikeCeate(Long userId, Long courseId) {
         User user = userService.getUserById(userId);
         // TODO 코스서비스의 findById 메서드로 변경
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
@@ -36,20 +36,16 @@ public class LikeService {
         Like like = new Like(user, course);
         Like savedLike = likeRepository.save(like);
         // 반환
-        return new LikeResponseDto(savedLike.getId(), savedLike.getUser().getId(), savedLike.getCourse().getId());
+        return new CourseLikeResponseDto(savedLike.getId(), savedLike.getUser().getId(), savedLike.getCourse().getId());
     }
 
     @Transactional
-    public void delete(Long userId, Long courseId) {
+    public void courseLikeDelete(Long userId, Long courseId) {
         // TODO 코스서비스의 findById 메서드로 변경
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
         // 좋아요 존재 검사
         Like like = likeRepository.findByUserIdAndCourseId(userId, courseId).orElseThrow(() -> new CustomException(ErrorCode.LIKE_NOT_FOUND));
-        // 인가 검사
-        if(!userId.equals(like.getUser().getId())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
-        }
         // 코스 테이블의 좋아요 수(like_count) -1
         course.decrementLikeCount();
         // hard delete
