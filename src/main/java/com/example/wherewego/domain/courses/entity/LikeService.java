@@ -1,11 +1,6 @@
-package com.example.wherewego.domain.like.service;
+package com.example.wherewego.domain.courses.entity;
 
 import com.example.wherewego.common.enums.ErrorCode;
-import com.example.wherewego.domain.courses.entity.Course;
-import com.example.wherewego.domain.courses.entity.CourseRepository;
-import com.example.wherewego.domain.like.dto.LikeResponseDto;
-import com.example.wherewego.domain.like.entity.Like;
-import com.example.wherewego.domain.like.repository.LikeRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;

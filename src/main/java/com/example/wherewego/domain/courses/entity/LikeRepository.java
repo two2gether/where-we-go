@@ -1,8 +1,5 @@
-package com.example.wherewego.domain.like.repository;
+package com.example.wherewego.domain.courses.entity;
 
-import com.example.wherewego.domain.courses.entity.Course;
-import com.example.wherewego.domain.like.entity.Like;
-import com.example.wherewego.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,8 +1,6 @@
-package com.example.wherewego.domain.like.controller;
+package com.example.wherewego.domain.courses.entity;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.like.dto.LikeResponseDto;
-import com.example.wherewego.domain.like.service.LikeService;
 import com.example.wherewego.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
