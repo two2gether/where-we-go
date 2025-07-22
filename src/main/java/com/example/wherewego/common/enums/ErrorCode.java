@@ -20,6 +20,7 @@ public enum ErrorCode {
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 존재하는 닉네임입니다."),
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 존재하는 이메일입니다."),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 일치하지 않습니다."),
+    UNAUTHORIZED_USER(HttpStatus.FORBIDDEN, "권한이 없는 사용자입니다."),
 
     // 코스 관련 에러 정의
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 코스입니다."),
