@@ -2,6 +2,7 @@ package com.example.wherewego.domain.courses.mapper;
 
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
@@ -31,7 +32,7 @@ public class CourseMapper {
 			.description(request.getDescription())
 			.themes(request.getThemes())
 			.region(request.getRegion())
-			.isPublic(request.isPublic())
+			.isPublic(request.getIsPublic())
 			.user(user)
 			.build();
 	}
@@ -48,5 +49,19 @@ public class CourseMapper {
 			course.getIsPublic(),
 			course.getCreatedAt()
 		);
+	}
+
+	public static CourseDetailResponseDto toDetailDto(Course course) {
+		return CourseDetailResponseDto.builder()
+			.courseId(course.getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.region(course.getRegion())
+			.themes(course.getThemes())
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.build();
 	}
 }

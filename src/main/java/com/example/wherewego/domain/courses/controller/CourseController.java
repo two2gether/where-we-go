@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.global.response.ApiResponse;
@@ -57,5 +59,15 @@ public class CourseController {
 		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스 목록 조회를 성공했습니다.", response));
+	}
+
+	/**
+	 * 코스 상세 조회 api
+	 */
+	@GetMapping("/{courseId}")
+	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(@PathVariable Long courseId) {
+		CourseDetailResponseDto response = courseService.getCourseDetail(courseId);
+
+		return ResponseEntity.ok(ApiResponse.ok("코스 조회를 성공했습니다.", response));
 	}
 }

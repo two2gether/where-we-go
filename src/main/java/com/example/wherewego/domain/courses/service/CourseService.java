@@ -11,6 +11,7 @@ import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CourseService {
 
 	private final CourseRepository courseRepository;
@@ -56,6 +58,7 @@ public class CourseService {
 	 * 코스 목록 조회 api
 	 * @param filterDto : 지역, 테마 조건을 담은 dto.
 	 */
+	@Transactional
 	public PagedResponse<CourseListResponseDto> getCourseList(
 		CourseListFilterDto filterDto,
 		Pageable pageable
@@ -81,5 +84,17 @@ public class CourseService {
 
 		// 4. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
+	}
+
+	/**
+	 * 코스 상세 조회 api
+	 */
+	public CourseDetailResponseDto getCourseDetail(Long courseId) {
+		// 1. 조회
+		Course findCourse = courseRepository.findById(courseId)
+			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
+
+		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
+		return CourseMapper.toDetailDto(findCourse);
 	}
 }

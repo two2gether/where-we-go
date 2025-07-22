@@ -22,6 +22,6 @@ public class CourseListResponseDto {
 	private String region;
 	private int likeCount;
 	private double averageRating;
-	private boolean isPublic;
+	private Boolean isPublic;
 	private LocalDateTime createdAt;
 }
