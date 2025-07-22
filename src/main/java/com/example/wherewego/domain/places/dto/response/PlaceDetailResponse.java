@@ -11,35 +11,28 @@ import lombok.NoArgsConstructor;
  * 클라이언트에게 반환할 표준화된 장소 정보를 담는 클래스입니다.
  * 카카오 API 응답을 통일된 형태로 변환합니다.
  *
- * 장소 검색 응답 예시:
+ * 개별 장소 데이터 구조:
  * {
- *   "success": true,
- *   "message": "장소 검색 성공",
- *   "data": [
- *     {
- *       "placeId": "253451",
- *       "name": "스타벅스 강남점",
- *       "category": "카페",
- *       "regionSummary": "서울 강남구",
- *       "region": {
- *         "depth1": "서울특별시",
- *         "depth2": "강남구",
- *         "depth3": "역삼동"
- *       },
- *       "address": "서울 강남구 강남대로 390",
- *       "roadAddress": "서울 강남구 강남대로 390",
- *       "phone": "02-1234-5678",
- *       "latitude": 37.498095,
- *       "longitude": 127.027610,
- *       "distance": 123,
- *       "averageRating": 4.2,
- *       "reviewCount": 156,
- *       "placeUrl": "http://place.map.kakao.com/253451",
- *       "bookmarkCount": 89,
- *       "isBookmarked": false
- *     }
- *   ],
- *   "timestamp": "2025-01-22T10:30:00Z"
+ *   "placeId": "253451",
+ *   "name": "스타벅스 강남점",
+ *   "category": "카페",
+ *   "regionSummary": "서울 강남구",
+ *   "region": {
+ *     "depth1": "서울특별시",
+ *     "depth2": "강남구",
+ *     "depth3": "역삼동"
+ *   },
+ *   "address": "서울 강남구 강남대로 390",
+ *   "roadAddress": "서울 강남구 강남대로 390",
+ *   "phone": "02-1234-5678",
+ *   "latitude": 37.498095,
+ *   "longitude": 127.027610,
+ *   "distance": 123,
+ *   "averageRating": 4.2,
+ *   "reviewCount": 156,
+ *   "placeUrl": "http://place.map.kakao.com/253451",
+ *   "bookmarkCount": 89,
+ *   "isBookmarked": false
  * }
  */
 @Getter

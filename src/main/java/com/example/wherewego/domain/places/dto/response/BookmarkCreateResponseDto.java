@@ -8,15 +8,10 @@ import lombok.NoArgsConstructor;
 /**
  * 북마크 추가 응답 DTO
  *
- * 응답 예시:
+ * 응답 예시 (POST /api/places/{placeId}/bookmark):
  * {
- *   "success": true,
- *   "message": "북마크 추가 성공",
- *   "data": {
- *     "bookmarkId": 12345,
- *     "isBookmarked": true
- *   },
- *   "timestamp": "2025-01-22T10:30:00Z"
+ *    "bookmarkId": 12345,
+ *    "isBookmarked": true
  * }
  */
 @Getter
@@ -24,7 +19,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class BookmarkCreateResponseDto {
-    
-    private Long bookmarkId;
-    private Boolean isBookmarked;
+
+	private Long bookmarkId;
+	private Boolean isBookmarked;
 }
