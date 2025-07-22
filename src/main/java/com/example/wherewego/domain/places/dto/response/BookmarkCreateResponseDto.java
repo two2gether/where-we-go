@@ -1,0 +1,30 @@
+package com.example.wherewego.domain.places.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * 북마크 추가 응답 DTO
+ *
+ * 응답 예시:
+ * {
+ *   "success": true,
+ *   "message": "북마크 추가 성공",
+ *   "data": {
+ *     "bookmarkId": 12345,
+ *     "isBookmarked": true
+ *   },
+ *   "timestamp": "2025-01-22T10:30:00Z"
+ * }
+ */
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class BookmarkCreateResponseDto {
+    
+    private Long bookmarkId;
+    private Boolean isBookmarked;
+}

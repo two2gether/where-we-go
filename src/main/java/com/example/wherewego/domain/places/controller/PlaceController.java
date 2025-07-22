@@ -2,12 +2,16 @@ package com.example.wherewego.domain.places.controller;
 
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.service.KakaoPlaceService;
+import com.example.wherewego.domain.places.service.PlaceBookmarkService;
+import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +29,7 @@ import java.util.List;
 public class PlaceController {
 
     private final KakaoPlaceService kakaoPlaceService;
+    private final PlaceBookmarkService placeBookmarkService;
 
     /**
      * 장소 검색 API
@@ -68,6 +73,38 @@ public class PlaceController {
             log.error("장소 검색 중 오류 발생: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("장소 검색 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 장소 북마크 추가 API
+     *
+     * POST /api/places/{placeId}/bookmark
+     */
+    @PostMapping("/{placeId}/bookmark")
+    public ResponseEntity<ApiResponse<BookmarkCreateResponseDto>> addBookmark(
+            @PathVariable String placeId,
+            @AuthenticationPrincipal User user) {
+
+        log.info("북마크 추가 요청 - 사용자: {}, 장소ID: {}", user.getId(), placeId);
+
+        try {
+            BookmarkCreateResponseDto result = placeBookmarkService.addBookmark(user.getId(), placeId);
+            
+            log.info("북마크 추가 성공 - 북마크ID: {}", result.getBookmarkId());
+            
+            return ResponseEntity.ok(
+                    ApiResponse.ok("북마크 추가 성공", result)
+            );
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("북마크 추가 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("북마크 추가 중 오류 발생: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("북마크 추가 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
 }

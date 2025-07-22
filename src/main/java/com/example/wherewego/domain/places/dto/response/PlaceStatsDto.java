@@ -8,6 +8,16 @@ import lombok.NoArgsConstructor;
 /**
  * 장소 통계 정보 DTO
  * - place_id(카카오 API ID) 기준 리뷰/북마크 통계 제공
+ *
+ * 응답 예시:
+ * {
+ *   "placeId": "253451",
+ *   "reviewCount": 156,
+ *   "averageRating": 4.24,
+ *   "bookmarkCount": 89,
+ *   "isBookmarked": true,
+ *   "hasUserReview": false
+ * }
  */
 @Builder
 @Getter
