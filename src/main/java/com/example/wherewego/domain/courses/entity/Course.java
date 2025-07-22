@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.courses.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 여행 코스 엔티티
@@ -50,8 +52,10 @@ public class Course extends BaseEntity {
     /**
      * 코스 테마 (로맨틱, 힐링, 액티비티 등)
      */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @Enumerated(EnumType.STRING)
     @Column(name = "theme", length = 50)
-    private String theme;
+    private List<CourseTheme> theme;
 
     /**
      * 지역 (서울, 부산, 제주 등)
@@ -69,9 +73,9 @@ public class Course extends BaseEntity {
     /**
      * 평균 평점 (0.00 ~ 5.00)
      */
-    @Column(name = "average_rating", nullable = false, precision = 3, scale = 2)
+    @Column(name = "average_rating", nullable = false)
     @Builder.Default
-    private BigDecimal averageRating = BigDecimal.ZERO;
+    private Double averageRating = (double) 0L;
 
     /**
      * 조회수
@@ -175,7 +179,7 @@ public class Course extends BaseEntity {
     /**
      * 평균 평점 업데이트
      */
-    public void updateAverageRating(BigDecimal newAverageRating) {
+    public void updateAverageRating(Double newAverageRating) {
         this.averageRating = newAverageRating;
     }
 
@@ -185,4 +189,5 @@ public class Course extends BaseEntity {
     public void updateDailyScore(Integer newDailyScore) {
         this.dailyScore = newDailyScore;
     }
+
 }
