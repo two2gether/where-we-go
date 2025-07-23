@@ -53,10 +53,19 @@ public class User extends BaseEntity {
 		this.password = encodedPassword;
 	}
 
+	public void changeNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public void changeProfileImage(String profileImage) {
+		this.profileImage = profileImage;
+	}
+
 	public void updateProfile(String nickname, String profileImage) {
 		this.nickname = nickname;
 		if (StringUtils.hasText(profileImage)) {
 			this.profileImage = profileImage;
 		}
 	}
+
 }
