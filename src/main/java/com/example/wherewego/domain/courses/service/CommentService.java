@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +15,7 @@ import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
+import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -70,7 +73,21 @@ public class CommentService {
 
 		comment.updateContent(requestDto.getContent());
 
-		return CommentResponseDto.of(comment);
+		return toDto(comment);
+	}
+
+	// 코스 댓글 목록 조회
+	@Transactional(readOnly = true)  //DB 변경이 없는 읽기 작업
+	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
+
+		//JPA Repository를 통해 댓글 목록을 조회
+		Page<Comment> commentPage = commentRepository.findAllByCourseIdOrderByCreatedAtDesc(courseId, pageable);
+
+		//조회된 댓글 엔티티들을 DTO로 변환
+		//현재 클래스(CommentService)의 인스턴스(this)인 toDto() 참조
+		Page<CommentResponseDto> dtoPage = commentPage.map(this::toDto);
+
+		return PagedResponse.from(dtoPage);
 	}
 
 	private CommentResponseDto toDto(Comment comment) {
