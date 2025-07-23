@@ -1,5 +1,8 @@
 package com.example.wherewego.domain.courses.service;
 
+import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.entity.Rating;
+import com.example.wherewego.global.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,5 +50,12 @@ public class CourseService {
 	/**
 	 * 코스 목록 조회 api
 	 */
+
+
+
+	public Course getCourseById(Long id) {
+		return courseRepository.findById(id)
+				.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+	}
 
 }
