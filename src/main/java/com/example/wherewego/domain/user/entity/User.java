@@ -1,7 +1,5 @@
 package com.example.wherewego.domain.user.entity;
 
-import org.springframework.util.StringUtils;
-
 import com.example.wherewego.common.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -59,13 +57,6 @@ public class User extends BaseEntity {
 
 	public void changeProfileImage(String profileImage) {
 		this.profileImage = profileImage;
-	}
-
-	public void updateProfile(String nickname, String profileImage) {
-		this.nickname = nickname;
-		if (StringUtils.hasText(profileImage)) {
-			this.profileImage = profileImage;
-		}
 	}
 
 }
