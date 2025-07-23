@@ -3,6 +3,7 @@ package com.example.wherewego.domain.courses.service;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CourseService {
 
 	private final CourseRepository courseRepository;
@@ -58,7 +58,7 @@ public class CourseService {
 	 * 코스 목록 조회 api
 	 * @param filterDto : 지역, 테마 조건을 담은 dto.
 	 */
-	@Transactional
+	@Transactional(readOnly = true)
 	public PagedResponse<CourseListResponseDto> getCourseList(
 		CourseListFilterDto filterDto,
 		Pageable pageable
@@ -67,22 +67,41 @@ public class CourseService {
 		String region = filterDto.getRegion();
 		List<CourseTheme> themes = filterDto.getThemes();
 
-		Page<Course> coursePage; // Page 객체 생성
+		// Page<Course> coursePage; // Page 객체 생성
 
 		// 2. 조건에 따라 코스 목록 조회
+		// Fetch Join으로 전체 리스트 조회
+		List<Course> courseList;
 		if (themes != null && !themes.isEmpty()) {
 			// 테마가 있을 경우 : 지역+테마 조건으로 조회
-			coursePage = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes, pageable);
+			courseList = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes);
 		} else {
 			// 테마가 없을 경우 : 지역 조건만으로 조회
-			coursePage = courseRepository.findByRegionAndIsPublicTrue(region, pageable);
+			courseList = courseRepository.findByRegionAndIsPublicTrue(region);
 		}
 
-		// 3. [엔티티 -> 응답 dto 변환] (map 활용)
-		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
-		Page<CourseListResponseDto> dtoPage = coursePage.map(CourseMapper::toList);
+		// 3. 페이징 처리
+		int offset = (int)pageable.getOffset(); // 시작 인덱스
+		int limit = pageable.getPageSize(); // 가져올 개수
+		int total = courseList.size(); // 전체 개수
 
-		// 4. 커스텀 페이징 응답 dto 로 변환 후 반환
+		List<Course> paged = courseList.stream()
+			.skip(offset)
+			.limit(limit)
+			.toList();
+
+		// 4. [엔티티 -> 응답 dto 변환] (map 활용)
+		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
+		// Page<CourseListResponseDto> dtoPage = courseList.map(CourseMapper::toList);
+
+		List<CourseListResponseDto> dtoList = paged.stream()
+			.map(CourseMapper::toList)
+			.toList();
+
+		// 5. PageImpl 로 Page 객체 생성
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, total);
+
+		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
 	}
 
@@ -96,5 +115,14 @@ public class CourseService {
 
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
 		return CourseMapper.toDetailDto(findCourse);
+	}
+
+	/**
+	 * 코스 수정 api
+	 */
+	@Transactional
+	public void updateCourseInfo() {
+
+		return;
 	}
 }

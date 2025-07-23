@@ -64,7 +64,7 @@ public class Course extends BaseEntity {
 	/**
 	 * 코스 테마 (로맨틱, 힐링, 액티비티 등)
 	 */
-	@ElementCollection(fetch = FetchType.EAGER)
+	@ElementCollection(fetch = FetchType.LAZY)
 	// -> Lazy로 FetchJoin사용하여 문제해결해야함.
 	// -> EAGER은 임시방편.
 	@Enumerated(EnumType.STRING)
