@@ -49,7 +49,28 @@ public class CommentService {
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
 
+		// 인가 검사 (작성자 본인인지 확인)
+		if (!comment.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
+		}
+
 		commentRepository.delete(comment);
+	}
+
+	// 코스 댓글 수정
+	public CommentResponseDto updateComment(Long commentId, Long userId, CommentRequestDto requestDto) {
+
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+		// 인가 검사 (작성자 본인인지 확인)
+		if (!comment.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
+		}
+
+		comment.updateContent(requestDto.getContent());
+
+		return CommentResponseDto.of(comment);
 	}
 
 	private CommentResponseDto toDto(Comment comment) {
