@@ -16,7 +16,7 @@ import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
-import com.example.wherewego.domain.places.service.KakaoPlaceService;
+import com.example.wherewego.domain.places.service.GooglePlaceService;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 장소 검색 API 컨트롤러
  *
- * 외부 API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
+ * 구글 Places API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
  * API 명세에 따른 통합 검색 엔드포인트를 구현합니다.
  */
 @Slf4j
@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PlaceController {
 
-	private final KakaoPlaceService kakaoPlaceService;
+	private final GooglePlaceService googlePlaceService;
 	private final PlaceBookmarkService placeBookmarkService;
 	private final PlaceService placeService;
 
@@ -74,8 +74,8 @@ public class PlaceController {
 				request.getUserLocation().getRadius());
 		}
 
-		// 외부 API 호출
-		List<PlaceDetailResponse> searchResults = kakaoPlaceService.searchPlaces(request);
+		// 외부 API 호출 (구글 Places API)
+		List<PlaceDetailResponse> searchResults = googlePlaceService.searchPlaces(request);
 		log.info("장소 검색 완료 - 총 {}개 결과", searchResults.size());
 
 		return ResponseEntity.ok(

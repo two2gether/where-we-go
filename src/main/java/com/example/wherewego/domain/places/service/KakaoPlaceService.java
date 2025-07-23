@@ -20,7 +20,7 @@ import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.common.enums.ErrorCode;
 
 @Slf4j
-@Service
+// @Service  // 카카오 API 비활성화
 @RequiredArgsConstructor
 public class KakaoPlaceService implements PlaceSearchService {
 
