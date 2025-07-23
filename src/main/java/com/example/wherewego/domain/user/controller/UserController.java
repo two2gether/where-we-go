@@ -46,7 +46,7 @@ public class UserController {
 	) {
 		Long userId = principal.getId();
 
-		MyPageResponseDto dto = userService.MyPage(userId);
+		MyPageResponseDto dto = userService.myPage(userId);
 
 		ApiResponse<MyPageResponseDto> response = ApiResponse.ok(
 			"마이페이지 화면입니다.", dto
