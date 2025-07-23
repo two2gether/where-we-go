@@ -3,13 +3,17 @@ package com.example.wherewego.domain.courses.entity;
 import com.example.wherewego.common.entity.BaseEntity;
 import com.example.wherewego.domain.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "comments")  //댓글
+@AllArgsConstructor
+@Builder
+@Table(name = "comments")
 public class Comment extends BaseEntity {
 
     @Id
@@ -26,13 +30,6 @@ public class Comment extends BaseEntity {
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
-
-
-    public Comment(User user, Course course, String content) {
-        this.user = user;
-        this.course = course;
-        this.content = content;
-    }
 
 
     //수정용

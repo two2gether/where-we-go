@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.user.entity;
 
+import org.springframework.util.StringUtils;
+
 import com.example.wherewego.common.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -45,5 +47,16 @@ public class User extends BaseEntity {
 
 	public void setIsDeleted(boolean isDeleted) {
 		this.isDeleted = isDeleted;
+	}
+
+	public void changePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
+
+	public void updateProfile(String nickname, String profileImage) {
+		this.nickname = nickname;
+		if (StringUtils.hasText(profileImage)) {
+			this.profileImage = profileImage;
+		}
 	}
 }
