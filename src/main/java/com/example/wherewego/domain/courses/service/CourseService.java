@@ -11,9 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
+import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
@@ -67,8 +69,6 @@ public class CourseService {
 		String region = filterDto.getRegion();
 		List<CourseTheme> themes = filterDto.getThemes();
 
-		// Page<Course> coursePage; // Page 객체 생성
-
 		// 2. 조건에 따라 코스 목록 조회
 		// Fetch Join으로 전체 리스트 조회
 		List<Course> courseList;
@@ -92,8 +92,6 @@ public class CourseService {
 
 		// 4. [엔티티 -> 응답 dto 변환] (map 활용)
 		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
-		// Page<CourseListResponseDto> dtoPage = courseList.map(CourseMapper::toList);
-
 		List<CourseListResponseDto> dtoList = paged.stream()
 			.map(CourseMapper::toList)
 			.toList();
@@ -108,9 +106,10 @@ public class CourseService {
 	/**
 	 * 코스 상세 조회 api
 	 */
+	@Transactional(readOnly = true)
 	public CourseDetailResponseDto getCourseDetail(Long courseId) {
 		// 1. 조회
-		Course findCourse = courseRepository.findById(courseId)
+		Course findCourse = courseRepository.findByIdWithThemes(courseId)
 			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
 
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
@@ -121,8 +120,24 @@ public class CourseService {
 	 * 코스 수정 api
 	 */
 	@Transactional
-	public void updateCourseInfo() {
+	public CourseUpdateResponseDto updateCourseInfo(
+		Long courseId,
+		CourseUpdateRequestDto requestDto
+	) {
+		// 1. 수정할 코스 DB 에서 조회.
+		Course findCourse = courseRepository.findById(courseId)
+			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
 
-		return;
+		// 2. 코스 업데이트
+		Course updatedCourse = findCourse.updateCourseInfoFromRequest(
+			requestDto.getTitle(),
+			requestDto.getDescription(),
+			requestDto.getThemes(),
+			requestDto.getRegion(),
+			requestDto.getIsPublic()
+		);
+
+		// 3. dto 반환하기[엔티티 -> 응답 dto 변환]
+		return CourseMapper.toUpdateDto(updatedCourse);
 	}
 }

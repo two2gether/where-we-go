@@ -65,8 +65,6 @@ public class Course extends BaseEntity {
 	 * 코스 테마 (로맨틱, 힐링, 액티비티 등)
 	 */
 	@ElementCollection(fetch = FetchType.LAZY)
-	// -> Lazy로 FetchJoin사용하여 문제해결해야함.
-	// -> EAGER은 임시방편.
 	@Enumerated(EnumType.STRING)
 	@Column(name = "theme", length = 50)
 	private List<CourseTheme> themes;
@@ -132,6 +130,20 @@ public class Course extends BaseEntity {
 	@Column(name = "is_public", nullable = false)
 	@Builder.Default
 	private Boolean isPublic = false;
+
+	/**
+	 * 코스 수정 기능
+	 */
+	public Course updateCourseInfoFromRequest(String title, String description,
+		List<CourseTheme> themes, String region, Boolean isPublic) {
+		this.title = title;
+		this.description = description;
+		this.themes = themes;
+		this.region = region;
+		this.isPublic = (isPublic != null) ? isPublic : false;
+
+		return this;
+	}
 
 	// === 카운트 관련 메서드 ===
 

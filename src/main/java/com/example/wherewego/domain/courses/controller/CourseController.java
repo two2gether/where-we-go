@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
+import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.global.response.ApiResponse;
 import com.example.wherewego.global.response.PagedResponse;
@@ -76,8 +78,12 @@ public class CourseController {
 	 * 코스 수정 api
 	 */
 	@PatchMapping("/{courseId}")
-	public void updateCourse() {
+	public ResponseEntity<ApiResponse<CourseUpdateResponseDto>> updateCourse(
+		@PathVariable Long courseId,
+		@RequestBody @Valid CourseUpdateRequestDto requestDto
+	) {
+		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto);
 
-		return;
+		return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 수정되었습니다.", response));
 	}
 }

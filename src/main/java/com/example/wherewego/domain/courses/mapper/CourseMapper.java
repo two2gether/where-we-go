@@ -4,6 +4,7 @@ import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
 
@@ -60,6 +61,23 @@ public class CourseMapper {
 			.themes(course.getThemes())
 			.likeCount(course.getLikeCount())
 			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.build();
+	}
+
+	public static CourseUpdateResponseDto toUpdateDto(Course course) {
+		return CourseUpdateResponseDto.builder()
+			.courseId(course.getId())
+			.userId(course.getUser().getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.themes(course.getThemes())
+			.region(course.getRegion())
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.viewCount(course.getViewCount())
+			.commentCount(course.getCommentCount())
 			.isPublic(course.getIsPublic())
 			.createdAt(course.getCreatedAt())
 			.build();
