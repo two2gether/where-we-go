@@ -19,8 +19,7 @@ import lombok.NoArgsConstructor;
  *   "regionSummary": "서울 강남구",
  *   "region": {
  *     "depth1": "서울특별시",
- *     "depth2": "강남구",
- *     "depth3": "역삼동"
+ *     "depth2": "강남구"
  *   },
  *   "address": "서울 강남구 강남대로 390",
  *   "roadAddress": null,
@@ -67,6 +66,5 @@ public class PlaceDetailResponse {
 	public static class Region {
 		private String depth1;  // 1단계 행정구역 (시/도)
 		private String depth2;  // 2단계 행정구역 (시/군/구)
-		private String depth3;  // 3단계 행정구역 (읍/면/동)
 	}
 }

@@ -193,7 +193,6 @@ public class KakaoPlaceService implements PlaceSearchService {
 			PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
 				.depth1(document.getRegion1DepthName())
 				.depth2(document.getRegion2DepthName())
-				.depth3(document.getRegion3DepthName())
 				.build();
 			builder.region(region);
 			

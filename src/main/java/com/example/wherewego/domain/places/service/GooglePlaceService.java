@@ -300,30 +300,60 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * 구글 주소에서 지역 정보 추출
+	 * 구글 주소에서 지역 정보 추출 (간소화 버전)
+	 * 
+	 * 띄어쓰기로 split해서 앞의 2개만 사용:
+	 * - "서울특별시 강남구 역삼동 123-45" → depth1: 서울특별시, depth2: 강남구
+	 * - "경기도 성남시 분당구 정자동 178-1" → depth1: 경기도, depth2: 성남시
 	 */
 	private PlaceDetailResponse.Region extractRegionFromAddress(String formattedAddress) {
-		// TODO: 구글 주소 파싱 로직 구현
-		// 예: "서울특별시 강남구 역삼동 123-45" -> depth1: 서울특별시, depth2: 강남구, depth3: 역삼동
-
-		if (formattedAddress == null) {
-			return PlaceDetailResponse.Region.builder()
-				.depth1("알 수 없음")
-				.depth2("알 수 없음")
-				.depth3(null)
-				.build();
+		if (formattedAddress == null || formattedAddress.trim().isEmpty()) {
+			return createDefaultRegion();
 		}
 
-		// 간단한 파싱 (추후 개선 필요)
+		try {
+			log.debug("주소 파싱 시작: {}", formattedAddress);
+			
+			// 주소를 공백으로 분할해서 앞의 2개만 사용
+			String[] addressParts = formattedAddress.trim().split("\\s+");
+			
+			String depth1 = addressParts.length > 0 ? addressParts[0] : "알 수 없음";
+			String depth2 = addressParts.length > 1 ? addressParts[1] : "알 수 없음"; 
+
+			PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
+				.depth1(depth1)
+				.depth2(depth2)
+				.build();
+
+			log.debug("주소 파싱 완료: {} -> depth1={}, depth2={}", 
+				formattedAddress, region.getDepth1(), region.getDepth2());
+			
+			return region;
+
+		} catch (Exception e) {
+			log.error("주소 파싱 중 오류 발생: {}", formattedAddress, e);
+			return createDefaultRegion();
+		}
+	}
+
+
+	/**
+	 * 기본 지역 정보 생성
+	 */
+	private PlaceDetailResponse.Region createDefaultRegion() {
 		return PlaceDetailResponse.Region.builder()
-			.depth1("서울특별시") // TODO: 실제 파싱
-			.depth2("강남구")     // TODO: 실제 파싱
-			.depth3("역삼동")     // TODO: 실제 파싱
+			.depth1("알 수 없음")
+			.depth2("알 수 없음")
 			.build();
 	}
 
 	/**
 	 * 지역 요약 문자열 생성
+	 * 
+	 * 예시:
+	 * - "서울특별시 강남구" -> "서울 강남구"
+	 * - "경기도 성남시" -> "경기 성남시"
+	 * - "부산광역시 해운대구" -> "부산 해운대구"
 	 */
 	private String generateRegionSummary(PlaceDetailResponse.Region region) {
 		if (region == null) {
@@ -332,20 +362,39 @@ public class GooglePlaceService implements PlaceSearchService {
 
 		StringBuilder summary = new StringBuilder();
 
-		if (region.getDepth1() != null) {
-			// "서울특별시" -> "서울"로 단순화
-			String depth1 = region.getDepth1().replace("특별시", "").replace("광역시", "");
+		// depth1 처리 (시/도 단순화)
+		if (region.getDepth1() != null && !"알 수 없음".equals(region.getDepth1())) {
+			String depth1 = simplifyProvinceName(region.getDepth1());
 			summary.append(depth1);
 		}
 
-		if (region.getDepth2() != null) {
+		// depth2 처리 (시/군/구)
+		if (region.getDepth2() != null && !"알 수 없음".equals(region.getDepth2())) {
 			if (summary.length() > 0) {
 				summary.append(" ");
 			}
 			summary.append(region.getDepth2());
 		}
 
-		return summary.toString();
+		// 결과가 비어있으면 기본값 반환
+		String result = summary.toString().trim();
+		return result.isEmpty() ? "알 수 없음" : result;
+	}
+
+	/**
+	 * 시/도명 단순화
+	 */
+	private String simplifyProvinceName(String provinceName) {
+		if (provinceName == null) {
+			return "";
+		}
+
+		return provinceName
+			.replace("특별시", "")
+			.replace("광역시", "")
+			.replace("특별자치시", "")
+			.replace("특별자치도", "")
+			.replace("도", "");
 	}
 
 	// 유틸리티 메서드들

@@ -75,8 +75,6 @@ public class PlaceSearchRequest {
 		@Size(max = 50, message = "2단계 행정구역은 50자 이하여야 합니다")
 		private String depth2;
 
-		@Size(max = 50, message = "3단계 행정구역은 50자 이하여야 합니다")
-		private String depth3;
 	}
 
 	/**
