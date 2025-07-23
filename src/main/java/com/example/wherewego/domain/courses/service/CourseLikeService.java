@@ -28,11 +28,11 @@ public class CourseLikeService {
         if(likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
             throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
         }
-        // 코스 테이블의 좋아요 수(like_count) +1
-        course.incrementLikeCount();
         // 레파지토리 저장
         Like like = new Like(user, course);
         Like savedLike = likeRepository.save(like);
+        // 코스 테이블의 좋아요 수(like_count) +1
+        course.incrementLikeCount();
         // 반환
         return new CourseLikeResponseDto(
                 savedLike.getId(),
@@ -45,11 +45,11 @@ public class CourseLikeService {
     public void courseLikeDelete(Long userId, Long courseId) {
         // 좋아요 존재 검사
         Like like = likeRepository.findByUserIdAndCourseId(userId, courseId).orElseThrow(() -> new CustomException(ErrorCode.LIKE_NOT_FOUND));
+        // hard delete
+        likeRepository.delete(like);
         // 코스 테이블의 좋아요 수(like_count) -1
         Course course = courseService.getCourseById(courseId);
         course.decrementLikeCount();
-        // hard delete
-        likeRepository.delete(like);
     }
 
     // TODO 사용되지 않으면 삭제 예정
