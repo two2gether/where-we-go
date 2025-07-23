@@ -44,43 +44,31 @@ public class GooglePlaceService implements PlaceSearchService {
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
 		log.info("구글 장소 검색 시작 - 키워드: {}", request.getQuery());
 
-		try {
-			// 구글 Text Search API 호출
-			GooglePlaceResponse googleResponse = callTextSearchApi(request);
+		// 구글 Text Search API 호출
+		GooglePlaceResponse googleResponse = callTextSearchApi(request);
 
-			if (googleResponse == null || googleResponse.getResults() == null) {
-				log.warn("구글 API 응답이 비어있습니다");
-				return Collections.emptyList();
-			}
-
-			// 검색 결과를 PlaceDetailResponse로 변환
-			Double userLat = getUserLatitude(request);
-			Double userLon = getUserLongitude(request);
-
-			List<PlaceDetailResponse> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
-
-			log.info("구글 장소 검색 완료 - 결과 수: {}", results.size());
-			return results;
-
-		} catch (Exception e) {
-			log.error("구글 장소 검색 중 오류 발생", e);
-			throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+		if (googleResponse == null || googleResponse.getResults() == null) {
+			log.warn("구글 API 응답이 비어있습니다");
+			return Collections.emptyList();
 		}
+
+		// 검색 결과를 PlaceDetailResponse로 변환
+		Double userLat = getUserLatitude(request);
+		Double userLon = getUserLongitude(request);
+
+		List<PlaceDetailResponse> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
+
+		log.info("구글 장소 검색 완료 - 결과 수: {}", results.size());
+		return results;
 	}
 
 	@Override
 	public PlaceDetailResponse getPlaceDetail(String placeId) {
 		log.info("구글 장소 상세 조회 시작 - placeId: {}", placeId);
 
-		try {
-			// TODO: Place Details API 호출 구현
-			log.warn("Place Details API 구현 예정");
-			return null;
-
-		} catch (Exception e) {
-			log.error("구글 장소 상세 조회 중 오류 발생", e);
-			throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
-		}
+		// TODO: Place Details API 호출 구현
+		log.warn("Place Details API 구현 예정");
+		return null;
 	}
 
 	/**
@@ -89,56 +77,60 @@ public class GooglePlaceService implements PlaceSearchService {
 	private GooglePlaceResponse callTextSearchApi(PlaceSearchRequest request) {
 		log.debug("구글 Text Search API 호출 시작");
 
-		try {
-			return googleWebClient.get()
-				.uri(uriBuilder -> {
-					uriBuilder.path(TEXT_SEARCH_ENDPOINT)
-						.queryParam("query", request.getQuery())
-						.queryParam("key", googleApiKey);
+		return googleWebClient.get()
+			.uri(uriBuilder -> {
+				uriBuilder.path(TEXT_SEARCH_ENDPOINT)
+					.queryParam("query", request.getQuery())
+					.queryParam("key", googleApiKey);
 
-					// 위치 기반 검색 파라미터 추가
-					if (request.getUserLocation() != null) {
-						Double lat = request.getUserLocation().getLatitude();
-						Double lng = request.getUserLocation().getLongitude();
-						Integer radius = request.getUserLocation().getRadius();
+				// 위치 기반 검색 파라미터 추가
+				if (request.getUserLocation() != null) {
+					Double lat = request.getUserLocation().getLatitude();
+					Double lng = request.getUserLocation().getLongitude();
+					Integer radius = request.getUserLocation().getRadius();
 
-						if (lat != null && lng != null) {
-							// location bias 추가 (검색 결과 우선순위)
-							uriBuilder.queryParam("location", lat + "," + lng);
+					if (lat != null && lng != null) {
+						// location bias 추가 (검색 결과 우선순위)
+						uriBuilder.queryParam("location", lat + "," + lng);
 
-							if (radius != null && radius > 0) {
-								// 반경 설정 (미터 단위, 최대 50000m)
-								int limitedRadius = Math.min(radius, 50000);
-								uriBuilder.queryParam("radius", limitedRadius);
-							}
+						if (radius != null && radius > 0) {
+							// 반경 설정 (미터 단위, 최대 50000m)
+							int limitedRadius = Math.min(radius, 50000);
+							uriBuilder.queryParam("radius", limitedRadius);
 						}
 					}
+				}
 
-					// 언어 설정 (한국어)
-					uriBuilder.queryParam("language", "ko");
+				// 언어 설정 (한국어)
+				uriBuilder.queryParam("language", "ko");
 
-					// 지역 설정 (한국)
-					uriBuilder.queryParam("region", "kr");
+				// 지역 설정 (한국)
+				uriBuilder.queryParam("region", "kr");
 
-					return uriBuilder.build();
-				})
-				.retrieve()
-				.bodyToMono(GooglePlaceResponse.class)
-				.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
-				.doOnSuccess(response -> {
-					if (response != null) {
-						log.debug("구글 API 호출 성공 - 상태: {}, 결과수: {}",
-							response.getStatus(),
-							response.getResults() != null ? response.getResults().size() : 0);
-					}
-				})
-				.doOnError(error -> log.error("구글 API 호출 실패", error))
-				.block();
-
-		} catch (Exception e) {
-			log.error("구글 Text Search API 호출 중 오류", e);
-			throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
-		}
+				return uriBuilder.build();
+			})
+			.retrieve()
+			.bodyToMono(GooglePlaceResponse.class)
+			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
+			.doOnSuccess(response -> {
+				if (response != null) {
+					log.debug("구글 API 호출 성공 - 상태: {}, 결과수: {}",
+						response.getStatus(),
+						response.getResults() != null ? response.getResults().size() : 0);
+				}
+			})
+			.doOnError(error -> {
+				log.error("구글 API 호출 실패", error);
+				throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+			})
+			.onErrorMap(throwable -> {
+				if (throwable instanceof CustomException) {
+					return throwable;
+				}
+				log.error("구글 Text Search API 호출 중 예상치 못한 오류", throwable);
+				return new CustomException(ErrorCode.EXTERNAL_API_ERROR);
+			})
+			.block();
 	}
 
 	/**
@@ -164,48 +156,42 @@ public class GooglePlaceService implements PlaceSearchService {
 	private PlaceDetailResponse convertToPlaceDetailResponse(
 		GooglePlaceResponse.PlaceResult result, Double userLat, Double userLon) {
 
-		try {
-			PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
-				.placeId(result.getPlaceId())
-				.name(result.getName())
-				.category(extractCategory(result.getTypes()))
-				.address(result.getFormattedAddress())
-				.roadAddress(null) // 구글은 roadAddress 구분 없음
-				.phone(null) // Text Search에는 전화번호 없음 (Details에서 가져와야 함)
-				.latitude(getLatitudeFromGeometry(result))
-				.longitude(getLongitudeFromGeometry(result))
-				.averageRating(0.0) // 우리 서비스 평점 (추후 계산)
-				.reviewCount(0) // 우리 서비스 리뷰 수 (추후 계산)
-				.googleRating(result.getRating()) // 구글 평점
-				.placeUrl(null) // Text Search에는 URL 없음
-				.bookmarkCount(0) // 추후 계산
-				.isBookmarked(false); // 추후 계산
+		PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
+			.placeId(result.getPlaceId())
+			.name(result.getName())
+			.category(extractCategory(result.getTypes()))
+			.address(result.getFormattedAddress())
+			.roadAddress(null) // 구글은 roadAddress 구분 없음
+			.phone(null) // Text Search에는 전화번호 없음 (Details에서 가져와야 함)
+			.latitude(getLatitudeFromGeometry(result))
+			.longitude(getLongitudeFromGeometry(result))
+			.averageRating(0.0) // 우리 서비스 평점 (추후 계산)
+			.reviewCount(0) // 우리 서비스 리뷰 수 (추후 계산)
+			.googleRating(result.getRating()) // 구글 평점
+			.placeUrl(null) // Text Search에는 URL 없음
+			.bookmarkCount(0) // 추후 계산
+			.isBookmarked(false); // 추후 계산
 
-			// 거리 계산
-			if (userLat != null && userLon != null) {
-				Double placeLat = getLatitudeFromGeometry(result);
-				Double placeLon = getLongitudeFromGeometry(result);
+		// 거리 계산
+		if (userLat != null && userLon != null) {
+			Double placeLat = getLatitudeFromGeometry(result);
+			Double placeLon = getLongitudeFromGeometry(result);
 
-				if (placeLat != null && placeLon != null) {
-					int distance = calculateDistance(userLat, userLon, placeLat, placeLon);
-					builder.distance(distance);
-				}
+			if (placeLat != null && placeLon != null) {
+				int distance = calculateDistance(userLat, userLon, placeLat, placeLon);
+				builder.distance(distance);
 			}
-
-			// 지역 정보 설정 (구글 formatted_address에서 추출)
-			PlaceDetailResponse.Region region = extractRegionFromAddress(result.getFormattedAddress());
-			builder.region(region);
-
-			// 지역 요약 생성
-			String regionSummary = generateRegionSummary(region);
-			builder.regionSummary(regionSummary);
-
-			return builder.build();
-
-		} catch (Exception e) {
-			log.error("PlaceDetailResponse 변환 중 오류 - placeId: {}", result.getPlaceId(), e);
-			return null;
 		}
+
+		// 지역 정보 설정 (구글 formatted_address에서 추출)
+		PlaceDetailResponse.Region region = extractRegionFromAddress(result.getFormattedAddress());
+		builder.region(region);
+
+		// 지역 요약 생성
+		String regionSummary = generateRegionSummary(region);
+		builder.regionSummary(regionSummary);
+
+		return builder.build();
 	}
 
 	/**
@@ -311,29 +297,23 @@ public class GooglePlaceService implements PlaceSearchService {
 			return createDefaultRegion();
 		}
 
-		try {
-			log.debug("주소 파싱 시작: {}", formattedAddress);
-			
-			// 주소를 공백으로 분할해서 앞의 2개만 사용
-			String[] addressParts = formattedAddress.trim().split("\\s+");
-			
-			String depth1 = addressParts.length > 0 ? addressParts[0] : "알 수 없음";
-			String depth2 = addressParts.length > 1 ? addressParts[1] : "알 수 없음"; 
+		log.debug("주소 파싱 시작: {}", formattedAddress);
+		
+		// 주소를 공백으로 분할해서 앞의 2개만 사용
+		String[] addressParts = formattedAddress.trim().split("\\s+");
+		
+		String depth1 = addressParts.length > 0 ? addressParts[0] : "알 수 없음";
+		String depth2 = addressParts.length > 1 ? addressParts[1] : "알 수 없음"; 
 
-			PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
-				.depth1(depth1)
-				.depth2(depth2)
-				.build();
+		PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
+			.depth1(depth1)
+			.depth2(depth2)
+			.build();
 
-			log.debug("주소 파싱 완료: {} -> depth1={}, depth2={}", 
-				formattedAddress, region.getDepth1(), region.getDepth2());
-			
-			return region;
-
-		} catch (Exception e) {
-			log.error("주소 파싱 중 오류 발생: {}", formattedAddress, e);
-			return createDefaultRegion();
-		}
+		log.debug("주소 파싱 완료: {} -> depth1={}, depth2={}", 
+			formattedAddress, region.getDepth1(), region.getDepth2());
+		
+		return region;
 	}
 
 
