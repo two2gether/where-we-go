@@ -46,7 +46,7 @@ public class UserService {
 	}
 
 	@Transactional
-	public MyPageResponseDto MyPage(Long userId) {
+	public MyPageResponseDto myPage(Long userId) {
 		User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		return MyPageResponseDto.builder()
