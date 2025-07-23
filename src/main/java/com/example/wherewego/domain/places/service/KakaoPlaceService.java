@@ -147,15 +147,6 @@ public class KakaoPlaceService implements PlaceSearchService {
 		return null;
 	}
 
-	@Override
-	public String getProviderName() {
-		return "kakao";
-	}
-
-	@Override
-	public Boolean isServiceAvailable() {
-		return true;
-	}
 
 	/**
 	 * 카카오  API 응답을 내부 DTO로 변환

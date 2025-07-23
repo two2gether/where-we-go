@@ -28,22 +28,8 @@ public interface PlaceSearchService {
     /**
      * 특정 장소의 상세 정보 조회
      * 
-     * @param placeId 장소 ID (카카오 API place_id)
+     * @param placeId 장소 ID (구글/카카오 API place_id)
      * @return 장소 상세 정보
      */
     PlaceDetailResponse getPlaceDetail(String placeId);
-
-    /**
-     * 서비스 제공자 정보 반환
-     * 
-     * @return API 제공자명 ("kakao", "naver" 등)
-     */
-    String getProviderName();
-
-    /**
-     * 서비스 가용성 확인
-     * 
-     * @return 서비스 사용 가능 여부
-     */
-    Boolean isServiceAvailable();
 }
