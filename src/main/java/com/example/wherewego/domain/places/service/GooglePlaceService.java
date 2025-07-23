@@ -30,15 +30,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class GooglePlaceService implements PlaceSearchService {
 
-	private final WebClient googleWebClient;
-
-	@Value("${google.api.key}")
-	private String googleApiKey;
-
 	// API 엔드포인트 상수
 	private static final String TEXT_SEARCH_ENDPOINT = "/textsearch/json";
 	private static final String PLACE_DETAILS_ENDPOINT = "/details/json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
+	private final WebClient googleWebClient;
+	@Value("${google.api.key}")
+	private String googleApiKey;
 
 	@Override
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
@@ -287,7 +285,7 @@ public class GooglePlaceService implements PlaceSearchService {
 
 	/**
 	 * 구글 주소에서 지역 정보 추출 (간소화 버전)
-	 * 
+	 *
 	 * 띄어쓰기로 split해서 앞의 2개만 사용:
 	 * - "서울특별시 강남구 역삼동 123-45" → depth1: 서울특별시, depth2: 강남구
 	 * - "경기도 성남시 분당구 정자동 178-1" → depth1: 경기도, depth2: 성남시
@@ -298,24 +296,23 @@ public class GooglePlaceService implements PlaceSearchService {
 		}
 
 		log.debug("주소 파싱 시작: {}", formattedAddress);
-		
+
 		// 주소를 공백으로 분할해서 앞의 2개만 사용
 		String[] addressParts = formattedAddress.trim().split("\\s+");
-		
+
 		String depth1 = addressParts.length > 0 ? addressParts[0] : "알 수 없음";
-		String depth2 = addressParts.length > 1 ? addressParts[1] : "알 수 없음"; 
+		String depth2 = addressParts.length > 1 ? addressParts[1] : "알 수 없음";
 
 		PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
 			.depth1(depth1)
 			.depth2(depth2)
 			.build();
 
-		log.debug("주소 파싱 완료: {} -> depth1={}, depth2={}", 
+		log.debug("주소 파싱 완료: {} -> depth1={}, depth2={}",
 			formattedAddress, region.getDepth1(), region.getDepth2());
-		
+
 		return region;
 	}
-
 
 	/**
 	 * 기본 지역 정보 생성
@@ -329,7 +326,7 @@ public class GooglePlaceService implements PlaceSearchService {
 
 	/**
 	 * 지역 요약 문자열 생성
-	 * 
+	 *
 	 * 예시:
 	 * - "서울특별시 강남구" -> "서울 강남구"
 	 * - "경기도 성남시" -> "경기 성남시"
