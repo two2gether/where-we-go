@@ -72,6 +72,7 @@ public class GooglePlaceService implements PlaceSearchService {
 	/**
 	 * 구글 Text Search API 호출
 	 */
+	// query = "광화문" & key = "
 	private GooglePlaceResponse callTextSearchApi(PlaceSearchRequest request) {
 		log.debug("구글 Text Search API 호출 시작");
 
