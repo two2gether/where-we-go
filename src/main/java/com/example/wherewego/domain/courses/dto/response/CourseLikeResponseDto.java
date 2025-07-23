@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.dto;
+package com.example.wherewego.domain.courses.dto.response;
 
 import lombok.Getter;
 

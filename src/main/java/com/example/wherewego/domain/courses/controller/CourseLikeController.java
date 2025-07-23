@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.courses.controller;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.courses.dto.CourseLikeResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseLikeResponseDto;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,8 @@ public class CourseLikeController {
             @AuthenticationPrincipal CustomUserDetail userDetails
     ) {
         Long userId = userDetails.getUser().getId();
-        CourseLikeResponseDto dto = likeService.courseLikeCeate(userId, courseId);
-        return new ResponseEntity<>(ApiResponse.ok( "좋아요가 등록되었습니다.", dto), HttpStatus.CREATED);
+        CourseLikeResponseDto response = likeService.courseLikeCeate(userId, courseId);
+        return new ResponseEntity<>(ApiResponse.ok( "좋아요가 등록되었습니다.", response), HttpStatus.CREATED);
     }
 
     // 코스 좋아요 삭제
