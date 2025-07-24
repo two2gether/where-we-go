@@ -2,6 +2,7 @@ package com.example.wherewego.domain.courses.mapper;
 
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
@@ -80,6 +81,13 @@ public class CourseMapper {
 			.commentCount(course.getCommentCount())
 			.isPublic(course.getIsPublic())
 			.createdAt(course.getCreatedAt())
+			.build();
+	}
+
+	public static CourseDeleteResponseDto toDeleteResponseDto(Course course) {
+		return CourseDeleteResponseDto.builder()
+			.courseId(course.getId())
+			.deletedAt(course.getDeletedAt())
 			.build();
 	}
 }

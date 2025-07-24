@@ -13,6 +13,7 @@ import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
@@ -140,4 +141,27 @@ public class CourseService {
 		// 3. dto 반환하기[엔티티 -> 응답 dto 변환]
 		return CourseMapper.toUpdateDto(updatedCourse);
 	}
+
+	/**
+	 * 코스 삭제 api
+	 */
+	@Transactional
+	public CourseDeleteResponseDto deleteCourseById(
+		Long courseId,
+		Long userId
+	) {
+		// 1. 코스 조회하기
+		Course findCourse = courseRepository.findById(courseId)
+			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
+
+		// 2. 사용자 권한 체크 - 본인 코스만 삭제할 수 있게
+		if (!findCourse.getUser().getId().equals(userId)) {
+			throw new IllegalArgumentException("본인의 코스만 삭제할 수 있습니다.");
+		}
+
+		findCourse.softDelete();
+
+		return CourseMapper.toDeleteResponseDto(findCourse);
+	}
+
 }

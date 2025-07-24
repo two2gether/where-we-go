@@ -18,6 +18,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		    LEFT JOIN FETCH c.themes t
 		    WHERE c.region = :region
 		      AND c.isPublic = true
+			  AND c.isDeleted = false
 		      AND t IN (:themes)
 		""")
 	List<Course> findByRegionAndThemesInAndIsPublicTrue(
@@ -30,6 +31,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		    SELECT DISTINCT c FROM Course c
 		    LEFT JOIN FETCH c.themes
 		    WHERE c.region = :region
+			  AND c.isDeleted = false
 		      AND c.isPublic = true
 		""")
 	List<Course> findByRegionAndIsPublicTrue(@Param("region") String region);
@@ -38,6 +40,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes
 		    WHERE c.id = :courseId
+		            AND c.isDeleted = false
 		""")
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
 }
