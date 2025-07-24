@@ -15,7 +15,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
 	//특정 코스에 대한 댓글 목록 최신순 조회
 	@Query("SELECT c FROM Comment c WHERE c.course.id = :courseId ORDER BY c.createdAt DESC")
-	@EntityGraph(attributePaths = {"user", "course"})
+	@EntityGraph(attributePaths = {"user"})
 	Page<Comment> findAllByCourseIdOrderByCreatedAtDesc(@Param("courseId") Long courseId, Pageable pageable);
 
 }

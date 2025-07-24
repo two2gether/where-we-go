@@ -46,6 +46,13 @@ public class CommentService {
 				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
 			});
 
+		// 비공개 코스일 경우, 작성자가 아닌 유저는 댓글 작성 불가
+		if (Boolean.FALSE.equals(course.getIsPublic()) && !course.getUser().getId().equals(userId)) {
+			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",
+				courseId, course.getUser().getId(), userId);
+			throw new CustomException(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE);
+		}
+
 		Comment comment = Comment.builder()
 			.content(requestDto.getContent())
 			.user(user)
