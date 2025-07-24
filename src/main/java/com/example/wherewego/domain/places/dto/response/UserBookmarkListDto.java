@@ -47,23 +47,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class UserBookmarkListDto {
-    
-    private List<BookmarkItem> content;
-    private Long totalElements;
-    private Integer totalPages;
-    private Integer size;
-    private Integer number;
-    
-    /**
-     * 북마크 아이템 DTO
-     */
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class BookmarkItem {
-        private Long bookmarkId;
-        private PlaceDetailResponse place;
-        private LocalDateTime createdAt;
-    }
+
+	private List<BookmarkItem> content;
+	private Long totalElements;
+	private Integer totalPages;
+	private Integer size;
+	private Integer number;
+
+	/**
+	 * 북마크 아이템 DTO
+	 */
+	@Getter
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class BookmarkItem {
+		private Long bookmarkId;
+		private PlaceDetailResponse place;
+		private LocalDateTime createdAt;
+	}
 }

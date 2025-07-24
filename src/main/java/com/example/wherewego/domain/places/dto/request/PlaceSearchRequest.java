@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.places.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -59,7 +58,6 @@ public class PlaceSearchRequest {
 
 	private String sort;
 
-
 	/**
 	 * 지역 정보를 담는 내부 클래스
 	 */
@@ -75,8 +73,6 @@ public class PlaceSearchRequest {
 		@Size(max = 50, message = "2단계 행정구역은 50자 이하여야 합니다")
 		private String depth2;
 
-		@Size(max = 50, message = "3단계 행정구역은 50자 이하여야 합니다")
-		private String depth3;
 	}
 
 	/**
