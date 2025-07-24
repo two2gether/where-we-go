@@ -6,26 +6,26 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
+import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.KakaoPlaceResponse;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Service
+// @Service  // 카카오 API 비활성화
 @RequiredArgsConstructor
 public class KakaoPlaceService implements PlaceSearchService {
 
-	private final WebClient kakaoWebClient;
-
 	private static final String SEARCH_ENDPOINT = "/v2/local/search/keyword.json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
+	private final WebClient kakaoWebClient;
 
 	@Override
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
@@ -38,9 +38,9 @@ public class KakaoPlaceService implements PlaceSearchService {
 				sort = request.getSort();
 			} else {
 				// 위치 정보가 있으면 distance, 없으면 accuracy 사용
-				sort = (request.getUserLocation() != null && 
-						request.getUserLocation().getLatitude() != null && 
-						request.getUserLocation().getLongitude() != null) ? "distance" : "accuracy";
+				sort = (request.getUserLocation() != null &&
+					request.getUserLocation().getLatitude() != null &&
+					request.getUserLocation().getLongitude() != null) ? "distance" : "accuracy";
 			}
 
 			// pagination 설정
@@ -104,7 +104,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 				kakaoResponse = objectMapper.readValue(rawJsonResponse, KakaoPlaceResponse.class);
 			} catch (Exception e) {
 				log.error("JSON 파싱 에러: {}", e.getMessage());
-				return Collections.emptyList();
+				throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
 			}
 
 			// 🔍 실제 API 응답 확인용 로그
@@ -128,9 +128,12 @@ public class KakaoPlaceService implements PlaceSearchService {
 
 			return convertToPlaceDetailResponses(kakaoResponse, userLat,
 				userLon);
+		} catch (CustomException e) {
+			// 이미 처리된 예외는 그대로 재전파
+			throw e;
 		} catch (Exception e) {
 			log.error("카카오 API 호출 실패", e);
-			return Collections.emptyList();
+			throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
 		}
 	}
 
@@ -140,16 +143,6 @@ public class KakaoPlaceService implements PlaceSearchService {
 		// 현재는 검색 API를 통해서만 장소 정보 조회
 		log.debug("단일 장소 상세 조회 - placeId: {}", placeId);
 		return null;
-	}
-
-	@Override
-	public String getProviderName() {
-		return "kakao";
-	}
-
-	@Override
-	public Boolean isServiceAvailable() {
-		return true;
 	}
 
 	/**
@@ -167,16 +160,14 @@ public class KakaoPlaceService implements PlaceSearchService {
 			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
 
-
-
 	}
 
 	/**
 	 * 개별 장소 문서를 내부 DTO로 변환
 	 */
 	private PlaceDetailResponse convertToPlaceDetailResponse(
-			KakaoPlaceResponse.PlaceDocument document, Double userLat, Double userLon) {
-		
+		KakaoPlaceResponse.PlaceDocument document, Double userLat, Double userLon) {
+
 		try {
 			PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
 				.placeId(document.getId())  // 카카오 API place_id 직접 사용
@@ -192,43 +183,41 @@ public class KakaoPlaceService implements PlaceSearchService {
 				.reviewCount(0)     // 기본값, 통계 없을 때
 				.bookmarkCount(0)
 				.isBookmarked(false);
-				
+
 			// 지역 정보 매핑
 			PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
 				.depth1(document.getRegion1DepthName())
 				.depth2(document.getRegion2DepthName())
-				.depth3(document.getRegion3DepthName())
 				.build();
 			builder.region(region);
-			
+
 			// regionSummary 생성 (예: "서울 강남구")
 			String regionSummary = generateRegionSummary(
-					document.getRegion1DepthName(), 
-					document.getRegion2DepthName()
+				document.getRegion1DepthName(),
+				document.getRegion2DepthName()
 			);
 			builder.regionSummary(regionSummary);
-			
+
 			// 거리 계산
-			if (userLat != null && userLon != null && 
+			if (userLat != null && userLon != null &&
 				document.getLatitude() != null && document.getLongitude() != null) {
-				
+
 				Double placeLat = parseDouble(document.getLatitude());
 				Double placeLon = parseDouble(document.getLongitude());
-				
+
 				if (placeLat != null && placeLon != null) {
 					Integer distance = calculateDistance(userLat, userLon, placeLat, placeLon);
 					builder.distance(distance);
 				}
 			}
-			
+
 			return builder.build();
-			
+
 		} catch (Exception e) {
 			log.warn("장소 변환 실패 - ID: {}, 이름: {}", document.getId(), document.getPlaceName(), e);
 			return null;
 		}
 	}
-
 
 	/**
 	 * 문자열을 Double로 안전하게 변환
@@ -249,10 +238,10 @@ public class KakaoPlaceService implements PlaceSearchService {
 		if (depth1 == null && depth2 == null) {
 			return "";
 		}
-		
+
 		// "특별시", "광역시", "도" 등 제거하고 간단하게 표시
 		String simplifiedDepth1 = simplifyRegionName(depth1);
-		
+
 		if (simplifiedDepth1 != null && depth2 != null) {
 			return simplifiedDepth1 + " " + depth2;
 		} else if (simplifiedDepth1 != null) {
@@ -261,7 +250,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 			return depth2;
 		}
 	}
-	
+
 	/**
 	 * 지역명 단순화 (서울특별시 → 서울)
 	 */
@@ -269,7 +258,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 		if (regionName == null) {
 			return null;
 		}
-		
+
 		return regionName
 			.replace("특별시", "")
 			.replace("광역시", "")
@@ -284,24 +273,24 @@ public class KakaoPlaceService implements PlaceSearchService {
 	 */
 	private Integer calculateDistance(double userLat, double userLon, double placeLat, double placeLon) {
 		final double EARTH_RADIUS = 6371000; // 지구 반지름 (미터)
-		
+
 		// 라디안으로 변환
 		double dLat = Math.toRadians(placeLat - userLat);
 		double dLon = Math.toRadians(placeLon - userLon);
-		
+
 		double lat1Rad = Math.toRadians(userLat);
 		double lat2Rad = Math.toRadians(placeLat);
-		
+
 		// Haversine 공식 적용
-		double a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-				   Math.cos(lat1Rad) * Math.cos(lat2Rad) * 
-				   Math.sin(dLon/2) * Math.sin(dLon/2);
-				   
-		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-		
+		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+				Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
 		// 거리 계산 (미터 단위)
 		double distance = EARTH_RADIUS * c;
-		
-		return (int) Math.round(distance);
+
+		return (int)Math.round(distance);
 	}
 }

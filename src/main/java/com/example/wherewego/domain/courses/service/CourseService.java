@@ -5,6 +5,9 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.entity.Rating;
+import com.example.wherewego.global.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -163,5 +166,4 @@ public class CourseService {
 
 		return CourseMapper.toDeleteResponseDto(findCourse);
 	}
-
 }
