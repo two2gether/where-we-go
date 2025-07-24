@@ -125,6 +125,22 @@ public class PlaceBookmarkService {
 	}
 
 	/**
+	 * 북마크 제거
+	 */
+	@Transactional
+	public void removeBookmark(Long userId, String placeId) {
+		log.debug("북마크 제거 - userId: {}, placeId: {}", userId, placeId);
+
+		// 북마크 존재 확인 및 조회
+		PlaceBookmark bookmark = placeBookmarkRepository.findByUserIdAndPlaceId(userId, placeId)
+			.orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_NOT_FOUND));
+
+		// 북마크 삭제
+		placeBookmarkRepository.delete(bookmark);
+		log.info("북마크 제거 완료 - bookmarkId: {}", bookmark.getId());
+	}
+
+	/**
 	 * 특정 사용자의 특정 장소 북마크 여부 확인
 	 */
 	public boolean isBookmarked(Long userId, String placeId) {

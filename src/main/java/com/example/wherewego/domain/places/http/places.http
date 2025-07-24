@@ -25,13 +25,18 @@ Content-Type: application/json
     }
 %}
 
-### 장소 검색 테스트
+### 장소 검색 테스트 (한국 스타벅스 강남 지역 검색)
 POST http://localhost:8080/api/places/search
 Content-Type: application/json
 Authorization: {{token}}
 
 {
-  "query": "스타벅스"
+  "query": "스타벅스 강남구청정문점",
+  "userLocation": {
+    "latitude": 37.498011,
+    "longitude": 127.020102,
+    "radius": 2000
+  }
 }
 
 > {%
@@ -62,16 +67,16 @@ Authorization: {{token}}
 GET http://localhost:8080/api/places/users/bookmarks?page=1&size=5
 Authorization: {{token}}
 
+### 북마크 제거 (placeId 자동 사용)
+DELETE http://localhost:8080/api/places/{{placeId}}/bookmark
+Authorization: {{token}}
+
 ### ================================
 ### 단일 장소 상세 조회 테스트 (Place Details API)
 ### ================================
 
-### 장소 상세 조회 (placeId 직접 입력 - 스타벅스 강남점 예시)
-GET http://localhost:8080/api/places/ChIJN1t_tDeuEmsRUsoyG83frY4/details
-Authorization: {{token}}
-
-### 장소 상세 조회 (다른 placeId 테스트)
-GET http://localhost:8080/api/places/ChIJgUbEo8cfqTUR5lP9_Wh_DaM/details
+### 장소 상세 조회 (실제 한국 스타벅스 - 스타벅스 강남구청정문점)
+GET http://localhost:8080/api/places/ChIJn6Nu-3OkfDURFidBwPXoZ5A/details
 Authorization: {{token}}
 
 ### 장소 상세 조회 (검색에서 저장된 placeId 사용)

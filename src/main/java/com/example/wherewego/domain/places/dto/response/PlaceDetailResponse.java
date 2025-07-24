@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.places.dto.response;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -58,6 +59,7 @@ public class PlaceDetailResponse {
 	private String placeUrl;           // 구글 맵스 URL
 	private Integer bookmarkCount;     // 총 북마크 수
 	private Boolean isBookmarked;      // 현재 사용자 북마크 여부
+	private String photo;              // 장소 대표 사진 URL
 
 	@Getter
 	@NoArgsConstructor

@@ -112,6 +112,10 @@ public class GooglePlaceService implements PlaceSearchService {
 			builder.regionSummary(regionSummary);
 		}
 
+		// 사진 정보 추출
+		String photoUrl = extractPhotoUrl(detail.getPhotos());
+		builder.photo(photoUrl);
+
 		return builder.build();
 	}
 
@@ -234,6 +238,39 @@ public class GooglePlaceService implements PlaceSearchService {
 
 		String result = summary.toString().trim();
 		return result.isEmpty() ? "" : result;
+	}
+
+	/**
+	 * Google Places API 사진 정보를 URL로 변환 (비용생각해서 1개만)
+	 */
+	private String extractPhotoUrl(List<GooglePlaceResponse.Photo> photos) {
+		if (photos == null || photos.isEmpty()) {
+			return null;
+		}
+
+		// 첫 번째 사진만 사용
+		String photoReference = photos.get(0).getPhotoReference();
+		return buildPhotoUrl(photoReference);
+	}
+
+	/**
+	 * Google Places Photos API URL 생성
+	 *
+	 * @param photoReference Google API에서 제공하는 사진 참조값
+	 * @return 실제 사진을 볼 수 있는 URL
+	 */
+	private String buildPhotoUrl(String photoReference) {
+		if (photoReference == null || photoReference.trim().isEmpty()) {
+			return null;
+		}
+
+		// Google Places Photos API 사용
+		// 참고: https://developers.google.com/maps/documentation/places/web-service/photos
+		return String.format(
+			"https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=%s&key=%s",
+			photoReference,
+			googleApiKey
+		);
 	}
 
 	/**
@@ -450,6 +487,10 @@ public class GooglePlaceService implements PlaceSearchService {
 		// 지역 요약 생성
 		String regionSummary = generateRegionSummary(region);
 		builder.regionSummary(regionSummary);
+
+		// 사진 정보 추가 (Text Search의 경우 제한적)
+		String photoUrl = extractPhotoUrl(result.getPhotos());
+		builder.photo(photoUrl);
 
 		return builder.build();
 	}
