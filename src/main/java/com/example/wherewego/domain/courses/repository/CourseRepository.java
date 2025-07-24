@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.courses.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,4 +44,24 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		            AND c.isDeleted = false
 		""")
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
+
+	@Query("""
+			SELECT c
+			FROM Course c
+			LEFT JOIN c.bookmarks b
+			WHERE c.region = :region
+			  AND (:themes IS NULL OR EXISTS (
+				SELECT t FROM Course c2 JOIN c2.themes t
+				WHERE c2.id = c.id AND t IN :themes
+			  ))
+			  AND c.isPublic = true
+			  AND (b.createdAt >= :startOfMonth OR b.id IS NULL)
+			GROUP BY c.id
+			ORDER BY COUNT(b.id) DESC
+		""")
+	List<Course> findPopularCoursesByMonth(
+		@Param("region") String region,
+		@Param("themes") List<CourseTheme> themes,
+		@Param("startOfMonth") LocalDateTime startOfMonth
+	);
 }

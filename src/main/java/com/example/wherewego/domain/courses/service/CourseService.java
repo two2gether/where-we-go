@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -169,5 +171,47 @@ public class CourseService {
 	public Course getCourseById(Long id) {
 		return courseRepository.findById(id)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+	}
+
+	/**
+	 * 인기 코스 목록 조회 api
+	 * => 이번 달 북마크 수 기준
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<CourseListResponseDto> getPopularCourseList(
+		CourseListFilterDto filterDto,
+		Pageable pageable
+	) {
+		// 1. 데이터 준비
+		String region = filterDto.getRegion();
+		List<CourseTheme> themes = filterDto.getThemes();
+
+		// 2. 이번 달 시작 날짜 구하기
+		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+
+		// 3. 조건에 따라 인기 코스 조회
+		// 정렬 : 이번 달 북마크 수 내림차순
+		List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
+
+		// 4. 페이징 처리
+		int offset = (int)pageable.getOffset();
+		int limit = pageable.getPageSize();
+		int total = popularCourses.size();
+
+		List<Course> paged = popularCourses.stream()
+			.skip(offset)
+			.limit(limit)
+			.toList();
+
+		// 4. [엔티티 -> 응답 dto 변환]
+		List<CourseListResponseDto> dtoList = paged.stream()
+			.map(CourseMapper::toList)
+			.toList();
+
+		// 5. PageImpl 로 Page 객체 생성
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, total);
+
+		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
+		return PagedResponse.from(dtoPage);
 	}
 }

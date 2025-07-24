@@ -103,4 +103,17 @@ public class CourseController {
 
 		return ResponseEntity.ok(ApiResponse.ok("코스가 삭제되었습니다.", response));
 	}
+
+	/**
+	 * 인기 코스 목록 조회 api
+	 */
+	@GetMapping("/popular")
+	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> popularCourseList(
+		@Validated @RequestBody CourseListFilterDto filterDto,
+		@PageableDefault(page = 0, size = 10) Pageable pageable
+	) {
+		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
+
+		return ResponseEntity.ok(ApiResponse.ok("인기 코스 목록 조회 성공", response));
+	}
 }
