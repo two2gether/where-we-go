@@ -23,6 +23,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 	@Query("SELECT c FROM Comment c WHERE c.course.id = :courseId ORDER BY c.createdAt DESC")
 	Page<Comment> findAllByCourseIdOrderByCreatedAtDesc(@Param("courseId") Long courseId, Pageable pageable);
 
+	// 로그인한 사용자가 쓴 댓글을 최신순으로 페이징 조회
+	Page<Comment> findAllByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
 	boolean existsByIdAndUserId(Long commentId, Long userId);
 
 }
