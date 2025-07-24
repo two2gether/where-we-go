@@ -38,7 +38,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class PlaceDetailResponse {
 
 	private String placeId;            // 장소 고유 ID (구글 place_id)

@@ -128,4 +128,35 @@ public class PlaceController {
 			ApiResponse.ok("북마크 목록 조회 성공", result)
 		);
 	}
+
+	/**
+	 * 장소 상세 정보 조회 API
+	 *
+	 * GET /api/places/{placeId}/details
+	 */
+	@GetMapping("/{placeId}/details")
+	public ResponseEntity<ApiResponse<PlaceDetailResponse>> getPlaceDetails(
+		@PathVariable String placeId,
+		@AuthenticationPrincipal CustomUserDetail userDetail) {
+
+		log.info("장소 상세 정보 조회 - placeId: {}", placeId);
+
+		// Google Places API를 통해 장소 상세 정보 조회
+		PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId);
+		
+		// 사용자별 북마크 상태 설정 (로그인한 경우만)
+		if (userDetail != null) {
+			Long userId = userDetail.getUser().getId();
+			boolean isBookmarked = placeBookmarkService.isBookmarked(userId, placeId);
+			placeDetail = placeDetail.toBuilder()
+				.isBookmarked(isBookmarked)
+				.build();
+		}
+
+		log.info("장소 상세 정보 조회 성공 - 장소명: {}", placeDetail.getName());
+
+		return ResponseEntity.ok(
+			ApiResponse.ok("장소 상세 정보 조회 성공", placeDetail)
+		);
+	}
 }
