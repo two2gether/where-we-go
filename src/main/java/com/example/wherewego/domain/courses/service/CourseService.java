@@ -5,13 +5,11 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import com.example.wherewego.common.enums.ErrorCode;
-import com.example.wherewego.domain.courses.entity.Rating;
-import com.example.wherewego.global.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
@@ -25,6 +23,7 @@ import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -46,7 +45,7 @@ public class CourseService {
 	) {
 		// 1. 사용자 조회 - userId로 유저 정보 조회
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 2. 엔티티 만들기[요청 DTO -> 엔티티 변환]
 		// CourseCreateRequestDto + User -> Course 엔티티 생성(Mapper 사용)
@@ -114,7 +113,7 @@ public class CourseService {
 	public CourseDetailResponseDto getCourseDetail(Long courseId) {
 		// 1. 조회
 		Course findCourse = courseRepository.findByIdWithThemes(courseId)
-			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
 		return CourseMapper.toDetailDto(findCourse);
@@ -130,7 +129,7 @@ public class CourseService {
 	) {
 		// 1. 수정할 코스 DB 에서 조회.
 		Course findCourse = courseRepository.findById(courseId)
-			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
 		// 2. 코스 업데이트
 		Course updatedCourse = findCourse.updateCourseInfoFromRequest(
@@ -155,15 +154,20 @@ public class CourseService {
 	) {
 		// 1. 코스 조회하기
 		Course findCourse = courseRepository.findById(courseId)
-			.orElseThrow(() -> new IllegalArgumentException("해당 코스를 찾을 수 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
 		// 2. 사용자 권한 체크 - 본인 코스만 삭제할 수 있게
 		if (!findCourse.getUser().getId().equals(userId)) {
-			throw new IllegalArgumentException("본인의 코스만 삭제할 수 있습니다.");
+			throw new CustomException(ErrorCode.UNAUTHORIZED_COURSE_ACCESS);
 		}
 
 		findCourse.softDelete();
 
 		return CourseMapper.toDeleteResponseDto(findCourse);
+	}
+
+	public Course getCourseById(Long id) {
+		return courseRepository.findById(id)
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 	}
 }

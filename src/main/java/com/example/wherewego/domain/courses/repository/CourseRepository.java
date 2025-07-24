@@ -4,18 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-<<<<<<< HEAD
 import org.springframework.data.jpa.repository.Query;
 
 import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
 
 import io.lettuce.core.dynamic.annotation.Param;
-=======
-import org.springframework.stereotype.Repository;
->>>>>>> dev
 
-@Repository
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
 	@Query("""

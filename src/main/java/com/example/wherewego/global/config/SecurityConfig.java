@@ -43,11 +43,8 @@ public class SecurityConfig {
 
 			// 인가 설정
 			.authorizeHttpRequests(auth -> auth
-<<<<<<< HEAD
-=======
 				.requestMatchers("/api/users/mypage").authenticated()
 				.requestMatchers(HttpMethod.PUT, "/api/users/mypage").authenticated()
->>>>>>> dev
 				.requestMatchers("/api/auth/**").permitAll()
 				.anyRequest().authenticated()
 			)
