@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
@@ -14,7 +15,6 @@ import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
-import com.example.wherewego.common.enums.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,8 +64,8 @@ public class PlaceBookmarkService {
 	/**
 	 * 사용자 북마크 목록 조회
 	 */
-	public UserBookmarkListDto getUserBookmarks(Long userId, int page, int size, 
-			Double userLatitude, Double userLongitude) {
+	public UserBookmarkListDto getUserBookmarks(Long userId, int page, int size,
+		Double userLatitude, Double userLongitude) {
 		log.debug("사용자 북마크 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
 
 		Pageable pageable = PageRequest.of(page, size);
@@ -77,7 +77,7 @@ public class PlaceBookmarkService {
 			.map(bookmark -> {
 				// 임시로 기본 PlaceDetailResponse 생성 (실제로는 카카오 API 호출)
 				PlaceDetailResponse place = createDummyPlaceDetail(bookmark.getPlaceId(), userLatitude, userLongitude);
-				
+
 				return UserBookmarkListDto.BookmarkItem.builder()
 					.bookmarkId(bookmark.getId())
 					.place(place)
@@ -101,7 +101,7 @@ public class PlaceBookmarkService {
 	private PlaceDetailResponse createDummyPlaceDetail(String placeId, Double userLatitude, Double userLongitude) {
 		// TODO: 실제 구현에서는 KakaoPlaceService를 통해 장소 정보 조회
 		log.warn("임시 장소 정보 생성 - placeId: {}", placeId);
-		
+
 		return PlaceDetailResponse.builder()
 			.placeId(placeId)
 			.name("장소명 조회 필요")
