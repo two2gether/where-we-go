@@ -12,15 +12,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
-import com.example.wherewego.domain.places.service.KakaoPlaceService;
+import com.example.wherewego.domain.places.service.GooglePlaceService;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.global.response.ApiResponse;
 
 import jakarta.validation.Valid;
@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 장소 검색 API 컨트롤러
  *
- * 외부 API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
+ * 구글 Places API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
  * API 명세에 따른 통합 검색 엔드포인트를 구현합니다.
  */
 @Slf4j
@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PlaceController {
 
-	private final KakaoPlaceService kakaoPlaceService;
+	private final GooglePlaceService googlePlaceService;
 	private final PlaceBookmarkService placeBookmarkService;
 	private final PlaceService placeService;
 
@@ -74,8 +74,8 @@ public class PlaceController {
 				request.getUserLocation().getRadius());
 		}
 
-		// 외부 API 호출
-		List<PlaceDetailResponse> searchResults = kakaoPlaceService.searchPlaces(request);
+		// 외부 API 호출 (구글 Places API)
+		List<PlaceDetailResponse> searchResults = googlePlaceService.searchPlaces(request);
 		log.info("장소 검색 완료 - 총 {}개 결과", searchResults.size());
 
 		return ResponseEntity.ok(
@@ -111,21 +111,21 @@ public class PlaceController {
 	 */
 	@GetMapping("/users/bookmarks")
 	public ResponseEntity<ApiResponse<UserBookmarkListDto>> getUserBookmarks(
-			@AuthenticationPrincipal CustomUserDetail userDetail,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size,
-			@RequestParam(required = false) Double userLatitude,
-			@RequestParam(required = false) Double userLongitude) {
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size,
+		@RequestParam(required = false) Double userLatitude,
+		@RequestParam(required = false) Double userLongitude) {
 
 		User user = userDetail.getUser();
 		log.info("사용자 북마크 목록 조회 - 사용자: {}, 페이지: {}", user.getId(), page);
 
 		UserBookmarkListDto result = placeBookmarkService.getUserBookmarks(
-				user.getId(), page, size, userLatitude, userLongitude);
+			user.getId(), page, size, userLatitude, userLongitude);
 		log.info("북마크 목록 조회 성공 - 총 {}개", result.getTotalElements());
 
 		return ResponseEntity.ok(
-				ApiResponse.ok("북마크 목록 조회 성공", result)
+			ApiResponse.ok("북마크 목록 조회 성공", result)
 		);
 	}
 }

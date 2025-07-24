@@ -1,13 +1,13 @@
 package com.example.wherewego.domain.places.dto.response;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-
 
 /**
  * 카카오 로컬 API 응답 DTO
@@ -46,108 +46,107 @@ import java.util.List;
 @Builder
 public class KakaoPlaceResponse {
 
-    @JsonProperty("documents")
-    private List<PlaceDocument> documents;
+	@JsonProperty("documents")
+	private List<PlaceDocument> documents;
 
-    @JsonProperty("meta")
-    private Meta meta;
+	@JsonProperty("meta")
+	private Meta meta;
 
-    /**
-     * 개별 장소 정보를 담는 내부 클래스
-     */
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class PlaceDocument {
+	/**
+	 * 개별 장소 정보를 담는 내부 클래스
+	 */
+	@Getter
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class PlaceDocument {
 
-        @JsonProperty("id")
-        private String id;
-        
-        @JsonProperty("place_name")
-        private String placeName;
-        
-        @JsonProperty("category_name")
-        private String categoryName;
-        
-        @JsonProperty("category_group_code")
-        private String categoryGroupCode;
-        
-        @JsonProperty("category_group_name")
-        private String categoryGroupName;
-        
-        @JsonProperty("phone")
-        private String phone;
-        
-        @JsonProperty("address_name")
-        private String addressName;
-        
-        @JsonProperty("road_address_name")
-        private String roadAddressName;
-        
-        @JsonProperty("region_1depth_name")
-        private String region1DepthName;
-        
-        @JsonProperty("region_2depth_name")
-        private String region2DepthName;
-        
-        @JsonProperty("region_3depth_name")
-        private String region3DepthName;
-        
-        @JsonProperty("x")
-        private String longitude;
-        
-        @JsonProperty("y")
-        private String latitude;
-        
-        @JsonProperty("place_url")
-        private String placeUrl;
-        
-        @JsonProperty("distance")
-        private String distance;
+		@JsonProperty("id")
+		private String id;
 
-    }
+		@JsonProperty("place_name")
+		private String placeName;
 
-    /**
-     * 검색 결과 메타 정보를 담는 내부 클래스
-     */
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class Meta {
+		@JsonProperty("category_name")
+		private String categoryName;
 
-        @JsonProperty("total_count")
-        private Integer totalCount;
-        
-        @JsonProperty("is_end")
-        private Boolean isEnd;
-        
-        @JsonProperty("pageable_count")
-        private Integer pageableCount;
-        
-        @JsonProperty("same_name")
-        private SameName sameName;
-    }
-    
-    /**
-     * 동명 지역 정보를 담는 내부 클래스
-     */
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class SameName {
-        
-        @JsonProperty("region")
-        private java.util.List<String> region;
-        
-        @JsonProperty("keyword")
-        private String keyword;
-        
-        @JsonProperty("selected_region")
-        private String selectedRegion;
-    }
+		@JsonProperty("category_group_code")
+		private String categoryGroupCode;
 
+		@JsonProperty("category_group_name")
+		private String categoryGroupName;
+
+		@JsonProperty("phone")
+		private String phone;
+
+		@JsonProperty("address_name")
+		private String addressName;
+
+		@JsonProperty("road_address_name")
+		private String roadAddressName;
+
+		@JsonProperty("region_1depth_name")
+		private String region1DepthName;
+
+		@JsonProperty("region_2depth_name")
+		private String region2DepthName;
+
+		@JsonProperty("region_3depth_name")
+		private String region3DepthName;
+
+		@JsonProperty("x")
+		private String longitude;
+
+		@JsonProperty("y")
+		private String latitude;
+
+		@JsonProperty("place_url")
+		private String placeUrl;
+
+		@JsonProperty("distance")
+		private String distance;
+
+	}
+
+	/**
+	 * 검색 결과 메타 정보를 담는 내부 클래스
+	 */
+	@Getter
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class Meta {
+
+		@JsonProperty("total_count")
+		private Integer totalCount;
+
+		@JsonProperty("is_end")
+		private Boolean isEnd;
+
+		@JsonProperty("pageable_count")
+		private Integer pageableCount;
+
+		@JsonProperty("same_name")
+		private SameName sameName;
+	}
+
+	/**
+	 * 동명 지역 정보를 담는 내부 클래스
+	 */
+	@Getter
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class SameName {
+
+		@JsonProperty("region")
+		private java.util.List<String> region;
+
+		@JsonProperty("keyword")
+		private String keyword;
+
+		@JsonProperty("selected_region")
+		private String selectedRegion;
+	}
 
 }
