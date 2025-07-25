@@ -2,6 +2,7 @@ package com.example.wherewego.domain.courses.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,14 +60,29 @@ public class CourseService {
 		// 2. 엔티티 만들기[요청 DTO -> 엔티티 변환]
 		// CourseCreateRequestDto + User -> Course 엔티티 생성(Mapper 사용)
 		Course course = CourseMapper.toEntity(requestDto, user);
-		PlacesOrder placesOrder = CourseMapper.
 
 		// 3. 저장하기 - 변환된 Course 엔티티를 DB에 저장
 		Course savedCourse = courseRepository.save(course);
-		Course savedPlace = placeRepository.save(course);
 
-		// 4. dto 반환하기[엔티티 -> 응답 dto 변환]
-		// 저장된 Course -> CourseCreateResponseDto 로 변환(Mapper 사용)
+		// requestDto 안에 리스트 placeIds 가져오기
+		List<String> placeIds = requestDto.getPlaceIds();
+
+		// placesOrder 엔티티 만들기
+		List<PlacesOrder> placesOrders = new ArrayList<>();
+
+		for (int i = 0; i < placeIds.size(); i++) {
+			PlacesOrder placesOrder = PlacesOrder.builder()
+				.courseId(savedCourse.getId())
+				.placeId(placeIds.get(i))
+				.visitOrder(i + 1)
+				.build();
+
+			placesOrders.add(placesOrder);
+		}
+
+		// 저장하기
+		placeRepository.saveAll(placesOrders);
+
 		return CourseMapper.toDto(savedCourse);
 	}
 
