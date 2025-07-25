@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.courses.entity;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.example.wherewego.common.entity.BaseEntity;
@@ -18,7 +17,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -108,8 +106,8 @@ public class Course extends BaseEntity {
 	/**
 	 * 북마크 : JPQL 가능하게 하기 위한
 	 */
-	@OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
-	private List<CourseBookmark> bookmarks = new ArrayList<>();
+	// @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
+	// private List<CourseBookmark> bookmarks = new ArrayList<>();
 
 	/**
 	 * 댓글 수

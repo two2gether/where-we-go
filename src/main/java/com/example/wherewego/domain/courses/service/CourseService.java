@@ -186,32 +186,49 @@ public class CourseService {
 		String region = filterDto.getRegion();
 		List<CourseTheme> themes = filterDto.getThemes();
 
-		// 2. 이번 달 시작 날짜 구하기
+		// 1-2. 이번 달 시작 날짜 구하기 + 오늘까지
 		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+		LocalDateTime now = LocalDateTime.now();
+
+		// 2. 조건에 따라 인기 코스 조회
+		// 정렬 : 이번 달 북마크 수 내림차순
+		Page<Course> coursePage;
+		if (themes != null && !themes.isEmpty()) {
+			coursePage = courseRepository.findPopularCoursesByRegionAndThemesThisMonth(
+				region, themes, startOfMonth, now, pageable
+			);
+		} else {
+			coursePage = courseRepository.findPopularCoursesByRegionThisMonth(
+				region, startOfMonth, now, pageable
+			);
+		}
 
 		// 3. 조건에 따라 인기 코스 조회
 		// 정렬 : 이번 달 북마크 수 내림차순
-		List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
+		// List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
 
-		// 4. 페이징 처리
-		int offset = (int)pageable.getOffset();
-		int limit = pageable.getPageSize();
-		int total = popularCourses.size();
+		// 3. 페이징 처리
+		// int offset = (int)pageable.getOffset();
+		// int limit = pageable.getPageSize();
+		// int total = popularCourseIds.size();
+		//
+		// List<Long> pagedIds = popularCourseIds.stream()
+		// 	.skip(offset)
+		// 	.limit(limit)
+		// 	.toList();
 
-		List<Course> paged = popularCourses.stream()
-			.skip(offset)
-			.limit(limit)
-			.toList();
+		// 4. Id로 Course 엔티티 가져오기 (북마크 포함)
+		// List<Course> popularCourses = courseRepository.findByIdIn(pagedIds);
 
-		// 4. [엔티티 -> 응답 dto 변환]
-		List<CourseListResponseDto> dtoList = paged.stream()
+		// 5. [엔티티 -> 응답 dto 변환]
+		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(CourseMapper::toList)
 			.toList();
 
-		// 5. PageImpl 로 Page 객체 생성
-		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, total);
+		// 6. PageImpl 로 Page 객체 생성
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 
-		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
+		// 7. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
 	}
 }

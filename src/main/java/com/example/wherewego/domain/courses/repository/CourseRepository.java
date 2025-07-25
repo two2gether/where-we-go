@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -46,22 +48,46 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
 
 	@Query("""
-			SELECT c
-			FROM Course c
-			LEFT JOIN c.bookmarks b
-			WHERE c.region = :region
-			  AND (:themes IS NULL OR EXISTS (
-				SELECT t FROM Course c2 JOIN c2.themes t
-				WHERE c2.id = c.id AND t IN :themes
-			  ))
-			  AND c.isPublic = true
-			  AND (b.createdAt >= :startOfMonth OR b.id IS NULL)
-			GROUP BY c.id
-			ORDER BY COUNT(b.id) DESC
+		    SELECT c
+		    FROM Course c
+		    WHERE c.region = :region
+		      AND c.isPublic = true
+		      AND EXISTS (
+		          SELECT 1
+		          FROM CourseBookmark b
+		          WHERE b.course = c
+		            AND b.createdAt BETWEEN :startOfMonth AND :now
+		      )
+		    GROUP BY c.id
+		    ORDER BY COUNT(CASE WHEN c.createdAt BETWEEN :startOfMonth AND :now THEN 1 END) DESC
 		""")
-	List<Course> findPopularCoursesByMonth(
+	Page<Course> findPopularCoursesByRegionThisMonth(
+		@Param("region") String region,
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
+
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    WHERE c.region = :region
+		      AND c.isPublic = true
+		      AND :themes MEMBER OF c.themes
+		      AND EXISTS (
+		          SELECT 1
+		          FROM CourseBookmark b
+		          WHERE b.course = c
+		            AND b.createdAt BETWEEN :startOfMonth AND :now
+		      )
+		    GROUP BY c.id
+		    ORDER BY COUNT(CASE WHEN c.createdAt BETWEEN :startOfMonth AND :now THEN 1 END) DESC
+		""")
+	Page<Course> findPopularCoursesByRegionAndThemesThisMonth(
 		@Param("region") String region,
 		@Param("themes") List<CourseTheme> themes,
-		@Param("startOfMonth") LocalDateTime startOfMonth
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
 	);
 }

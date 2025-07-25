@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -13,8 +15,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
@@ -109,9 +113,12 @@ public class CourseController {
 	 */
 	@GetMapping("/popular")
 	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> popularCourseList(
-		@Validated @RequestBody CourseListFilterDto filterDto,
+		@RequestParam String region,
+		@RequestParam(required = false) List<CourseTheme> themes,
 		@PageableDefault(page = 0, size = 10) Pageable pageable
 	) {
+		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+		
 		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("인기 코스 목록 조회 성공", response));
