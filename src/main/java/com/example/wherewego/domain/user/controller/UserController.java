@@ -18,6 +18,7 @@ import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseService;
