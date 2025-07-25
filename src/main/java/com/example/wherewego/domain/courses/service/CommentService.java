@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.ErrorCode;
-import com.example.wherewego.domain.courses.dto.CommentRequestDto;
-import com.example.wherewego.domain.courses.dto.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
@@ -18,8 +18,10 @@ import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class CommentService {
@@ -30,11 +32,26 @@ public class CommentService {
 
 	// 코스 댓글 생성
 	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
+		log.debug("댓글 생성 요청 - courseId: {}, userId: {}, content: {}", courseId, userId, requestDto.getContent());
+
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+			.orElseThrow(() -> {
+				log.warn("댓글 생성 실패 - 사용자 없음: {}", userId);
+				return new CustomException(ErrorCode.USER_NOT_FOUND);
+			});
 
 		Course course = courseRepository.findById(courseId)
-			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+			.orElseThrow(() -> {
+				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
+				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
+			});
+
+		// 비공개 코스일 경우, 작성자가 아닌 유저는 댓글 작성 불가
+		if (Boolean.FALSE.equals(course.getIsPublic()) && !course.getUser().getId().equals(userId)) {
+			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",
+				courseId, course.getUser().getId(), userId);
+			throw new CustomException(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE);
+		}
 
 		Comment comment = Comment.builder()
 			.content(requestDto.getContent())
@@ -43,35 +60,49 @@ public class CommentService {
 			.build();
 
 		commentRepository.save(comment);
+		log.debug("댓글 생성 성공 - commentId: {}", comment.getId());
 
 		return toDto(comment);
 	}
 
 	// 코스 댓글 삭제
 	public void deleteComment(Long commentId, Long userId) {
+		log.debug("댓글 삭제 요청 - commentId: {}, userId: {}", commentId, userId);
+
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+			.orElseThrow(() -> {
+				log.warn("댓글 삭제 실패 - 댓글 없음: {}", commentId);
+				return new CustomException(ErrorCode.COMMENT_NOT_FOUND);
+			});
 
 		// 인가 검사 (작성자 본인인지 확인)
 		if (!comment.getUser().getId().equals(userId)) {
+			log.warn("댓글 삭제 실패 - 인가되지 않은 접근: userId {}, commentOwnerId {}", userId, comment.getUser().getId());
 			throw new CustomException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
 		}
 
 		commentRepository.delete(comment);
+		log.debug("댓글 삭제 성공 - commentId: {}", commentId);
 	}
 
 	// 코스 댓글 수정
 	public CommentResponseDto updateComment(Long commentId, Long userId, CommentRequestDto requestDto) {
+		log.debug("댓글 수정 요청 - commentId: {}, userId: {}, newContent: {}", commentId, userId, requestDto.getContent());
 
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+			.orElseThrow(() -> {
+				log.warn("댓글 수정 실패 - 댓글 없음: {}", commentId);
+				return new CustomException(ErrorCode.COMMENT_NOT_FOUND);
+			});
 
 		// 인가 검사 (작성자 본인인지 확인)
 		if (!comment.getUser().getId().equals(userId)) {
+			log.warn("댓글 수정 실패 - 인가되지 않은 접근: userId {}, commentOwnerId {}", userId, comment.getUser().getId());
 			throw new CustomException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
 		}
 
 		comment.updateContent(requestDto.getContent());
+		log.debug("댓글 수정 성공 - commentId: {}", commentId);
 
 		return toDto(comment);
 	}
@@ -86,6 +117,7 @@ public class CommentService {
 		//조회된 댓글 엔티티들을 DTO로 변환
 		//현재 클래스(CommentService)의 인스턴스(this)인 toDto() 참조
 		Page<CommentResponseDto> dtoPage = commentPage.map(this::toDto);
+		log.debug("댓글 목록 조회 완료 - 조회된 댓글 수: {}", dtoPage.getTotalElements());
 
 		return PagedResponse.from(dtoPage);
 	}

@@ -1,8 +1,7 @@
 package com.example.wherewego.common.enums;
 
-import org.springframework.http.HttpStatus;
-
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
@@ -30,9 +29,13 @@ public enum ErrorCode {
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 
-	// 북마크 관련 에러 정의
-	BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 장소입니다."),
-	BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크한 기록이 없습니다."),
+    // 북마크 관련 에러 정의
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 장소입니다."),
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크한 기록이 없습니다."),
+
+    // 장소 관련 에러 정의
+    PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 정보를 찾을 수 없습니다."),
+    PLACE_API_ERROR(HttpStatus.BAD_GATEWAY, "장소 정보 조회에 실패했습니다."),
 
 	// 평점 관련 에러 정의
 	RATING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 평점을 등록한 코스입니다."),
@@ -45,7 +48,8 @@ public enum ErrorCode {
 
 	// 댓글 관련 에러 정의
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글입니다."),
-	UNAUTHORIZED_COMMENT_ACCESS(HttpStatus.FORBIDDEN, "해당 댓글에 대한 권한이 없습니다.");
+	UNAUTHORIZED_COMMENT_ACCESS(HttpStatus.FORBIDDEN, "해당 댓글에 대한 권한이 없습니다."),
+	CANNOT_COMMENT_ON_PRIVATE_COURSE(HttpStatus.FORBIDDEN, "비공개 코스에는 댓글을 작성할 수 없습니다.");
 
 	private final HttpStatus status;
 	private final String message;
