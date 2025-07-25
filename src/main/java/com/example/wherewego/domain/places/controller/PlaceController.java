@@ -132,30 +132,6 @@ public class PlaceController {
 		);
 	}
 
-	/**
-	 * 사용자 북마크 목록 조회 API
-	 *
-	 * GET /api/places/users/bookmarks
-	 */
-	@GetMapping("/users/bookmarks")
-	public ResponseEntity<ApiResponse<UserBookmarkListDto>> getUserBookmarks(
-		@AuthenticationPrincipal CustomUserDetail userDetail,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "20") int size,
-		@RequestParam(required = false) Double userLatitude,
-		@RequestParam(required = false) Double userLongitude) {
-
-		User user = userDetail.getUser();
-		log.info("사용자 북마크 목록 조회 - 사용자: {}, 페이지: {}", user.getId(), page);
-
-		UserBookmarkListDto result = placeBookmarkService.getUserBookmarks(
-			user.getId(), page, size, userLatitude, userLongitude);
-		log.info("북마크 목록 조회 성공 - 총 {}개", result.getTotalElements());
-
-		return ResponseEntity.ok(
-			ApiResponse.ok("북마크 목록 조회 성공", result)
-		);
-	}
 
 	/**
 	 * 장소 상세 정보 조회 API
