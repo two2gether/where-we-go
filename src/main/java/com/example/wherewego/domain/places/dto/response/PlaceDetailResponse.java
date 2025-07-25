@@ -12,28 +12,34 @@ import lombok.NoArgsConstructor;
  * 클라이언트에게 반환할 표준화된 장소 정보를 담는 클래스입니다.
  * Google Maps API 응답을 통일된 형태로 변환하며, 이중 평점 시스템을 지원합니다.
  *
- * 개별 장소 데이터 구조:
+ * 사용 API:
+ * - 장소 검색: POST /api/places/search
+ * - 장소 상세 조회: GET /api/places/{placeId}/details
+ * - 북마크 목록 조회: GET /api/places/users/bookmarks (place 필드로 포함)
+ *
+ * 응답 예시:
  * {
- *   "placeId": "ChIJN1t_tDeuEmsRUsoyG83frY4",
- *   "name": "스타벅스 강남점",
+ *   "placeId": "ChIJn6Nu-3OkfDURFidBwPXoZ5A",
+ *   "name": "스타벅스 강남구청정문점",
  *   "category": "카페",
  *   "regionSummary": "서울 강남구",
  *   "region": {
  *     "depth1": "서울특별시",
  *     "depth2": "강남구"
  *   },
- *   "address": "서울 강남구 강남대로 390",
+ *   "address": "대한민국 서울특별시 강남구 학동로 419",
  *   "roadAddress": null,
- *   "phone": "02-1234-5678",
- *   "latitude": 37.498095,
- *   "longitude": 127.027610,
+ *   "phone": "1522-3232",
+ *   "latitude": 37.5182675,
+ *   "longitude": 127.0459628,
  *   "distance": 123,
- *   "averageRating": 4.2,     // 우리 서비스 평점
+ *   "averageRating": 4.2,     // 우리 서비스 내부 평점
  *   "reviewCount": 156,       // 우리 서비스 리뷰 수
- *   "googleRating": 4.4,      // 구글 평점 (참고용)
- *   "placeUrl": "https://maps.google.com/?cid=13153204942596594755",
+ *   "googleRating": 4.3,      // 구글 평점 (참고용)
+ *   "placeUrl": "https://maps.google.com/?cid=10405541606252947222",
  *   "bookmarkCount": 89,
- *   "isBookmarked": false
+ *   "isBookmarked": false,
+ *   "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=CmRaAAAA...&key=API_KEY"
  * }
  */
 @Getter

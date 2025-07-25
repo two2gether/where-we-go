@@ -516,9 +516,9 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * 두 지점 간 거리 계산 (미터 단위)
+	 * 두 지점 간 거리 계산 (미터 단위) - 다른 서비스에서도 사용 가능하도록 public으로 변경
 	 */
-	private int calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+	public int calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 		final int EARTH_RADIUS = 6371000; // 지구 반지름 (미터)
 
 		double lat1Rad = Math.toRadians(lat1);
