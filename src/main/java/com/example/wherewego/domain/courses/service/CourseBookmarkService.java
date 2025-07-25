@@ -1,16 +1,24 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.response.CourseBookmarkResponseDto;
+import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseBookmark;
+import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseBookmarkRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
+import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -55,6 +63,19 @@ public class CourseBookmarkService {
 		bookmarkRepository.delete(bookmark);
 		// 북마크 수 -1
 		course.decrementBookmarkCount();
+	}
+
+	// 내가 북마크한 코스 목록 조회
+	@Transactional(readOnly = true)
+	public PagedResponse<UserCourseBookmarkListDto> getBookmarkedCourses(Long userId,
+		Pageable pageable) {
+		Page<CourseBookmark> bookmarkPage = bookmarkRepository.findByUserId(userId, pageable);
+
+		List<UserCourseBookmarkListDto> dtoList = bookmarkPage.getContent().stream()
+			.map(CourseMapper::toBookmarkCourseDto)
+			.toList();
+
+		return PagedResponse.from(new PageImpl<>(dtoList, pageable, bookmarkPage.getTotalElements()));
 	}
 
 }

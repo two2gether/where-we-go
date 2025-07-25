@@ -6,7 +6,9 @@ import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
 import com.example.wherewego.domain.courses.entity.Course;
+import com.example.wherewego.domain.courses.entity.CourseBookmark;
 import com.example.wherewego.domain.user.entity.User;
 
 public class CourseMapper {
@@ -88,6 +90,24 @@ public class CourseMapper {
 		return CourseDeleteResponseDto.builder()
 			.courseId(course.getId())
 			.deletedAt(course.getDeletedAt())
+			.build();
+	}
+
+	//	내가 북마크한 코스 목록 조회 (마이페이지)
+	public static UserCourseBookmarkListDto.BookmarkCourse toBookmarkCourseDto(CourseBookmark bookmark) {
+		Course course = bookmark.getCourse();
+
+		return UserCourseBookmarkListDto.BookmarkCourse.builder()
+			.courseId(course.getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.themes(course.getThemes())
+			.region(course.getRegion())
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.bookmarkCreatedAt(bookmark.getCreatedAt())
 			.build();
 	}
 }

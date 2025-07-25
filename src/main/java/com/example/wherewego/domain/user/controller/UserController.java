@@ -17,10 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
 import com.example.wherewego.domain.courses.service.CommentService;
+import com.example.wherewego.domain.courses.service.CourseBookmarkService;
+import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
-import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
@@ -41,6 +43,7 @@ public class UserController {
 	private final CommentService commentService;
 	private final PlaceBookmarkService placeBookmarkService;
 	private final CourseService courseService;
+	private final CourseBookmarkService courseBookmarkService;
 
 	@DeleteMapping("/withdraw")
 	public ResponseEntity<ApiResponse<Void>> withdraw(
@@ -125,6 +128,20 @@ public class UserController {
 		PagedResponse<CourseListResponseDto> page = courseService.getCoursesByUser(userId, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("내가 만든 코스 목록 조회에 성공했습니다.", page));
+	}
+
+	// 내가 북마크한 코스 목록 조회 (북마크한 시점 기준으로 최신순)
+	@GetMapping("/mypage/coursebookmark")
+	public ResponseEntity<ApiResponse<PagedResponse<UserCourseBookmarkListDto>>> getMyBookmarkedCourses(
+		@AuthenticationPrincipal CustomUserDetail principal,
+		@PageableDefault(size = 10, sort = "bookmarkCreatedAt", direction = Sort.Direction.DESC) Pageable pageable
+	) {
+		Long userId = principal.getUser().getId();
+
+		PagedResponse<UserCourseBookmarkListDto> response =
+			courseBookmarkService.getBookmarkedCourses(userId, pageable);
+
+		return ResponseEntity.ok(ApiResponse.ok("내가 북마크한 코스 목록이 조회되었습니다.", response));
 	}
 
 }
