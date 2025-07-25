@@ -11,12 +11,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
+import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
+import com.example.wherewego.domain.places.service.PlaceBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
@@ -36,6 +39,7 @@ public class UserController {
 
 	private final UserService userService;
 	private final CommentService commentService;
+	private final PlaceBookmarkService placeBookmarkService;
 	private final CourseService courseService;
 
 	@DeleteMapping("/withdraw")
@@ -85,6 +89,28 @@ public class UserController {
 	) {
 		MyPageResponseDto updated = userService.updateMyPage(principal.getUser().getId(), dto);
 		return ResponseEntity.ok(ApiResponse.ok("프로필이 성공적으로 수정되었습니다.", updated));
+	}
+
+	/**
+	 * 마이페이지 - 내 북마크 목록 조회 API
+	 *
+	 * GET /api/users/mypage/bookmarks
+	 */
+	@GetMapping("/mypage/bookmarks")
+	public ResponseEntity<ApiResponse<UserBookmarkListDto>> getMyBookmarks(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size,
+		@RequestParam(required = false) Double userLatitude,
+		@RequestParam(required = false) Double userLongitude) {
+
+		Long userId = userDetail.getUser().getId();
+		UserBookmarkListDto bookmarks = placeBookmarkService.getUserBookmarks(
+			userId, page, size, userLatitude, userLongitude);
+
+		return ResponseEntity.ok(
+			ApiResponse.ok("내 북마크 목록 조회 성공", bookmarks)
+		);
 	}
 
 	// 내가 만든 코스 목록 조회

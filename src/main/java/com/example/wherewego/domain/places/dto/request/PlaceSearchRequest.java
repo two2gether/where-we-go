@@ -16,9 +16,27 @@ import lombok.NoArgsConstructor;
 /**
  * 장소 검색 요청 DTO
  *
+ * 사용 API: POST /api/places/search
+ * 
  * 클라이언트가 장소 검색 시 보내는 요청 데이터를 담는 클래스입니다.
+ * Google Places API Text Search를 통해 실시간 장소 검색을 수행합니다.
  *
- * 요청 예시:
+ * 기본 검색 요청 예시:
+ * {
+ *   "query": "스타벅스 강남구청정문점"
+ * }
+ * 
+ * 위치 기반 검색 요청 예시:
+ * {
+ *   "query": "스타벅스 강남구청정문점",
+ *   "userLocation": {
+ *     "latitude": 37.498011,
+ *     "longitude": 127.020102,
+ *     "radius": 2000
+ *   }
+ * }
+ * 
+ * 전체 옵션 포함 요청 예시:
  * {
  *   "query": "강남 스타벅스",
  *   "region": {
