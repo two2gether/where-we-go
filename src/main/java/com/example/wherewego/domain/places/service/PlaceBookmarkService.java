@@ -30,6 +30,7 @@ public class PlaceBookmarkService {
 
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final UserRepository userRepository;
+	private final GooglePlaceService googlePlaceService;
 
 	/**
 	 * 북마크 추가
@@ -72,11 +73,10 @@ public class PlaceBookmarkService {
 		Page<PlaceBookmark> bookmarkPage = placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
 
 		// 북마크된 장소들의 상세 정보를 외부 API에서 조회
-		// TODO: 실제 구현에서는 카카오 API 호출 필요
 		var bookmarkItems = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
-				// 임시로 기본 PlaceDetailResponse 생성 (실제로는 카카오 API 호출)
-				PlaceDetailResponse place = createDummyPlaceDetail(bookmark.getPlaceId(), userLatitude, userLongitude);
+				// Google Places API를 통해 실제 장소 정보 조회
+				PlaceDetailResponse place = getPlaceDetailFromApi(bookmark.getPlaceId(), userLatitude, userLongitude);
 
 				return UserBookmarkListDto.BookmarkItem.builder()
 					.bookmarkId(bookmark.getId())
@@ -96,24 +96,54 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * 임시 장소 정보 생성 (실제로는 카카오 API 호출 필요)
+	 * Google Places API를 통해 장소 상세 정보 조회
 	 */
-	private PlaceDetailResponse createDummyPlaceDetail(String placeId, Double userLatitude, Double userLongitude) {
-		// TODO: 실제 구현에서는 KakaoPlaceService를 통해 장소 정보 조회
-		log.warn("임시 장소 정보 생성 - placeId: {}", placeId);
+	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
+		log.debug("장소 상세 정보 조회 - placeId: {}", placeId);
+		
+		try {
+			// Google Places API를 통해 장소 정보 조회
+			PlaceDetailResponse place = googlePlaceService.getPlaceDetail(placeId);
+			
+			if (place == null) {
+				log.warn("장소 정보를 찾을 수 없음 - placeId: {}", placeId);
+				throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
+			}
+			
+			// 북마크 상태 설정 (북마크 목록이므로 항상 true)
+			return place.toBuilder()
+				.isBookmarked(true)
+				.build();
+				
+		} catch (CustomException e) {
+			// CustomException은 그대로 재전파
+			throw e;
+		} catch (Exception e) {
+			log.error("장소 정보 조회 중 예외 발생 - placeId: {}", placeId, e);
+			throw new CustomException(ErrorCode.PLACE_API_ERROR);
+		}
+	}
 
-		return PlaceDetailResponse.builder()
-			.placeId(placeId)
-			.name("장소명 조회 필요")
-			.category("카테고리 조회 필요")
-			.regionSummary("지역 조회 필요")
-			.address("주소 조회 필요")
-			.latitude(37.5665)
-			.longitude(126.9780)
-			.averageRating(0.0)
-			.reviewCount(0)
-			.bookmarkCount(0)
-			.isBookmarked(true)  // 북마크 목록이므로 항상 true
-			.build();
+	/**
+	 * 북마크 제거
+	 */
+	@Transactional
+	public void removeBookmark(Long userId, String placeId) {
+		log.debug("북마크 제거 - userId: {}, placeId: {}", userId, placeId);
+
+		// 북마크 존재 확인 및 조회
+		PlaceBookmark bookmark = placeBookmarkRepository.findByUserIdAndPlaceId(userId, placeId)
+			.orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_NOT_FOUND));
+
+		// 북마크 삭제
+		placeBookmarkRepository.delete(bookmark);
+		log.info("북마크 제거 완료 - bookmarkId: {}", bookmark.getId());
+	}
+
+	/**
+	 * 특정 사용자의 특정 장소 북마크 여부 확인
+	 */
+	public boolean isBookmarked(Long userId, String placeId) {
+		return placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId);
 	}
 }

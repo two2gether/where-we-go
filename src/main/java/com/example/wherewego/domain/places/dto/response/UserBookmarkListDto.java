@@ -10,8 +10,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * 사용자 북마크 목록 응답 DTO
- *
- * 응답 예시 (GET /api/users/bookmarks):
+ * 
+ * 사용 API: GET /api/places/users/bookmarks
+ * 
+ * 전체 응답 예시:
  * {
  *   "success": true,
  *   "message": "북마크 목록 조회 성공",
@@ -20,18 +22,21 @@ import lombok.NoArgsConstructor;
  *       {
  *         "bookmarkId": 12345,
  *         "place": {
- *           "placeId": "253451",
- *           "name": "스타벅스 강남점",
+ *           "placeId": "ChIJn6Nu-3OkfDURFidBwPXoZ5A",
+ *           "name": "스타벅스 강남구청정문점",
  *           "category": "카페",
  *           "regionSummary": "서울 강남구",
- *           "address": "서울 강남구 강남대로 390",
- *           "latitude": 37.498095,
- *           "longitude": 127.027610,
+ *           "address": "대한민국 서울특별시 강남구 학동로 419",
+ *           "latitude": 37.5182675,
+ *           "longitude": 127.0459628,
  *           "distance": 123,
  *           "averageRating": 4.2,
- *           "reviewCount": 156
+ *           "reviewCount": 156,
+ *           "googleRating": 4.3,
+ *           "isBookmarked": true,
+ *           "photo": null
  *         },
- *         "createdAt": "2025-01-15T09:30:00"
+ *         "createdAt": "2025-07-24T09:30:00"
  *       }
  *     ],
  *     "totalElements": 25,
@@ -39,7 +44,7 @@ import lombok.NoArgsConstructor;
  *     "size": 20,
  *     "number": 0
  *   },
- *   "timestamp": "2025-01-20T10:30:00Z"
+ *   "timestamp": "2025-07-24T22:04:22.199842"
  * }
  */
 @Getter

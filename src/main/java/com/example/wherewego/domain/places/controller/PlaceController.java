@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
+import com.example.wherewego.domain.places.dto.response.BookmarkDeleteResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.service.GooglePlaceService;
@@ -105,27 +107,60 @@ public class PlaceController {
 	}
 
 	/**
-	 * 사용자 북마크 목록 조회 API
+	 * 장소 북마크 제거 API
 	 *
-	 * GET /api/users/bookmarks
+	 * DELETE /api/places/{placeId}/bookmark
 	 */
-	@GetMapping("/users/bookmarks")
-	public ResponseEntity<ApiResponse<UserBookmarkListDto>> getUserBookmarks(
-		@AuthenticationPrincipal CustomUserDetail userDetail,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "20") int size,
-		@RequestParam(required = false) Double userLatitude,
-		@RequestParam(required = false) Double userLongitude) {
+	@DeleteMapping("/{placeId}/bookmark")
+	public ResponseEntity<ApiResponse<BookmarkDeleteResponseDto>> removeBookmark(
+		@PathVariable String placeId,
+		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
 		User user = userDetail.getUser();
-		log.info("사용자 북마크 목록 조회 - 사용자: {}, 페이지: {}", user.getId(), page);
+		log.info("북마크 제거 요청 - 사용자: {}, 장소ID: {}", user.getId(), placeId);
 
-		UserBookmarkListDto result = placeBookmarkService.getUserBookmarks(
-			user.getId(), page, size, userLatitude, userLongitude);
-		log.info("북마크 목록 조회 성공 - 총 {}개", result.getTotalElements());
+		placeBookmarkService.removeBookmark(user.getId(), placeId);
+
+		BookmarkDeleteResponseDto result = BookmarkDeleteResponseDto.builder()
+			.isBookmarked(false)
+			.build();
+
+		log.info("북마크 제거 성공 - 장소ID: {}", placeId);
 
 		return ResponseEntity.ok(
-			ApiResponse.ok("북마크 목록 조회 성공", result)
+			ApiResponse.ok("북마크 제거 성공", result)
+		);
+	}
+
+
+	/**
+	 * 장소 상세 정보 조회 API
+	 *
+	 * GET /api/places/{placeId}/details
+	 */
+	@GetMapping("/{placeId}/details")
+	public ResponseEntity<ApiResponse<PlaceDetailResponse>> getPlaceDetails(
+		@PathVariable String placeId,
+		@AuthenticationPrincipal CustomUserDetail userDetail) {
+
+		log.info("장소 상세 정보 조회 - placeId: {}", placeId);
+
+		// Google Places API를 통해 장소 상세 정보 조회
+		PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId);
+
+		// 사용자별 북마크 상태 설정 (로그인한 경우만)
+		if (userDetail != null) {
+			Long userId = userDetail.getUser().getId();
+			boolean isBookmarked = placeBookmarkService.isBookmarked(userId, placeId);
+			placeDetail = placeDetail.toBuilder()
+				.isBookmarked(isBookmarked)
+				.build();
+		}
+
+		log.info("장소 상세 정보 조회 성공 - 장소명: {}", placeDetail.getName());
+
+		return ResponseEntity.ok(
+			ApiResponse.ok("장소 상세 정보 조회 성공", placeDetail)
 		);
 	}
 }

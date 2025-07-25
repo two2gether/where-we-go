@@ -7,11 +7,18 @@ import lombok.NoArgsConstructor;
 
 /**
  * 북마크 추가 응답 DTO
- *
- * 응답 예시 (POST /api/places/{placeId}/bookmark):
+ * 
+ * 사용 API: POST /api/places/{placeId}/bookmark
+ * 
+ * 전체 응답 예시:
  * {
- *    "bookmarkId": 12345,
- *    "isBookmarked": true
+ *   "success": true,
+ *   "message": "북마크 추가 성공",
+ *   "data": {
+ *     "bookmarkId": 12345,
+ *     "isBookmarked": true
+ *   },
+ *   "timestamp": "2025-07-24T22:04:22.199842"
  * }
  */
 @Getter
