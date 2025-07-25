@@ -1,5 +1,8 @@
 package com.example.wherewego.domain.user.controller;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -11,11 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.CommentResponseDto;
+import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.response.PagedResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
 	private final UserService userService;
+	private final CommentService commentService;
 
 	@DeleteMapping("/withdraw")
 	public ResponseEntity<ApiResponse<Void>> withdraw(
@@ -52,6 +59,20 @@ public class UserController {
 			"마이페이지 화면입니다.", dto
 		);
 		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/mypage/comments")
+	public ResponseEntity<ApiResponse<PagedResponse<CommentResponseDto>>> getMyComments(
+		@AuthenticationPrincipal CustomUserDetail principal,
+		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+		Pageable pageable
+	) {
+		Long userId = principal.getUser().getId();
+
+		// commentService 인스턴스를 사용해서 호출
+
+		PagedResponse<CommentResponseDto> page = commentService.getCommentsByUser(userId, pageable);
+		return ResponseEntity.ok(ApiResponse.ok("내가 작성한 댓글 목록 조회에 성공했습니다.", page));
 	}
 
 	@PutMapping("/mypage")
