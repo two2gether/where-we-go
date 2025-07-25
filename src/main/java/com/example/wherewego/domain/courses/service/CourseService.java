@@ -140,7 +140,7 @@ public class CourseService {
 	public CourseDetailResponseDto getCourseDetail(
 		Long courseId,
 		Double userLatitude,
-		Double userLonitude
+		Double userLongitude
 	) {
 		// 1. 코스 조회
 		Course findCourse = courseRepository.findByIdWithThemes(courseId)
@@ -154,7 +154,7 @@ public class CourseService {
 			.collect(Collectors.toList());
 
 		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
-			userLatitude, userLonitude);
+			userLatitude, userLongitude);
 
 		CourseDetailResponseDto responseDto = CourseDetailResponseDto.builder()
 			.courseId(findCourse.getId())

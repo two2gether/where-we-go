@@ -76,8 +76,8 @@ public class CourseController {
 	@GetMapping("/{courseId}")
 	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(
 		@PathVariable Long courseId,
-		@RequestParam Double userLatitude,
-		@RequestParam Double userLongitude
+		@RequestParam(required = false) Double userLatitude,
+		@RequestParam(required = false) Double userLongitude
 	) {
 		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude);
 
