@@ -122,6 +122,13 @@ public class CommentService {
 		return PagedResponse.from(dtoPage);
 	}
 
+	// 사용자 조회 메서드
+	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
+		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
+		Page<CommentResponseDto> dtoPage = page.map(this::toDto);
+		return PagedResponse.from(dtoPage);
+	}
+
 	private CommentResponseDto toDto(Comment comment) {
 		return CommentResponseDto.of(comment);
 	}
