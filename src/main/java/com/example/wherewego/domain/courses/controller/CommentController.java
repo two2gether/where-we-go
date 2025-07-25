@@ -64,6 +64,7 @@ public class CommentController {
 	// 코스 댓글 수정
 	@PatchMapping("/{commentId}")
 	public ResponseEntity<ApiResponse<CommentResponseDto>> updateComment(
+		@PathVariable Long courseId,
 		@PathVariable Long commentId,
 		@RequestBody @Valid CommentRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
