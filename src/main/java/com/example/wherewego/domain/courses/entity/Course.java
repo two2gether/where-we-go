@@ -104,12 +104,6 @@ public class Course extends BaseEntity {
 	private Integer bookmarkCount = 0;
 
 	/**
-	 * 북마크 : JPQL 가능하게 하기 위한
-	 */
-	// @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
-	// private List<CourseBookmark> bookmarks = new ArrayList<>();
-
-	/**
 	 * 댓글 수
 	 */
 	@Column(name = "comment_count", nullable = false)
@@ -150,9 +144,6 @@ public class Course extends BaseEntity {
 
 		return this;
 	}
-	/**
-	 * 코스 삭제 기능
-	 */
 
 	// === 카운트 관련 메서드 ===
 

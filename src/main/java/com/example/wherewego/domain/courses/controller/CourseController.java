@@ -74,8 +74,12 @@ public class CourseController {
 	 * 코스 상세 조회 api
 	 */
 	@GetMapping("/{courseId}")
-	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(@PathVariable Long courseId) {
-		CourseDetailResponseDto response = courseService.getCourseDetail(courseId);
+	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(
+		@PathVariable Long courseId,
+		@RequestParam Double userLatitude,
+		@RequestParam Double userLongitude
+	) {
+		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스 조회를 성공했습니다.", response));
 	}
@@ -118,7 +122,7 @@ public class CourseController {
 		@PageableDefault(page = 0, size = 10) Pageable pageable
 	) {
 		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
-		
+
 		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("인기 코스 목록 조회 성공", response));

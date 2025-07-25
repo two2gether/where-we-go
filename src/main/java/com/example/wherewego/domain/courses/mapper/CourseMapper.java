@@ -1,10 +1,13 @@
 package com.example.wherewego.domain.courses.mapper;
 
+import java.util.List;
+
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
 import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
@@ -53,13 +56,14 @@ public class CourseMapper {
 		);
 	}
 
-	public static CourseDetailResponseDto toDetailDto(Course course) {
+	public static CourseDetailResponseDto toDetailDto(Course course, List<CoursePlaceInfo> places) {
 		return CourseDetailResponseDto.builder()
 			.courseId(course.getId())
 			.title(course.getTitle())
 			.description(course.getDescription())
 			.region(course.getRegion())
 			.themes(course.getThemes())
+			.places(places)
 			.likeCount(course.getLikeCount())
 			.averageRating(course.getAverageRating())
 			.isPublic(course.getIsPublic())

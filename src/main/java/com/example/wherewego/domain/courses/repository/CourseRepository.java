@@ -71,17 +71,13 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    WHERE c.region = :region
-		      AND c.isPublic = true
-		      AND :themes MEMBER OF c.themes
-		      AND EXISTS (
-		          SELECT 1
-		          FROM CourseBookmark b
-		          WHERE b.course = c
-		            AND b.createdAt BETWEEN :startOfMonth AND :now
-		      )
-		    GROUP BY c.id
-		    ORDER BY COUNT(CASE WHEN c.createdAt BETWEEN :startOfMonth AND :now THEN 1 END) DESC
+			JOIN CourseBookmark b ON b.course = c
+			WHERE c.region = :region
+			  AND c.isPublic = true
+			  AND :themes MEMBER OF c.themes
+			  AND b.createdAt BETWEEN :startOfMonth AND :now
+			GROUP BY c.id
+			ORDER BY COUNT(b.id) DESC
 		""")
 	Page<Course> findPopularCoursesByRegionAndThemesThisMonth(
 		@Param("region") String region,
