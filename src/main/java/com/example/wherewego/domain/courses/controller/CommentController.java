@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.courses.dto.CommentRequestDto;
-import com.example.wherewego.domain.courses.dto.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.global.response.ApiResponse;
 import com.example.wherewego.global.response.PagedResponse;
@@ -27,13 +27,13 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/courses/{courseId}/comments")
+@RequestMapping
 public class CommentController {
 
 	private final CommentService commentService;
 
 	// 코스 댓글 생성
-	@PostMapping
+	@PostMapping("/api/courses/{courseId}/comments")
 	public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
 		@PathVariable Long courseId,
 		@RequestBody @Valid CommentRequestDto requestDto,
@@ -47,9 +47,8 @@ public class CommentController {
 	}
 
 	// 코스 댓글 삭제
-	@DeleteMapping("/{commentId}")
+	@DeleteMapping("/api/courses/{courseId}/comments/{commentId}")
 	public ResponseEntity<ApiResponse<Void>> deleteComment(
-		@PathVariable Long courseId,
 		@PathVariable Long commentId,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
@@ -62,7 +61,7 @@ public class CommentController {
 	}
 
 	// 코스 댓글 수정
-	@PatchMapping("/{commentId}")
+	@PatchMapping("/api/courses/{courseId}/comments/{commentId}")
 	public ResponseEntity<ApiResponse<CommentResponseDto>> updateComment(
 		@PathVariable Long commentId,
 		@RequestBody @Valid CommentRequestDto requestDto,
@@ -77,7 +76,7 @@ public class CommentController {
 	}
 
 	//코스 댓글 목록 조회
-	@GetMapping
+	@GetMapping("/api/courses/{courseId}/comments")
 	public ResponseEntity<ApiResponse<PagedResponse<CommentResponseDto>>> getComments(
 		@PathVariable Long courseId,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {

@@ -11,20 +11,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class CourseCreateResponseDto {
+@AllArgsConstructor
+@Builder
+public class CourseDetailResponseDto {
 	private Long courseId;
-	private Long userId;
 	private String title;
 	private String description;
 	private List<CourseTheme> themes;
 	private String region;
 	private int likeCount;
 	private double averageRating;
-	private int viewCount;
-	private int commentCount;
 	private Boolean isPublic;
 	private LocalDateTime createdAt;
 }

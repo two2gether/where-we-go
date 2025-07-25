@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.dto;
+package com.example.wherewego.domain.courses.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CommentRequestDto {
 
-    @NotBlank(message = "댓글 내용을 입력해주세요")
-    private String content;
+	@NotBlank(message = "댓글 내용을 입력해주세요")
+	private String content;
 
 }

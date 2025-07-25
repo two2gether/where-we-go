@@ -67,9 +67,21 @@ public class UserService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-		user.changePassword(passwordEncoder.encode(dto.getPassword()));
+		// 1) password 가 넘어왔을 때만 변경
+		if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+			String encoded = passwordEncoder.encode(dto.getPassword());
+			user.changePassword(encoded);
+		}
 
-		user.updateProfile(dto.getNickname(), dto.getProfileImage());
+		// 2) nickname 이 넘어왔을 때만 변경
+		if (dto.getNickname() != null && !dto.getNickname().isBlank()) {
+			user.changeNickname(dto.getNickname());
+		}
+
+		// 3) profileImage 가 넘어왔을 때만 변경
+		if (dto.getProfileImage() != null && !dto.getProfileImage().isBlank()) {
+			user.changeProfileImage(dto.getProfileImage());
+		}
 
 		return MyPageResponseDto.fromEntity(user);
 	}
