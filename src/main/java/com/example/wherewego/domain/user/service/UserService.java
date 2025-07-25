@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
+import com.example.wherewego.domain.user.dto.MyPageResponseDto;
+import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
@@ -43,6 +45,47 @@ public class UserService {
 		userRepository.save(user);
 	}
 
+	@Transactional
+	public MyPageResponseDto myPage(Long userId) {
+		User user = userRepository.findById(userId).orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		return MyPageResponseDto.builder()
+			.userId(user.getId())
+			.nickname(user.getNickname())
+			.email(user.getEmail())
+			.profileImage(user.getProfileImage())
+			.provider(user.getProvider())
+			.providerId(user.getProviderId())
+			.createdAt(user.getCreatedAt().toString())
+			.updatedAt(user.getUpdatedAt().toString())
+			.build();
+
+	}
+
+	@Transactional
+	public MyPageResponseDto updateMyPage(Long userId, MyPageUpdateRequestDto dto) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		// 1) password 가 넘어왔을 때만 변경
+		if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+			String encoded = passwordEncoder.encode(dto.getPassword());
+			user.changePassword(encoded);
+		}
+
+		// 2) nickname 이 넘어왔을 때만 변경
+		if (dto.getNickname() != null && !dto.getNickname().isBlank()) {
+			user.changeNickname(dto.getNickname());
+		}
+
+		// 3) profileImage 가 넘어왔을 때만 변경
+		if (dto.getProfileImage() != null && !dto.getProfileImage().isBlank()) {
+			user.changeProfileImage(dto.getProfileImage());
+		}
+
+		return MyPageResponseDto.fromEntity(user);
+	}
+
 	public UserResponseDto toDto(User u) {
 		return UserResponseDto.builder()
 			.id(u.getId())
@@ -58,4 +101,5 @@ public class UserService {
 		return userRepository.findById(id)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 	}
+
 }

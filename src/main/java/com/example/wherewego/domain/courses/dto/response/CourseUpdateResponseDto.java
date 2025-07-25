@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CourseCreateResponseDto {
+public class CourseUpdateResponseDto {
 	private Long courseId;
 	private Long userId;
 	private String title;

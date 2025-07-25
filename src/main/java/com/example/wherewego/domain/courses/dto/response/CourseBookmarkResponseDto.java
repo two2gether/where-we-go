@@ -5,9 +5,8 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class CourseRatingResponseDto {
-    private Long id; // ratingId
+public class CourseBookmarkResponseDto {
+    private Long id; // courseBookmarkId
     private Long userId;
     private Long courseId;
-    private int rating;
 }
