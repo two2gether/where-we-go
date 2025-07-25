@@ -3,6 +3,8 @@ package com.example.wherewego.domain.courses.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -43,4 +45,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		            AND c.isDeleted = false
 		""")
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
+
+	// 내가 만든 코스 목록 조회
+	Page<Course> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
 }

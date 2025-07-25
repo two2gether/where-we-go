@@ -170,4 +170,18 @@ public class CourseService {
 		return courseRepository.findById(id)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 	}
+
+	// 내가 만든 코스 목록 조회
+	@Transactional(readOnly = true)
+	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Pageable pageable) {
+		Page<Course> page = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
+
+		List<CourseListResponseDto> dtoList = page.getContent().stream()
+			.map(CourseMapper::toList)
+			.toList();
+
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, page.getTotalElements());
+
+		return PagedResponse.from(dtoPage);
+	}
 }

@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.courses.dto.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
+import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
@@ -34,6 +36,7 @@ public class UserController {
 
 	private final UserService userService;
 	private final CommentService commentService;
+	private final CourseService courseService;
 
 	@DeleteMapping("/withdraw")
 	public ResponseEntity<ApiResponse<Void>> withdraw(
@@ -82,6 +85,20 @@ public class UserController {
 	) {
 		MyPageResponseDto updated = userService.updateMyPage(principal.getUser().getId(), dto);
 		return ResponseEntity.ok(ApiResponse.ok("프로필이 성공적으로 수정되었습니다.", updated));
+	}
+
+	// 내가 만든 코스 목록 조회
+	@GetMapping("/mypage/courses")
+	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> getMyCourses(
+		@AuthenticationPrincipal CustomUserDetail principal,
+		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+		Pageable pageable
+	) {
+		Long userId = principal.getUser().getId();
+
+		PagedResponse<CourseListResponseDto> page = courseService.getCoursesByUser(userId, pageable);
+
+		return ResponseEntity.ok(ApiResponse.ok("내가 만든 코스 목록 조회에 성공했습니다.", page));
 	}
 
 }
