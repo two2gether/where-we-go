@@ -47,7 +47,7 @@ class PlaceBookmarkServiceTest {
 	private UserRepository userRepository;
 
 	@Mock
-	private GooglePlaceService googlePlaceService;
+	private PlaceSearchService placeSearchService;
 
 	@InjectMocks
 	private PlaceBookmarkService placeBookmarkService;
@@ -172,8 +172,8 @@ class PlaceBookmarkServiceTest {
 				.isBookmarked(true)
 				.build();
 
-			given(googlePlaceService.getPlaceDetail("place2")).willReturn(place1);
-			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place2);
+			given(placeSearchService.getPlaceDetail("place2")).willReturn(place1);
+			given(placeSearchService.getPlaceDetail("place1")).willReturn(place2);
 
 			// when
 			UserBookmarkListDto result = placeBookmarkService.getUserBookmarks(userId, page, size, userLat, userLng);
@@ -235,7 +235,7 @@ class PlaceBookmarkServiceTest {
 
 			given(placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
 				.willReturn(bookmarkPage);
-			given(googlePlaceService.getPlaceDetail("invalid-place")).willReturn(null);
+			given(placeSearchService.getPlaceDetail("invalid-place")).willReturn(null);
 
 			// when & then
 			assertThatThrownBy(() -> placeBookmarkService.getUserBookmarks(userId, page, size, userLat, userLng))
@@ -244,7 +244,7 @@ class PlaceBookmarkServiceTest {
 		}
 
 		@Test
-		@DisplayName("외부 API 오류 시 CustomException이 발생한다")
+		@DisplayName("외부 API 오류가 적절히 전파된다")
 		void getUserBookmarksApiError() {
 			// given
 			PlaceBookmark bookmark = PlaceBookmark.builder()
@@ -259,13 +259,13 @@ class PlaceBookmarkServiceTest {
 
 			given(placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
 				.willReturn(bookmarkPage);
-			given(googlePlaceService.getPlaceDetail("place1"))
+			given(placeSearchService.getPlaceDetail("place1"))
 				.willThrow(new RuntimeException("API 오류"));
 
 			// when & then
 			assertThatThrownBy(() -> placeBookmarkService.getUserBookmarks(userId, page, size, userLat, userLng))
-				.isInstanceOf(CustomException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.PLACE_API_ERROR);
+				.isInstanceOf(RuntimeException.class)
+				.hasMessageContaining("API 오류");
 		}
 	}
 
