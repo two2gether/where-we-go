@@ -131,6 +131,10 @@ public class Course extends BaseEntity {
 	@Builder.Default
 	private Boolean isPublic = false;
 
+	public Course(String title, String region, boolean isPublic) {
+		super();
+	}
+
 	/**
 	 * 코스 수정 기능
 	 */
@@ -216,4 +220,6 @@ public class Course extends BaseEntity {
 		this.dailyScore = newDailyScore;
 	}
 
+	public void setId(long l) {
+	}
 }
