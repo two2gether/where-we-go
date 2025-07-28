@@ -34,33 +34,53 @@ public class PlaceService {
 	private final PlaceSearchService placeSearchService;
 
 	/**
-	 * 거리 계산을 포함한 장소 검색
+	 * 거리 계산과 북마크 상태를 포함한 장소 검색
 	 *
 	 * @param request 검색 요청 정보
-	 * @return 거리 정보가 포함된 검색 결과
+	 * @param userId 사용자 ID (null 가능)
+	 * @return 거리 정보와 북마크 상태가 포함된 검색 결과
 	 */
-	public List<PlaceDetailResponse> searchPlacesWithDistance(PlaceSearchRequest request) {
+	public List<PlaceDetailResponse> searchPlacesWithDistance(PlaceSearchRequest request, Long userId) {
 		// 외부 API로 검색
 		List<PlaceDetailResponse> searchResults = placeSearchService.searchPlaces(request);
 
-		// 사용자 위치가 있는 경우 거리 정보 추가
-		if (request.getUserLocation() != null &&
-			request.getUserLocation().getLatitude() != null &&
-			request.getUserLocation().getLongitude() != null) {
-
-			Double userLat = request.getUserLocation().getLatitude();
-			Double userLon = request.getUserLocation().getLongitude();
-
-			return searchResults.stream()
-				.map(place -> addDistanceToPlace(place, userLat, userLon))
-				.toList();
-		}
-
-		return searchResults;
+		// 각 장소에 대해 거리 정보와 북마크/통계 정보 추가
+		return searchResults.stream()
+			.map(place -> addDistanceAndStatsToPlace(place, request, userId))
+			.toList();
 	}
 
 	/**
-	 * 장소에 거리 정보 추가
+	 * 장소에 거리 정보와 북마크/통계 정보 추가
+	 */
+	private PlaceDetailResponse addDistanceAndStatsToPlace(PlaceDetailResponse place, PlaceSearchRequest request, Long userId) {
+		PlaceDetailResponse.PlaceDetailResponseBuilder builder = place.toBuilder();
+		
+		// 거리 정보 추가 (사용자 위치가 있는 경우)
+		if (request.getUserLocation() != null &&
+			request.getUserLocation().getLatitude() != null &&
+			request.getUserLocation().getLongitude() != null &&
+			place.getLatitude() != null && 
+			place.getLongitude() != null) {
+			
+			Double userLat = request.getUserLocation().getLatitude();
+			Double userLon = request.getUserLocation().getLongitude();
+			Integer distance = calculateDistanceInternal(userLat, userLon, place.getLatitude(), place.getLongitude());
+			builder.distance(distance);
+		}
+		
+		// 북마크/통계 정보 추가
+		PlaceStatsDto stats = getPlaceStats(place.getPlaceId(), userId);
+		builder.averageRating(stats.getAverageRating())
+			.reviewCount(stats.getReviewCount().intValue())
+			.bookmarkCount(stats.getBookmarkCount().intValue())
+			.isBookmarked(stats.getIsBookmarked());
+		
+		return builder.build();
+	}
+
+	/**
+	 * 장소에 거리 정보 추가 (기존 메서드 유지 - 호환성)
 	 */
 	private PlaceDetailResponse addDistanceToPlace(PlaceDetailResponse place, Double userLat, Double userLon) {
 		if (place.getLatitude() == null || place.getLongitude() == null) {

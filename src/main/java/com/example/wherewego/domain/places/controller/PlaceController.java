@@ -59,8 +59,8 @@ public class PlaceController {
 
 		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
 
-		// PlaceService에서 거리 계산을 포함한 검색 처리
-		List<PlaceDetailResponse> searchResults = placeService.searchPlacesWithDistance(request);
+		// PlaceService에서 거리 계산 및 북마크 상태를 포함한 검색 처리
+		List<PlaceDetailResponse> searchResults = placeService.searchPlacesWithDistance(request, userId);
 
 
 		return ResponseEntity.ok(
