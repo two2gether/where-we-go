@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.user.controller;
 
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
