@@ -20,7 +20,7 @@ public class Comment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne // 유저를 항상 조회해서 닉네임을 가져와야 하기 떄문에 디폴인 EAGER 설정
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

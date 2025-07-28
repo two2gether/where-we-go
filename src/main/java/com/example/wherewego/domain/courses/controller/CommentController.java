@@ -35,13 +35,12 @@ public class CommentController {
 	// 코스 댓글 생성
 	@PostMapping("/api/courses/{courseId}/comments")
 	public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
-		@PathVariable Long courseId,
 		@RequestBody @Valid CommentRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
 		Long userId = userDetails.getUser().getId();
 
-		CommentResponseDto responseDto = commentService.createComment(courseId, userId, requestDto);
+		CommentResponseDto responseDto = commentService.createComment(requestDto.getCourseId(), userId, requestDto);
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.body(ApiResponse.ok("댓글이 생성되었습니다.", responseDto));
 	}

@@ -138,7 +138,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 	}
 
 	@Override
-	public PlaceDetailResponse getPlaceDetail(String placeId) {
+	public PlaceDetailResponse getPlaceDetail(String placeId, boolean bookmarked) {
 		// TODO: 향후 단일 장소 상세 조회 API 구현 시 사용
 		// 현재는 검색 API를 통해서만 장소 정보 조회
 		log.debug("단일 장소 상세 조회 - placeId: {}", placeId);
@@ -271,7 +271,8 @@ public class KakaoPlaceService implements PlaceSearchService {
 	/**
 	 * 거리 계산 (Haversine 공식)
 	 */
-	private Integer calculateDistance(double userLat, double userLon, double placeLat, double placeLon) {
+	@Override
+	public Integer calculateDistance(double userLat, double userLon, double placeLat, double placeLon) {
 		final double EARTH_RADIUS = 6371000; // 지구 반지름 (미터)
 
 		// 라디안으로 변환

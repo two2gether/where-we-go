@@ -41,13 +41,10 @@ public class GooglePlaceService implements PlaceSearchService {
 
 	@Override
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
-		log.info("구글 장소 검색 시작 - 키워드: {}", request.getQuery());
-
 		// 구글 Text Search API 호출
 		GooglePlaceResponse googleResponse = callTextSearchApi(request);
 
 		if (googleResponse == null || googleResponse.getResults() == null) {
-			log.warn("구글 API 응답이 비어있습니다");
 			return Collections.emptyList();
 		}
 
@@ -55,16 +52,13 @@ public class GooglePlaceService implements PlaceSearchService {
 		Double userLat = getUserLatitude(request);
 		Double userLon = getUserLongitude(request);
 
-		List<PlaceDetailResponse> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
-
-		log.info("구글 장소 검색 완료 - 결과 수: {}", results.size());
-		return results;
+        return convertToPlaceDetailResponses(googleResponse, userLat, userLon);
 	}
 
 	/**
 	 * Google Place Details를 PlaceDetailResponse로 변환
 	 */
-	private PlaceDetailResponse convertToPlaceDetailResponse(GooglePlaceDetailResponse.PlaceDetail detail) {
+	private PlaceDetailResponse convertToPlaceDetailResponse(GooglePlaceDetailResponse.PlaceDetail detail, boolean isBookmarked) {
 		if (detail == null) {
 			return null;
 		}
@@ -78,7 +72,7 @@ public class GooglePlaceService implements PlaceSearchService {
 			.averageRating(0.0)  // 우리 서비스 평점 (기본값)
 			.reviewCount(0)      // 우리 서비스 리뷰 수 (기본값)
 			.bookmarkCount(0)    // 북마크 수 (기본값)
-			.isBookmarked(false) // 기본값 (실제로는 사용자별로 설정)
+			.isBookmarked(isBookmarked) // 기본값 (실제로는 사용자별로 설정)
 			.googleRating(detail.getRating()); // 구글 평점
 
 		// 위치 정보 추출
@@ -292,34 +286,31 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	@Override
-	public PlaceDetailResponse getPlaceDetail(String placeId) {
+	public PlaceDetailResponse getPlaceDetail(String placeId, boolean isBookmarked) {
 		log.info("구글 장소 상세 조회 시작 - placeId: {}", placeId);
 
+		GooglePlaceDetailResponse detailResponse;
 		try {
 			// Google Place Details API 호출
-			GooglePlaceDetailResponse detailResponse = callPlaceDetailsApi(placeId);
-
-			if (detailResponse == null || !"OK".equals(detailResponse.getStatus())) {
-				log.warn("구글 Place Details API 호출 실패 - placeId: {}, status: {}",
-					placeId, detailResponse != null ? detailResponse.getStatus() : "null");
-				throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
-			}
-
-			if (detailResponse.getResult() == null) {
-				log.warn("구글 Place Details 결과가 비어있음 - placeId: {}", placeId);
-				throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
-			}
-
-			// Google API 응답을 PlaceDetailResponse로 변환
-			return convertToPlaceDetailResponse(detailResponse.getResult());
-
-		} catch (CustomException e) {
-			// CustomException은 그대로 재전파
-			throw e;
-		} catch (Exception e) {
+            detailResponse = callPlaceDetailsApi(placeId);
+        } catch (Exception e) {
 			log.error("구글 Place Details API 호출 중 예외 발생 - placeId: {}", placeId, e);
 			throw new CustomException(ErrorCode.PLACE_API_ERROR);
 		}
+
+		if (detailResponse == null || !"OK".equals(detailResponse.getStatus())) {
+			log.warn("구글 Place Details API 호출 실패 - placeId: {}, status: {}",
+				placeId, detailResponse != null ? detailResponse.getStatus() : "null");
+			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
+		}
+
+		if (detailResponse.getResult() == null) {
+			log.warn("구글 Place Details 결과가 비어있음 - placeId: {}", placeId);
+			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
+		}
+
+		// Google API 응답을 PlaceDetailResponse로 변환
+		return convertToPlaceDetailResponse(detailResponse.getResult(), isBookmarked);
 	}
 
 	/**
@@ -409,13 +400,6 @@ public class GooglePlaceService implements PlaceSearchService {
 			.retrieve()
 			.bodyToMono(GooglePlaceResponse.class)
 			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
-			.doOnSuccess(response -> {
-				if (response != null) {
-					log.debug("구글 API 호출 성공 - 상태: {}, 결과수: {}",
-						response.getStatus(),
-						response.getResults() != null ? response.getResults().size() : 0);
-				}
-			})
 			.doOnError(error -> {
 				log.error("구글 API 호출 실패", error);
 				throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
@@ -518,7 +502,8 @@ public class GooglePlaceService implements PlaceSearchService {
 	/**
 	 * 두 지점 간 거리 계산 (미터 단위) - 다른 서비스에서도 사용 가능하도록 public으로 변경
 	 */
-	public int calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+	@Override
+	public Integer calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 		final int EARTH_RADIUS = 6371000; // 지구 반지름 (미터)
 
 		double lat1Rad = Math.toRadians(lat1);
@@ -526,12 +511,25 @@ public class GooglePlaceService implements PlaceSearchService {
 		double deltaLat = Math.toRadians(lat2 - lat1);
 		double deltaLon = Math.toRadians(lon2 - lon1);
 
-		double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-			Math.cos(lat1Rad) * Math.cos(lat2Rad) *
-				Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+		double a = getStraightDistanceBetweenXAndY(deltaLat, lat1Rad, lat2Rad, deltaLon);
 		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
 		return (int)(EARTH_RADIUS * c);
+	}
+
+
+	/**
+	 * 두 좌표간 직선 거리는 구하는 메소드
+	 * @param deltaLat
+	 * @param lat1Rad
+	 * @param lat2Rad
+	 * @param deltaLon
+	 * @return
+	 */
+	private static double getStraightDistanceBetweenXAndY(double deltaLat, double lat1Rad, double lat2Rad, double deltaLon) {
+		return Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+				Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+						Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
 	}
 
 	/**

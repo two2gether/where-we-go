@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.places.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -58,23 +59,7 @@ public class PlaceController {
 	 */
 	@PostMapping("/search")
 	public ResponseEntity<ApiResponse<List<PlaceDetailResponse>>> searchPlaces(
-		@Valid @RequestBody PlaceSearchRequest request,
-		@AuthenticationPrincipal CustomUserDetail userDetail) {
-
-		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
-		log.info("장소 검색 요청 - 사용자: {}, 키워드: {}, 페이지: {}, 크기: {}",
-			userId,
-			request.getQuery(),
-			request.getPagination() != null ? request.getPagination().getPage() : "기본값",
-			request.getPagination() != null ? request.getPagination().getSize() : "기본값");
-
-		// 위치 정보 로깅
-		if (request.getUserLocation() != null) {
-			log.info("위치 기반 검색 - 위도: {}, 경도: {}, 반경: {}m",
-				request.getUserLocation().getLatitude(),
-				request.getUserLocation().getLongitude(),
-				request.getUserLocation().getRadius());
-		}
+		@Valid @RequestBody PlaceSearchRequest request) {
 
 		// 외부 API 호출 (구글 Places API)
 		List<PlaceDetailResponse> searchResults = googlePlaceService.searchPlaces(request);
@@ -145,17 +130,16 @@ public class PlaceController {
 
 		log.info("장소 상세 정보 조회 - placeId: {}", placeId);
 
-		// Google Places API를 통해 장소 상세 정보 조회
-		PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId);
-
 		// 사용자별 북마크 상태 설정 (로그인한 경우만)
+		boolean isBookmarked = false;
 		if (userDetail != null) {
 			Long userId = userDetail.getUser().getId();
-			boolean isBookmarked = placeBookmarkService.isBookmarked(userId, placeId);
-			placeDetail = placeDetail.toBuilder()
-				.isBookmarked(isBookmarked)
-				.build();
-		}
+            isBookmarked = placeBookmarkService.isBookmarked(userId, placeId);
+        }
+
+		// Google Places API를 통해 장소 상세 정보 조회
+		PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId, isBookmarked);
+
 
 		log.info("장소 상세 정보 조회 성공 - 장소명: {}", placeDetail.getName());
 
