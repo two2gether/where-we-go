@@ -19,6 +19,7 @@ public class CourseDetailResponseDto {
 	private String title;
 	private String description;
 	private List<CourseTheme> themes;
+	private List<CoursePlaceInfo> places;
 	private String region;
 	private int likeCount;
 	private double averageRating;
