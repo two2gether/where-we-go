@@ -101,27 +101,17 @@ public class PlaceBookmarkService {
 	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
 		log.debug("장소 상세 정보 조회 - placeId: {}", placeId);
 		
-		try {
-			// Google Places API를 통해 장소 정보 조회
-			PlaceDetailResponse place = googlePlaceService.getPlaceDetail(placeId);
-			
-			if (place == null) {
-				log.warn("장소 정보를 찾을 수 없음 - placeId: {}", placeId);
-				throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
-			}
-			
-			// 북마크 상태 설정 (북마크 목록이므로 항상 true)
-			return place.toBuilder()
-				.isBookmarked(true)
-				.build();
-				
-		} catch (CustomException e) {
-			// CustomException은 그대로 재전파
-			throw e;
-		} catch (Exception e) {
-			log.error("장소 정보 조회 중 예외 발생 - placeId: {}", placeId, e);
-			throw new CustomException(ErrorCode.PLACE_API_ERROR);
+
+		// Google Places API를 통해 장소 정보 조회
+		// 북마크 상태 설정 (북마크 목록이므로 항상 true)
+		PlaceDetailResponse place = googlePlaceService.getPlaceDetail(placeId, true);
+
+		if (place == null) {
+			log.warn("장소 정보를 찾을 수 없음 - placeId: {}", placeId);
+			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
+
+		return place;
 	}
 
 	/**

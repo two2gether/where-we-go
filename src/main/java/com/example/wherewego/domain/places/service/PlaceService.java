@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.example.wherewego.domain.places.entity.PlaceBookmark;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,7 @@ public class PlaceService {
 
 	private final PlaceReviewRepository placeReviewRepository;
 	private final PlaceBookmarkRepository placeBookmarkRepository;
-	private final GooglePlaceService googlePlaceService;
+	private final PlaceSearchService googlePlaceService;
 
 	/**
 	 * 단일 장소 통계 조회 (사용자 정보 포함)
@@ -160,7 +161,7 @@ public class PlaceService {
 
 			try {
 				// 1. Google API에서 장소 상세 정보 조회
-				PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId);
+				PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId, false);
 
 				if (placeDetail == null) {
 					log.warn("장소 정보 조회 실패 - placeId: {}", placeId);

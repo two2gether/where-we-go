@@ -31,5 +31,7 @@ public interface PlaceSearchService {
 	 * @param placeId 장소 ID (구글/카카오 API place_id)
 	 * @return 장소 상세 정보
 	 */
-	PlaceDetailResponse getPlaceDetail(String placeId);
+	PlaceDetailResponse getPlaceDetail(String placeId, boolean bookmarked);
+
+	Integer calculateDistance(double lat1, double lon1, double lat2, double lon2);
 }
