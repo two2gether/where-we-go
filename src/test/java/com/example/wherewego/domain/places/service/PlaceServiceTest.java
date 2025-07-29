@@ -1,23 +1,36 @@
 package com.example.wherewego.domain.places.service;
 
-import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
-import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
-import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
+import com.example.wherewego.domain.courses.dto.response.CourseRouteSummary;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
+import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
+import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("PlaceService 테스트")
 class PlaceServiceTest {
 
 	@Mock
@@ -26,55 +39,425 @@ class PlaceServiceTest {
 	@Mock
 	private PlaceBookmarkRepository placeBookmarkRepository;
 
+	@Mock
+	private GooglePlaceService googlePlaceService;
+
 	@InjectMocks
 	private PlaceService placeService;
 
-	@Test
-	@DisplayName("단일 장소 통계 조회 - 로그인 사용자")
-	void getPlaceStats_WithUser_Success() {
-		// Given
-		String placeId = "12345";
-		Long userId = 1L;
+	@Nested
+	@DisplayName("단일 장소 통계 조회")
+	class GetPlaceStats {
 
-		when(placeReviewRepository.countByPlaceId(placeId)).thenReturn(5L);
-		when(placeReviewRepository.getAverageRatingByPlaceId(placeId)).thenReturn(4.236);
-		when(placeBookmarkRepository.countByPlaceId(placeId)).thenReturn(10L);
-		when(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).thenReturn(true);
-		when(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).thenReturn(false);
+		private final String placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4";
+		private final Long userId = 1L;
 
-		// When
-		PlaceStatsDto result = placeService.getPlaceStats(placeId, userId);
+		@Test
+		@DisplayName("로그인 사용자의 장소 통계를 정상적으로 조회한다")
+		void getPlaceStatsWithUser() {
+			// given
+			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
+			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
+			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(5L);
+			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(true);
+			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
 
-		// Then
-		assertThat(result).isNotNull();
-		assertThat(result.getPlaceId()).isEqualTo(placeId);
-		assertThat(result.getReviewCount()).isEqualTo(5L);
-		assertThat(result.getAverageRating()).isEqualTo(4.24);  // 소수점 2자리
-		assertThat(result.getBookmarkCount()).isEqualTo(10L);
-		assertThat(result.getIsBookmarked()).isTrue();
-		assertThat(result.getHasUserReview()).isFalse();
+			// when
+			PlaceStatsDto result = placeService.getPlaceStats(placeId, userId);
+
+			// then
+			assertThat(result).isNotNull();
+			assertThat(result.getPlaceId()).isEqualTo(placeId);
+			assertThat(result.getReviewCount()).isEqualTo(10L);
+			assertThat(result.getAverageRating()).isEqualTo(4.5);
+			assertThat(result.getBookmarkCount()).isEqualTo(5L);
+			assertThat(result.getIsBookmarked()).isTrue();
+			assertThat(result.getHasUserReview()).isFalse();
+		}
+
+		@Test
+		@DisplayName("게스트 사용자의 장소 통계를 정상적으로 조회한다")
+		void getPlaceStatsForGuest() {
+			// given
+			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
+			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
+			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(5L);
+
+			// when
+			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+
+			// then
+			assertThat(result).isNotNull();
+			assertThat(result.getPlaceId()).isEqualTo(placeId);
+			assertThat(result.getReviewCount()).isEqualTo(10L);
+			assertThat(result.getAverageRating()).isEqualTo(4.5);
+			assertThat(result.getBookmarkCount()).isEqualTo(5L);
+			assertThat(result.getIsBookmarked()).isNull();
+			assertThat(result.getHasUserReview()).isNull();
+		}
+
+		@Test
+		@DisplayName("평점이 null인 경우 0.0으로 반환한다")
+		void getPlaceStatsWithNullRating() {
+			// given
+			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(0L);
+			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(null);
+			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(0L);
+
+			// when
+			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+
+			// then
+			assertThat(result.getAverageRating()).isEqualTo(0.0);
+		}
+
+		@Test
+		@DisplayName("평점이 소수점 2자리로 포맷팅된다")
+		void getPlaceStatsWithFormattedRating() {
+			// given
+			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(3L);
+			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.666666);
+			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(0L);
+
+			// when
+			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+
+			// then
+			assertThat(result.getAverageRating()).isEqualTo(4.67);
+		}
 	}
 
-	@Test
-	@DisplayName("단일 장소 통계 조회 - 게스트 사용자")
-	void getPlaceStats_Guest_Success() {
-		// Given
-		String placeId = "12345";
+	@Nested
+	@DisplayName("여러 장소 통계 조회")
+	class GetPlaceStatsMap {
 
-		when(placeReviewRepository.countByPlaceId(placeId)).thenReturn(3L);
-		when(placeReviewRepository.getAverageRatingByPlaceId(placeId)).thenReturn(null);
-		when(placeBookmarkRepository.countByPlaceId(placeId)).thenReturn(7L);
+		private final List<String> placeIds = Arrays.asList("place1", "place2", "place3");
+		private final Long userId = 1L;
 
-		// When
-		PlaceStatsDto result = placeService.getPlaceStats(placeId);
+		@Test
+		@DisplayName("로그인 사용자의 여러 장소 통계를 정상적으로 조회한다")
+		void getPlaceStatsMapWithUser() {
+			// given
+			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds))
+				.willReturn(Arrays.asList("place1", "place3"));
 
-		// Then
-		assertThat(result).isNotNull();
-		assertThat(result.getPlaceId()).isEqualTo(placeId);
-		assertThat(result.getReviewCount()).isEqualTo(3L);
-		assertThat(result.getAverageRating()).isEqualTo(0.0); // null인 경우 0.0
-		assertThat(result.getBookmarkCount()).isEqualTo(7L);
-		assertThat(result.getIsBookmarked()).isNull();
-		assertThat(result.getHasUserReview()).isNull();
+			// place1 설정
+			given(placeReviewRepository.countByPlaceId("place1")).willReturn(5L);
+			given(placeReviewRepository.getAverageRatingByPlaceId("place1")).willReturn(4.2);
+			given(placeBookmarkRepository.countByPlaceId("place1")).willReturn(3L);
+			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place1")).willReturn(true);
+
+			// place2 설정
+			given(placeReviewRepository.countByPlaceId("place2")).willReturn(8L);
+			given(placeReviewRepository.getAverageRatingByPlaceId("place2")).willReturn(3.8);
+			given(placeBookmarkRepository.countByPlaceId("place2")).willReturn(10L);
+			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place2")).willReturn(false);
+
+			// place3 설정
+			given(placeReviewRepository.countByPlaceId("place3")).willReturn(0L);
+			given(placeReviewRepository.getAverageRatingByPlaceId("place3")).willReturn(null);
+			given(placeBookmarkRepository.countByPlaceId("place3")).willReturn(1L);
+			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place3")).willReturn(false);
+
+			// when
+			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds, userId);
+
+			// then
+			assertThat(result).hasSize(3);
+
+			PlaceStatsDto place1Stats = result.get("place1");
+			assertThat(place1Stats.getReviewCount()).isEqualTo(5L);
+			assertThat(place1Stats.getAverageRating()).isEqualTo(4.2);
+			assertThat(place1Stats.getBookmarkCount()).isEqualTo(3L);
+			assertThat(place1Stats.getIsBookmarked()).isTrue();
+			assertThat(place1Stats.getHasUserReview()).isTrue();
+
+			PlaceStatsDto place2Stats = result.get("place2");
+			assertThat(place2Stats.getReviewCount()).isEqualTo(8L);
+			assertThat(place2Stats.getAverageRating()).isEqualTo(3.8);
+			assertThat(place2Stats.getBookmarkCount()).isEqualTo(10L);
+			assertThat(place2Stats.getIsBookmarked()).isFalse();
+			assertThat(place2Stats.getHasUserReview()).isFalse();
+
+			PlaceStatsDto place3Stats = result.get("place3");
+			assertThat(place3Stats.getReviewCount()).isEqualTo(0L);
+			assertThat(place3Stats.getAverageRating()).isEqualTo(0.0);
+			assertThat(place3Stats.getBookmarkCount()).isEqualTo(1L);
+			assertThat(place3Stats.getIsBookmarked()).isTrue();
+			assertThat(place3Stats.getHasUserReview()).isFalse();
+		}
+
+		@Test
+		@DisplayName("게스트 사용자의 여러 장소 통계를 정상적으로 조회한다")
+		void getPlaceStatsMapForGuest() {
+			// given
+			given(placeReviewRepository.countByPlaceId(any())).willReturn(5L);
+			given(placeReviewRepository.getAverageRatingByPlaceId(any())).willReturn(4.0);
+			given(placeBookmarkRepository.countByPlaceId(any())).willReturn(2L);
+
+			// when
+			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds);
+
+			// then
+			assertThat(result).hasSize(3);
+			result.values().forEach(stats -> {
+				assertThat(stats.getIsBookmarked()).isNull();
+				assertThat(stats.getHasUserReview()).isNull();
+			});
+		}
+	}
+
+	@Nested
+	@DisplayName("코스용 장소 정보 조회")
+	class GetPlacesForCourseWithRoute {
+
+		private final List<String> placeIds = Arrays.asList("place1", "place2", "place3");
+		private final Double userLat = 37.5665;
+		private final Double userLng = 126.9780;
+
+		@Test
+		@DisplayName("경로 정보와 함께 장소 정보를 정상적으로 조회한다")
+		void getPlacesForCourseWithRouteSuccess() {
+			// given
+			given(googlePlaceService.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+				.willReturn(1000); // 1km
+			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+				.placeId("place1")
+				.name("장소1")
+				.category("음식점")
+				.latitude(37.5700)
+				.longitude(126.9800)
+				.build();
+
+			PlaceDetailResponse place2 = PlaceDetailResponse.builder()
+				.placeId("place2")
+				.name("장소2")
+				.category("카페")
+				.latitude(37.5750)
+				.longitude(126.9850)
+				.build();
+
+			PlaceDetailResponse place3 = PlaceDetailResponse.builder()
+				.placeId("place3")
+				.name("장소3")
+				.category("관광지")
+				.latitude(37.5800)
+				.longitude(126.9900)
+				.build();
+
+			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
+			given(googlePlaceService.getPlaceDetail("place2")).willReturn(place2);
+			given(googlePlaceService.getPlaceDetail("place3")).willReturn(place3);
+
+			// when
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(placeIds, userLat, userLng);
+
+			// then
+			assertThat(result).hasSize(3);
+
+			// 첫 번째 장소
+			CoursePlaceInfo firstPlace = result.get(0);
+			assertThat(firstPlace.getPlaceId()).isEqualTo("place1");
+			assertThat(firstPlace.getName()).isEqualTo("장소1");
+			assertThat(firstPlace.getVisitOrder()).isEqualTo(1);
+			assertThat(firstPlace.getDistanceFromUser()).isEqualTo(1000);
+			assertThat(firstPlace.getDistanceFromPrevious()).isNull();
+
+			// 두 번째 장소
+			CoursePlaceInfo secondPlace = result.get(1);
+			assertThat(secondPlace.getPlaceId()).isEqualTo("place2");
+			assertThat(secondPlace.getName()).isEqualTo("장소2");
+			assertThat(secondPlace.getVisitOrder()).isEqualTo(2);
+			assertThat(secondPlace.getDistanceFromUser()).isEqualTo(1000);
+			assertThat(secondPlace.getDistanceFromPrevious()).isEqualTo(1000);
+
+			// 세 번째 장소
+			CoursePlaceInfo thirdPlace = result.get(2);
+			assertThat(thirdPlace.getPlaceId()).isEqualTo("place3");
+			assertThat(thirdPlace.getName()).isEqualTo("장소3");
+			assertThat(thirdPlace.getVisitOrder()).isEqualTo(3);
+			assertThat(thirdPlace.getDistanceFromUser()).isEqualTo(1000);
+			assertThat(thirdPlace.getDistanceFromPrevious()).isEqualTo(1000);
+		}
+
+		@Test
+		@DisplayName("장소 ID 목록이 비어있으면 빈 리스트를 반환한다")
+		void getPlacesForCourseWithEmptyList() {
+			// when
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				List.of(), userLat, userLng);
+
+			// then
+			assertThat(result).isEmpty();
+		}
+
+		@Test
+		@DisplayName("사용자 위치가 없어도 장소 간 거리는 계산된다")
+		void getPlacesForCourseWithoutUserLocation() {
+			// given
+			given(googlePlaceService.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+				.willReturn(1000); // 1km
+			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+				.placeId("place1")
+				.name("장소1")
+				.latitude(37.5700)
+				.longitude(126.9800)
+				.build();
+
+			PlaceDetailResponse place2 = PlaceDetailResponse.builder()
+				.placeId("place2")
+				.name("장소2")
+				.latitude(37.5750)
+				.longitude(126.9850)
+				.build();
+
+			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
+			given(googlePlaceService.getPlaceDetail("place2")).willReturn(place2);
+
+			// when
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				Arrays.asList("place1", "place2"), null, null);
+
+			// then
+			assertThat(result).hasSize(2);
+			assertThat(result.get(0).getDistanceFromUser()).isNull();
+			assertThat(result.get(1).getDistanceFromUser()).isNull();
+			assertThat(result.get(1).getDistanceFromPrevious()).isEqualTo(1000);
+		}
+
+		@Test
+		@DisplayName("장소 정보 조회 실패 시 해당 장소는 건너뛴다")
+		void getPlacesForCourseWithFailedPlace() {
+			// given
+			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+				.placeId("place1")
+				.name("장소1")
+				.latitude(37.5700)
+				.longitude(126.9800)
+				.build();
+
+			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
+			given(googlePlaceService.getPlaceDetail("place2")).willReturn(null); // 실패
+			given(googlePlaceService.getPlaceDetail("place3")).willThrow(new RuntimeException("API 오류"));
+
+			// when
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				Arrays.asList("place1", "place2", "place3"), userLat, userLng);
+
+			// then
+			assertThat(result).hasSize(1);
+			assertThat(result.get(0).getPlaceId()).isEqualTo("place1");
+		}
+	}
+
+	@Nested
+	@DisplayName("총 경로 거리 계산")
+	class CalculateTotalRouteDistance {
+
+		@Test
+		@DisplayName("전체 경로의 총 거리를 정상적으로 계산한다")
+		void calculateTotalRouteDistanceSuccess() {
+			// given
+			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
+				.visitOrder(1)
+				.distanceFromUser(500)
+				.distanceFromPrevious(null)
+				.build();
+
+			CoursePlaceInfo place2 = CoursePlaceInfo.builder()
+				.visitOrder(2)
+				.distanceFromUser(800)
+				.distanceFromPrevious(300)
+				.build();
+
+			CoursePlaceInfo place3 = CoursePlaceInfo.builder()
+				.visitOrder(3)
+				.distanceFromUser(1200)
+				.distanceFromPrevious(400)
+				.build();
+
+			List<CoursePlaceInfo> places = Arrays.asList(place1, place2, place3);
+
+			// when
+			Integer totalDistance = placeService.calculateTotalRouteDistance(places);
+
+			// then
+			assertThat(totalDistance).isEqualTo(1200); // 500 + 300 + 400
+		}
+
+		@Test
+		@DisplayName("장소 목록이 비어있으면 0을 반환한다")
+		void calculateTotalRouteDistanceWithEmptyList() {
+			// when
+			Integer totalDistance = placeService.calculateTotalRouteDistance(List.of());
+
+			// then
+			assertThat(totalDistance).isEqualTo(0);
+		}
+
+		@Test
+		@DisplayName("거리 정보가 없는 구간은 건너뛴다")
+		void calculateTotalRouteDistanceWithNullDistances() {
+			// given
+			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
+				.visitOrder(1)
+				.distanceFromUser(null) // null
+				.distanceFromPrevious(null)
+				.build();
+
+			CoursePlaceInfo place2 = CoursePlaceInfo.builder()
+				.visitOrder(2)
+				.distanceFromUser(800)
+				.distanceFromPrevious(300)
+				.build();
+
+			List<CoursePlaceInfo> places = Arrays.asList(place1, place2);
+
+			// when
+			Integer totalDistance = placeService.calculateTotalRouteDistance(places);
+
+			// then
+			assertThat(totalDistance).isEqualTo(300); // null은 제외하고 300만 계산
+		}
+	}
+
+	@Nested
+	@DisplayName("경로 요약 정보 계산")
+	class CalculateRouteSummary {
+
+		@Test
+		@DisplayName("경로 요약 정보를 정상적으로 계산한다")
+		void calculateRouteSummarySuccess() {
+			// given
+			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
+				.visitOrder(1)
+				.distanceFromUser(500)
+				.build();
+
+			CoursePlaceInfo place2 = CoursePlaceInfo.builder()
+				.visitOrder(2)
+				.distanceFromPrevious(300)
+				.build();
+
+			List<CoursePlaceInfo> places = Arrays.asList(place1, place2);
+
+			// when
+			CourseRouteSummary summary = placeService.calculateRouteSummary(places);
+
+			// then
+			assertThat(summary.getTotalDistance()).isEqualTo(800);
+			assertThat(summary.getPlaceCount()).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("장소 목록이 비어있으면 기본값을 반환한다")
+		void calculateRouteSummaryWithEmptyList() {
+			// when
+			CourseRouteSummary summary = placeService.calculateRouteSummary(List.of());
+
+			// then
+			assertThat(summary.getTotalDistance()).isEqualTo(0);
+			assertThat(summary.getPlaceCount()).isEqualTo(0);
+		}
 	}
 }

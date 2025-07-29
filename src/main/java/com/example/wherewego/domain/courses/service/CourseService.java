@@ -1,6 +1,10 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -17,10 +21,14 @@ import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto
 import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
 import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
+import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
+import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
@@ -34,6 +42,8 @@ public class CourseService {
 
 	private final CourseRepository courseRepository;
 	private final UserRepository userRepository;
+	private final PlaceService placeService;
+	private final PlaceRepository placeRepository;
 
 	/**
 	 * 코스 생성 api
@@ -54,8 +64,25 @@ public class CourseService {
 		// 3. 저장하기 - 변환된 Course 엔티티를 DB에 저장
 		Course savedCourse = courseRepository.save(course);
 
-		// 4. dto 반환하기[엔티티 -> 응답 dto 변환]
-		// 저장된 Course -> CourseCreateResponseDto 로 변환(Mapper 사용)
+		// requestDto 안에 리스트 placeIds 가져오기
+		List<String> placeIds = requestDto.getPlaceIds();
+
+		// placesOrder 엔티티 만들기
+		List<PlacesOrder> placesOrders = new ArrayList<>();
+
+		for (int i = 0; i < placeIds.size(); i++) {
+			PlacesOrder placesOrder = PlacesOrder.builder()
+				.courseId(savedCourse.getId())
+				.placeId(placeIds.get(i))
+				.visitOrder(i + 1)
+				.build();
+
+			placesOrders.add(placesOrder);
+		}
+
+		// 저장하기
+		placeRepository.saveAll(placesOrders);
+
 		return CourseMapper.toDto(savedCourse);
 	}
 
@@ -110,13 +137,41 @@ public class CourseService {
 	 * 코스 상세 조회 api
 	 */
 	@Transactional(readOnly = true)
-	public CourseDetailResponseDto getCourseDetail(Long courseId) {
-		// 1. 조회
+	public CourseDetailResponseDto getCourseDetail(
+		Long courseId,
+		Double userLatitude,
+		Double userLongitude
+	) {
+		// 1. 코스 조회
 		Course findCourse = courseRepository.findByIdWithThemes(courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
+		// 1-2. 장소 조회
+		List<PlacesOrder> placesOrder = placeRepository.findByCourseIdOrderByVisitOrderAsc(courseId);
+
+		List<String> placeIds = placesOrder.stream()
+			.map(order -> order.getPlaceId())
+			.collect(Collectors.toList());
+
+		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
+			userLatitude, userLongitude);
+
+		CourseDetailResponseDto responseDto = CourseDetailResponseDto.builder()
+			.courseId(findCourse.getId())
+			.title(findCourse.getTitle())
+			.description(findCourse.getDescription())
+			.region(findCourse.getRegion())
+			.themes(findCourse.getThemes())
+			.places(placesForCourseWithRoute)
+			.likeCount(findCourse.getLikeCount())
+			.averageRating(findCourse.getAverageRating())
+			.isPublic(findCourse.getIsPublic())
+			.createdAt(findCourse.getCreatedAt())
+			.build();
+
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
-		return CourseMapper.toDetailDto(findCourse);
+		// return CourseMapper.toDetailDto(findCourse, places);
+		return responseDto;
 	}
 
 	/**
@@ -169,6 +224,65 @@ public class CourseService {
 	public Course getCourseById(Long id) {
 		return courseRepository.findById(id)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+	}
+
+	/**
+	 * 인기 코스 목록 조회 api
+	 * => 이번 달 북마크 수 기준
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<CourseListResponseDto> getPopularCourseList(
+		CourseListFilterDto filterDto,
+		Pageable pageable
+	) {
+		// 1. 데이터 준비
+		String region = filterDto.getRegion();
+		List<CourseTheme> themes = filterDto.getThemes();
+
+		// 1-2. 이번 달 시작 날짜 구하기 + 오늘까지
+		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+		LocalDateTime now = LocalDateTime.now();
+
+		// 2. 조건에 따라 인기 코스 조회
+		// 정렬 : 이번 달 북마크 수 내림차순
+		Page<Course> coursePage;
+		if (themes != null && !themes.isEmpty()) {
+			coursePage = courseRepository.findPopularCoursesByRegionAndThemesThisMonth(
+				region, themes, startOfMonth, now, pageable
+			);
+		} else {
+			coursePage = courseRepository.findPopularCoursesByRegionThisMonth(
+				region, startOfMonth, now, pageable
+			);
+		}
+
+		// 3. 조건에 따라 인기 코스 조회
+		// 정렬 : 이번 달 북마크 수 내림차순
+		// List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
+
+		// 3. 페이징 처리
+		// int offset = (int)pageable.getOffset();
+		// int limit = pageable.getPageSize();
+		// int total = popularCourseIds.size();
+		//
+		// List<Long> pagedIds = popularCourseIds.stream()
+		// 	.skip(offset)
+		// 	.limit(limit)
+		// 	.toList();
+
+		// 4. Id로 Course 엔티티 가져오기 (북마크 포함)
+		// List<Course> popularCourses = courseRepository.findByIdIn(pagedIds);
+
+		// 5. [엔티티 -> 응답 dto 변환]
+		List<CourseListResponseDto> dtoList = coursePage.stream()
+			.map(CourseMapper::toList)
+			.toList();
+
+		// 6. PageImpl 로 Page 객체 생성
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
+
+		// 7. 커스텀 페이징 응답 dto 로 변환 후 반환
+		return PagedResponse.from(dtoPage);
 	}
 
 	// 내가 만든 코스 목록 조회

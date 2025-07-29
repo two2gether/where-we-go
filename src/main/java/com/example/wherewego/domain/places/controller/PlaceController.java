@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
@@ -18,8 +17,6 @@ import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.BookmarkDeleteResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
-import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
-import com.example.wherewego.domain.places.service.GooglePlaceService;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
@@ -32,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 장소 검색 API 컨트롤러
  *
- * 구글 Places API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
+ * Place API를 통한 실시간 장소 검색 및 상세 정보 조회 기능을 제공합니다.
  * API 명세에 따른 통합 검색 엔드포인트를 구현합니다.
  */
 @Slf4j
@@ -41,9 +38,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PlaceController {
 
-	private final GooglePlaceService googlePlaceService;
-	private final PlaceBookmarkService placeBookmarkService;
 	private final PlaceService placeService;
+	private final PlaceBookmarkService placeBookmarkService;
 
 	/**
 	 * 장소 검색 API
@@ -62,23 +58,10 @@ public class PlaceController {
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
 		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
-		log.info("장소 검색 요청 - 사용자: {}, 키워드: {}, 페이지: {}, 크기: {}",
-			userId,
-			request.getQuery(),
-			request.getPagination() != null ? request.getPagination().getPage() : "기본값",
-			request.getPagination() != null ? request.getPagination().getSize() : "기본값");
 
-		// 위치 정보 로깅
-		if (request.getUserLocation() != null) {
-			log.info("위치 기반 검색 - 위도: {}, 경도: {}, 반경: {}m",
-				request.getUserLocation().getLatitude(),
-				request.getUserLocation().getLongitude(),
-				request.getUserLocation().getRadius());
-		}
+		// PlaceService에서 거리 계산을 포함한 검색 처리
+		List<PlaceDetailResponse> searchResults = placeService.searchPlacesWithDistance(request);
 
-		// 외부 API 호출 (구글 Places API)
-		List<PlaceDetailResponse> searchResults = googlePlaceService.searchPlaces(request);
-		log.info("장소 검색 완료 - 총 {}개 결과", searchResults.size());
 
 		return ResponseEntity.ok(
 			ApiResponse.ok("장소 검색 성공", searchResults)
@@ -96,10 +79,8 @@ public class PlaceController {
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
 		User user = userDetail.getUser();
-		log.info("북마크 추가 요청 - 사용자: {}, 장소ID: {}", user.getId(), placeId);
 
 		BookmarkCreateResponseDto result = placeBookmarkService.addBookmark(user.getId(), placeId);
-		log.info("북마크 추가 성공 - 북마크ID: {}", result.getBookmarkId());
 
 		return ResponseEntity.ok(
 			ApiResponse.ok("북마크 추가 성공", result)
@@ -117,7 +98,6 @@ public class PlaceController {
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
 		User user = userDetail.getUser();
-		log.info("북마크 제거 요청 - 사용자: {}, 장소ID: {}", user.getId(), placeId);
 
 		placeBookmarkService.removeBookmark(user.getId(), placeId);
 
@@ -125,13 +105,11 @@ public class PlaceController {
 			.isBookmarked(false)
 			.build();
 
-		log.info("북마크 제거 성공 - 장소ID: {}", placeId);
 
 		return ResponseEntity.ok(
 			ApiResponse.ok("북마크 제거 성공", result)
 		);
 	}
-
 
 	/**
 	 * 장소 상세 정보 조회 API
@@ -143,21 +121,12 @@ public class PlaceController {
 		@PathVariable String placeId,
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
-		log.info("장소 상세 정보 조회 - placeId: {}", placeId);
 
-		// Google Places API를 통해 장소 상세 정보 조회
-		PlaceDetailResponse placeDetail = googlePlaceService.getPlaceDetail(placeId);
+		// PlaceService에서 장소 정보 조회 (통계 정보 포함)
+		User user = userDetail != null ? userDetail.getUser() : null;
+		PlaceDetailResponse placeDetail = placeService.getPlaceDetailWithStats(placeId,
+			user != null ? user.getId() : null);
 
-		// 사용자별 북마크 상태 설정 (로그인한 경우만)
-		if (userDetail != null) {
-			Long userId = userDetail.getUser().getId();
-			boolean isBookmarked = placeBookmarkService.isBookmarked(userId, placeId);
-			placeDetail = placeDetail.toBuilder()
-				.isBookmarked(isBookmarked)
-				.build();
-		}
-
-		log.info("장소 상세 정보 조회 성공 - 장소명: {}", placeDetail.getName());
 
 		return ResponseEntity.ok(
 			ApiResponse.ok("장소 상세 정보 조회 성공", placeDetail)

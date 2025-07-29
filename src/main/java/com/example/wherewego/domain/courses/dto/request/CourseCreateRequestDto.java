@@ -5,6 +5,7 @@ import java.util.List;
 import com.example.wherewego.common.enums.CourseTheme;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class CourseCreateRequestDto {
+
+	@NotEmpty(message = "장소 선택은 필수입니다.")
+	private List<String> placeIds;
 
 	@NotBlank(message = "제목은 필수입니다.")
 	private String title;

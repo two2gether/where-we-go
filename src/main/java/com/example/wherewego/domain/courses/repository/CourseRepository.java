@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.courses.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +46,46 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		            AND c.isDeleted = false
 		""")
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
+
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    WHERE c.region = :region
+		      AND c.isPublic = true
+		      AND EXISTS (
+		          SELECT 1
+		          FROM CourseBookmark b
+		          WHERE b.course = c
+		            AND b.createdAt BETWEEN :startOfMonth AND :now
+		      )
+		    GROUP BY c.id
+		    ORDER BY COUNT(CASE WHEN c.createdAt BETWEEN :startOfMonth AND :now THEN 1 END) DESC
+		""")
+	Page<Course> findPopularCoursesByRegionThisMonth(
+		@Param("region") String region,
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
+
+	@Query("""
+		    SELECT c
+		    FROM Course c
+			JOIN CourseBookmark b ON b.course = c
+			WHERE c.region = :region
+			  AND c.isPublic = true
+			  AND :themes MEMBER OF c.themes
+			  AND b.createdAt BETWEEN :startOfMonth AND :now
+			GROUP BY c.id
+			ORDER BY COUNT(b.id) DESC
+		""")
+	Page<Course> findPopularCoursesByRegionAndThemesThisMonth(
+		@Param("region") String region,
+		@Param("themes") List<CourseTheme> themes,
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
 
 	// 내가 만든 코스 목록 조회
 	Page<Course> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
