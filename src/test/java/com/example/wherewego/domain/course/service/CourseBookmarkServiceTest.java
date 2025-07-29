@@ -6,7 +6,15 @@ import static org.mockito.Mockito.*;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.auth.Provider;
 import com.example.wherewego.domain.courses.dto.response.CourseBookmarkResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseBookmark;
@@ -17,133 +25,125 @@ import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-
 @ExtendWith(MockitoExtension.class)
 class CourseBookmarkServiceTest {
 
-    @Mock
-    UserService userService;
-    @Mock
-    CourseService courseService;
-    @Mock
-    private CourseBookmarkRepository bookmarkRepository;
+	@Mock
+	UserService userService;
+	@Mock
+	CourseService courseService;
+	@Mock
+	private CourseBookmarkRepository bookmarkRepository;
 
-    @InjectMocks
-    private CourseBookmarkService bookmarkService;
+	@InjectMocks
+	private CourseBookmarkService bookmarkService;
 
-    private final Long userId = 1L;
-    private final Long courseId = 1L;
+	private final Long userId = 1L;
+	private final Long courseId = 1L;
 
-    @Test
-    void 북마크_생성_성공() {
-        // given
-        User user = createUser(userId);
-        Course course = createCourse(courseId);
+	@Test
+	void 북마크_생성_성공() {
+		// given
+		User user = createUser(userId);
+		Course course = createCourse(courseId);
 
-        int beforeCount = course.getBookmarkCount();
-        when(courseService.getCourseById(100L)).thenReturn(course);
-        when(userService.getUserById(1L)).thenReturn(user);
-        when(bookmarkRepository.existsByUserIdAndCourseId(1L, 100L)).thenReturn(false);
+		int beforeCount = course.getBookmarkCount();
+		when(courseService.getCourseById(100L)).thenReturn(course);
+		when(userService.getUserById(1L)).thenReturn(user);
+		when(bookmarkRepository.existsByUserIdAndCourseId(1L, 100L)).thenReturn(false);
 
-        CourseBookmark bookmark = new CourseBookmark(user, course);
-        ReflectionTestUtils.setField(bookmark,"id", 10L);
-        when(bookmarkRepository.save(any(CourseBookmark.class))).thenReturn(bookmark);
+		CourseBookmark bookmark = new CourseBookmark(user, course);
+		ReflectionTestUtils.setField(bookmark, "id", 10L);
+		when(bookmarkRepository.save(any(CourseBookmark.class))).thenReturn(bookmark);
 
-        // when
-        CourseBookmarkResponseDto result = bookmarkService.courseBookmarkCreate(1L, 100L);
+		// when
+		CourseBookmarkResponseDto result = bookmarkService.courseBookmarkCreate(1L, 100L);
 
-        // then
-        assertEquals(10L, result.getId());
-        assertEquals(1L, result.getUserId());
-        assertEquals(1L, result.getCourseId());
-        assertEquals(beforeCount + 1, course.getBookmarkCount());
-    }
+		// then
+		assertEquals(10L, result.getId());
+		assertEquals(1L, result.getUserId());
+		assertEquals(1L, result.getCourseId());
+		assertEquals(beforeCount + 1, course.getBookmarkCount());
+	}
 
-    @Test
-    void 북마크_중복생성_예외발생() {
-        // given
-        User user = createUser(userId);
-        Course course = createCourse(courseId);
+	@Test
+	void 북마크_중복생성_예외발생() {
+		// given
+		User user = createUser(userId);
+		Course course = createCourse(courseId);
 
-        when(courseService.getCourseById(100L)).thenReturn(course);
-        when(userService.getUserById(1L)).thenReturn(user);
-        when(bookmarkRepository.existsByUserIdAndCourseId(1L, 100L)).thenReturn(true);
+		when(courseService.getCourseById(100L)).thenReturn(course);
+		when(userService.getUserById(1L)).thenReturn(user);
+		when(bookmarkRepository.existsByUserIdAndCourseId(1L, 100L)).thenReturn(true);
 
-        // when & then
-        CustomException exception = assertThrows(CustomException.class,
-                () -> bookmarkService.courseBookmarkCreate(1L, 100L));
-        assertEquals(ErrorCode.BOOKMARK_ALREADY_EXISTS, exception.getErrorCode());
-    }
+		// when & then
+		CustomException exception = assertThrows(CustomException.class,
+			() -> bookmarkService.courseBookmarkCreate(1L, 100L));
+		assertEquals(ErrorCode.BOOKMARK_ALREADY_EXISTS, exception.getErrorCode());
+	}
 
-    @Test
-    void 북마크_삭제_성공() {
-        // given
-        User user = createUser(userId);
-        Course course = createCourse(courseId);
+	@Test
+	void 북마크_삭제_성공() {
+		// given
+		User user = createUser(userId);
+		Course course = createCourse(courseId);
 
-        CourseBookmark bookmark = new CourseBookmark(user, course);
+		CourseBookmark bookmark = new CourseBookmark(user, course);
 
-        when(courseService.getCourseById(100L)).thenReturn(course);
-        when(bookmarkRepository.findByUserIdAndCourseId(1L, 100L)).thenReturn(Optional.of(bookmark));
+		when(courseService.getCourseById(100L)).thenReturn(course);
+		when(bookmarkRepository.findByUserIdAndCourseId(1L, 100L)).thenReturn(Optional.of(bookmark));
 
-        // when
-        bookmarkService.courseBookmarkDelete(1L, 100L);
+		// when
+		bookmarkService.courseBookmarkDelete(1L, 100L);
 
-        // then
-        verify(bookmarkRepository).delete(bookmark);
-    }
+		// then
+		verify(bookmarkRepository).delete(bookmark);
+	}
 
-    @Test
-    void 북마크_삭제시_존재하지않는경우_예외() {
-        // given
-        User user = createUser(userId);
-        Course course = createCourse(courseId);
+	@Test
+	void 북마크_삭제시_존재하지않는경우_예외() {
+		// given
+		User user = createUser(userId);
+		Course course = createCourse(courseId);
 
-        when(courseService.getCourseById(100L)).thenReturn(course);
-        when(bookmarkRepository.findByUserIdAndCourseId(1L, 100L)).thenReturn(Optional.empty());
+		when(courseService.getCourseById(100L)).thenReturn(course);
+		when(bookmarkRepository.findByUserIdAndCourseId(1L, 100L)).thenReturn(Optional.empty());
 
-        // when & then
-        CustomException exception = assertThrows(CustomException.class,
-                () -> bookmarkService.courseBookmarkDelete(1L, 100L));
-        assertEquals(ErrorCode.BOOKMARK_NOT_FOUND, exception.getErrorCode());
-    }
+		// when & then
+		CustomException exception = assertThrows(CustomException.class,
+			() -> bookmarkService.courseBookmarkDelete(1L, 100L));
+		assertEquals(ErrorCode.BOOKMARK_NOT_FOUND, exception.getErrorCode());
+	}
 
-    // 자주 쓰는 코드 메서드로 분리
-    private User createUser(Long id) {
-        return User.builder()
-                .id(id)
-                .email("email")
-                .password("password")
-                .nickname("nickname")
-                .profileImage("profileImage")
-                .provider("provider")
-                .providerId("providerId")
-                .build();
-    }
+	// 자주 쓰는 코드 메서드로 분리
+	private User createUser(Long id) {
+		return User.builder()
+			.id(id)
+			.email("email")
+			.password("password")
+			.nickname("nickname")
+			.profileImage("profileImage")
+			.provider(Provider.LOCAL)
+			.providerId("providerId")
+			.build();
+	}
 
-    private Course createCourse(Long id) {
-        return Course.builder()
-                .id(id)
-                .user(createUser(userId))
-                .title("title")
-                .description("description")
-                .themes(List.of())
-                .region("region")
-                .likeCount(0)
-                .averageRating(0.0)
-                .viewCount(0)
-                .bookmarkCount(0)
-                .commentCount(0)
-                .dailyScore(0)
-                .isDeleted(false)
-                .isPublic(true)
-                .build();
-    }
+	private Course createCourse(Long id) {
+		return Course.builder()
+			.id(id)
+			.user(createUser(userId))
+			.title("title")
+			.description("description")
+			.themes(List.of())
+			.region("region")
+			.likeCount(0)
+			.averageRating(0.0)
+			.viewCount(0)
+			.bookmarkCount(0)
+			.commentCount(0)
+			.dailyScore(0)
+			.isDeleted(false)
+			.isPublic(true)
+			.build();
+	}
 }
