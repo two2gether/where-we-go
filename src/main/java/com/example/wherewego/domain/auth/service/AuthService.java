@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.wherewego.domain.auth.Provider;
 import com.example.wherewego.domain.auth.dto.LoginRequestDto;
 import com.example.wherewego.domain.auth.dto.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.SignupRequestDto;
@@ -41,7 +42,7 @@ public class AuthService {
 			.password(passwordEncoder.encode(request.getPassword()))
 			.nickname(request.getNickname())
 			.profileImage(request.getProfileImage())
-			.provider("local")
+			.provider(Provider.LOCAL)
 			.build();
 
 		User saved = userRepository.save(user);
