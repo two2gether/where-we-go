@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,7 +18,6 @@ import com.example.wherewego.domain.places.dto.response.GooglePlaceResponse;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.global.exception.CustomException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -28,16 +28,21 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class GooglePlaceService implements PlaceSearchService {
 
 	// API 엔드포인트 상수
 	private static final String TEXT_SEARCH_ENDPOINT = "/textsearch/json";
 	private static final String PLACE_DETAILS_ENDPOINT = "/details/json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
+
 	private final WebClient googleWebClient;
+
 	@Value("${google.api.key}")
 	private String googleApiKey;
+
+	public GooglePlaceService(@Qualifier("googleWebClient") WebClient googleWebClient) {
+		this.googleWebClient = googleWebClient;
+	}
 
 	@Override
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
@@ -335,7 +340,6 @@ public class GooglePlaceService implements PlaceSearchService {
 			.bodyToMono(GooglePlaceDetailResponse.class)
 			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
 			.block();
-
 
 		return response;
 	}

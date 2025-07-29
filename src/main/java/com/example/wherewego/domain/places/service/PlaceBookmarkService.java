@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.places.service;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +17,6 @@ import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -24,13 +24,19 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PlaceBookmarkService {
 
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final UserRepository userRepository;
 	private final PlaceSearchService placeSearchService;
+
+	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserRepository userRepository,
+		@Qualifier(value = "googlePlaceService") PlaceSearchService placeSearchService) {
+		this.placeBookmarkRepository = placeBookmarkRepository;
+		this.userRepository = userRepository;
+		this.placeSearchService = placeSearchService;
+	}
 
 	/**
 	 * 북마크 추가
@@ -97,14 +103,14 @@ public class PlaceBookmarkService {
 	 * PlaceSearchService를 통해 장소 상세 정보 조회
 	 */
 	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
-		
+
 		// PlaceSearchService를 통해 장소 정보 조회
 		PlaceDetailResponse place = placeSearchService.getPlaceDetail(placeId);
-		
+
 		if (place == null) {
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
-		
+
 		// 북마크 상태 설정 (북마크 목록이므로 항상 true)
 		return place.toBuilder()
 			.isBookmarked(true)
