@@ -15,6 +15,6 @@ public interface CourseBookmarkRepository extends JpaRepository<CourseBookmark, 
 
 	Optional<CourseBookmark> findByUserIdAndCourseId(Long userId, Long courseId);
 
-	// 북마크 목록 페이징 조회 (bookmarkCreatedAt 내림차순 정렬 가능)
+	// 북마크 목록 페이징 조회 (bookmarkCreatedAt 내림차순 정렬)
 	Page<CourseBookmark> findByUserId(Long userId, Pageable pageable);
 }

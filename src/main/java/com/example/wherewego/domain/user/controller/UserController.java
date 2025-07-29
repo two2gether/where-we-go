@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.user.controller;
 
-import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -19,7 +18,6 @@ import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
-import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseService;
@@ -132,7 +130,7 @@ public class UserController {
 		return ResponseEntity.ok(ApiResponse.ok("내가 만든 코스 목록 조회에 성공했습니다.", page));
 	}
 
-	// 내가 북마크한 코스 목록 조회 (북마크한 시점 기준으로 최신순)
+	// 내가 북마크한 코스 목록 조회
 	@GetMapping("/mypage/coursebookmark")
 	public ResponseEntity<ApiResponse<PagedResponse<UserCourseBookmarkListDto>>> getMyBookmarkedCourses(
 		@AuthenticationPrincipal CustomUserDetail principal,

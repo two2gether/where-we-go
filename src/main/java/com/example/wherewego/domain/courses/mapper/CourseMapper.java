@@ -98,10 +98,10 @@ public class CourseMapper {
 	}
 
 	//	내가 북마크한 코스 목록 조회 (마이페이지)
-	public static UserCourseBookmarkListDto.BookmarkCourse toBookmarkCourseDto(CourseBookmark bookmark) {
+	public static UserCourseBookmarkListDto toBookmarkCourseDto(CourseBookmark bookmark) {
 		Course course = bookmark.getCourse();
 
-		return UserCourseBookmarkListDto.BookmarkCourse.builder()
+		return UserCourseBookmarkListDto.builder()
 			.courseId(course.getId())
 			.title(course.getTitle())
 			.description(course.getDescription())
