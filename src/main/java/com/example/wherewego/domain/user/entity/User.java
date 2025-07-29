@@ -1,9 +1,12 @@
 package com.example.wherewego.domain.user.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.auth.Provider;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,8 +40,9 @@ public class User extends BaseEntity {
 	@Column(length = 500, name = "profile_image")
 	private String profileImage;
 
-	@Column(length = 20)
-	private String provider;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private Provider provider;
 
 	@Column(length = 100, name = "provider_id")
 	private String providerId;
