@@ -16,6 +16,7 @@ import io.lettuce.core.dynamic.annotation.Param;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
+	// FIXME : DISTICT 제거
 	@Query("""
 		    SELECT DISTINCT c FROM Course c
 		    LEFT JOIN FETCH c.themes t
@@ -30,6 +31,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	);
 
 	// Fetch Join - 테마 조건 없음
+	// FIXME : DISTICT 제거
 	@Query("""
 		    SELECT DISTINCT c FROM Course c
 		    LEFT JOIN FETCH c.themes
