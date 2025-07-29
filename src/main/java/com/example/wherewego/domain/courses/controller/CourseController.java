@@ -46,28 +46,25 @@ public class CourseController {
 	 * 코스 생성 api
 	 */
 	@PostMapping
-	public ResponseEntity<ApiResponse<CourseCreateResponseDto>> registerCourse(
-		@RequestBody @Valid CourseCreateRequestDto requestDto,
-		@AuthenticationPrincipal CustomUserDetail userDetail
-	) {
-		Long userId = userDetail.getUser().getId();
+	public ApiResponse<CourseCreateResponseDto> registerCourse(@RequestBody @Valid CourseCreateRequestDto requestDto,
+															   @AuthenticationPrincipal CustomUserDetail userDetail) {
+		Long userId = 1L;
 
 		CourseCreateResponseDto response = courseService.createCourse(requestDto, userId);
 
-		return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 생성되었습니다.", response));
+		return ApiResponse.ok("코스가 성공적으로 생성되었습니다.", response);
 	}
 
 	/**
 	 * 코스 목록 조회 api
 	 */
 	@GetMapping
-	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> courseList(
-		@Validated @RequestBody CourseListFilterDto filterDto,
-		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-	) {
+	public ApiResponse<PagedResponse<CourseListResponseDto>> courseList(
+				// FIXME : GET 메소드이므로 @RequestBody가 아닌 @RequestParam으로 변경
+				@Validated @RequestBody CourseListFilterDto filterDto,
+				@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
-
-		return ResponseEntity.ok(ApiResponse.ok("코스 목록 조회를 성공했습니다.", response));
+		return ApiResponse.ok("코스 목록 조회를 성공했습니다.", response);
 	}
 
 	/**

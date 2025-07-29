@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+// FIXME : 가능하다면, CourseCreateResponseDto를 자식 클래스로 변경하면 좋을 것 같음
 public class CourseUpdateResponseDto {
 	private Long courseId;
 	private Long userId;

@@ -104,9 +104,11 @@ public class CourseService {
 		List<Course> courseList;
 		if (themes != null && !themes.isEmpty()) {
 			// 테마가 있을 경우 : 지역+테마 조건으로 조회
+			// FIXME : Pageable을 사용하도록 변경 필요
 			courseList = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes);
 		} else {
 			// 테마가 없을 경우 : 지역 조건만으로 조회
+			// FIXME : Pageable을 사용하도록 변경 필요
 			courseList = courseRepository.findByRegionAndIsPublicTrue(region);
 		}
 
@@ -156,6 +158,7 @@ public class CourseService {
 		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
 			userLatitude, userLongitude);
 
+		// FIXME : inline 처리 필요
 		CourseDetailResponseDto responseDto = CourseDetailResponseDto.builder()
 			.courseId(findCourse.getId())
 			.title(findCourse.getTitle())
@@ -240,6 +243,7 @@ public class CourseService {
 		List<CourseTheme> themes = filterDto.getThemes();
 
 		// 1-2. 이번 달 시작 날짜 구하기 + 오늘까지
+		// FIXME : 하나의 논리적 범위 안에서는 한번만 now()를 실행하고 처리할 수 있도록 변경 필요
 		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 		LocalDateTime now = LocalDateTime.now();
 
