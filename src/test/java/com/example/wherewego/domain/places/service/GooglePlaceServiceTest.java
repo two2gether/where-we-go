@@ -1,73 +1,78 @@
 package com.example.wherewego.domain.places.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GooglePlaceService 테스트")
 class GooglePlaceServiceTest {
 
+	@Mock
+	private WebClient googleWebClient;
+
 	@InjectMocks
 	private GooglePlaceService googlePlaceService;
 
-	// WebClient 모킹이 복잡하므로 거리 계산 기능만 테스트
+	// 거리 계산 기능은 PlaceService로 이동되었음
+	// GooglePlaceService는 PlaceSearchService 인터페이스 구현과 객체 생성에 중점
 
 	@Nested
-	@DisplayName("거리 계산")
-	class CalculateDistance {
+	@DisplayName("서비스 인터페이스 구현")
+	class ServiceImplementation {
 
 		@Test
-		@DisplayName("두 지점 간 거리를 정확히 계산한다")
-		void calculateDistanceAccurate() {
-			// given
-			double lat1 = 37.5665; // 서울시청
-			double lon1 = 126.9780;
-			double lat2 = 37.4979; // 강남역
-			double lon2 = 127.0276;
-
-			// when
-			int distance = googlePlaceService.calculateDistance(lat1, lon1, lat2, lon2);
-
+		@DisplayName("PlaceSearchService 인터페이스를 구현한다")
+		void implementsPlaceSearchService() {
 			// then
-			// 실제 거리는 약 9.2km이므로 9000m 근처여야 함
-			assertThat(distance).isBetween(8000, 11000);
+			assertThat(googlePlaceService).isInstanceOf(PlaceSearchService.class);
 		}
 
 		@Test
-		@DisplayName("같은 지점의 거리는 0이다")
-		void calculateDistanceSamePoint() {
+		@DisplayName("PlaceSearchRequest 유효성 검증")
+		void validatePlaceSearchRequest() {
 			// given
-			double lat = 37.5665;
-			double lon = 126.9780;
-
-			// when
-			int distance = googlePlaceService.calculateDistance(lat, lon, lat, lon);
+			PlaceSearchRequest request = PlaceSearchRequest.builder()
+				.query("서울역")
+				.build();
 
 			// then
-			assertThat(distance).isEqualTo(0);
+			assertThat(request.getQuery()).isEqualTo("서울역");
+			assertThat(request.getUserLocation()).isNull();
 		}
 
 		@Test
-		@DisplayName("짧은 거리도 정확히 계산한다")
-		void calculateDistanceShort() {
+		@DisplayName("사용자 위치가 있는 PlaceSearchRequest 생성")
+		void createPlaceSearchRequestWithUserLocation() {
 			// given
-			double lat1 = 37.5665;
-			double lon1 = 126.9780;
-			double lat2 = 37.5675; // 약 100m 차이
-			double lon2 = 126.9790;
+			PlaceSearchRequest.UserLocation userLocation = PlaceSearchRequest.UserLocation.builder()
+				.latitude(37.5665)
+				.longitude(126.9780)
+				.radius(1000)
+				.build();
 
-			// when
-			int distance = googlePlaceService.calculateDistance(lat1, lon1, lat2, lon2);
+			PlaceSearchRequest request = PlaceSearchRequest.builder()
+				.query("카페")
+				.userLocation(userLocation)
+				.build();
 
 			// then
-			// 대략 100-200m 사이여야 함
-			assertThat(distance).isBetween(50, 300);
+			assertThat(request.getQuery()).isEqualTo("카페");
+			assertThat(request.getUserLocation()).isNotNull();
+			assertThat(request.getUserLocation().getLatitude()).isEqualTo(37.5665);
+			assertThat(request.getUserLocation().getLongitude()).isEqualTo(126.9780);
+			assertThat(request.getUserLocation().getRadius()).isEqualTo(1000);
 		}
 	}
 }

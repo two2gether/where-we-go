@@ -40,7 +40,7 @@ class PlaceServiceTest {
 	private PlaceBookmarkRepository placeBookmarkRepository;
 
 	@Mock
-	private GooglePlaceService googlePlaceService;
+	private PlaceSearchService placeSearchService;
 
 	@InjectMocks
 	private PlaceService placeService;
@@ -219,8 +219,6 @@ class PlaceServiceTest {
 		@DisplayName("경로 정보와 함께 장소 정보를 정상적으로 조회한다")
 		void getPlacesForCourseWithRouteSuccess() {
 			// given
-			given(googlePlaceService.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
-				.willReturn(1000); // 1km
 			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
 				.placeId("place1")
 				.name("장소1")
@@ -245,9 +243,9 @@ class PlaceServiceTest {
 				.longitude(126.9900)
 				.build();
 
-			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
-			given(googlePlaceService.getPlaceDetail("place2")).willReturn(place2);
-			given(googlePlaceService.getPlaceDetail("place3")).willReturn(place3);
+			given(placeSearchService.getPlaceDetail("place1")).willReturn(place1);
+			given(placeSearchService.getPlaceDetail("place2")).willReturn(place2);
+			given(placeSearchService.getPlaceDetail("place3")).willReturn(place3);
 
 			// when
 			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(placeIds, userLat, userLng);
@@ -255,12 +253,13 @@ class PlaceServiceTest {
 			// then
 			assertThat(result).hasSize(3);
 
-			// 첫 번째 장소
+			// 첫 번째 장소 - 실제 거리 계산 검증
 			CoursePlaceInfo firstPlace = result.get(0);
 			assertThat(firstPlace.getPlaceId()).isEqualTo("place1");
 			assertThat(firstPlace.getName()).isEqualTo("장소1");
 			assertThat(firstPlace.getVisitOrder()).isEqualTo(1);
-			assertThat(firstPlace.getDistanceFromUser()).isEqualTo(1000);
+			assertThat(firstPlace.getDistanceFromUser()).isNotNull();
+			assertThat(firstPlace.getDistanceFromUser()).isPositive();
 			assertThat(firstPlace.getDistanceFromPrevious()).isNull();
 
 			// 두 번째 장소
@@ -268,16 +267,20 @@ class PlaceServiceTest {
 			assertThat(secondPlace.getPlaceId()).isEqualTo("place2");
 			assertThat(secondPlace.getName()).isEqualTo("장소2");
 			assertThat(secondPlace.getVisitOrder()).isEqualTo(2);
-			assertThat(secondPlace.getDistanceFromUser()).isEqualTo(1000);
-			assertThat(secondPlace.getDistanceFromPrevious()).isEqualTo(1000);
+			assertThat(secondPlace.getDistanceFromUser()).isNotNull();
+			assertThat(secondPlace.getDistanceFromUser()).isPositive();
+			assertThat(secondPlace.getDistanceFromPrevious()).isNotNull();
+			assertThat(secondPlace.getDistanceFromPrevious()).isPositive();
 
 			// 세 번째 장소
 			CoursePlaceInfo thirdPlace = result.get(2);
 			assertThat(thirdPlace.getPlaceId()).isEqualTo("place3");
 			assertThat(thirdPlace.getName()).isEqualTo("장소3");
 			assertThat(thirdPlace.getVisitOrder()).isEqualTo(3);
-			assertThat(thirdPlace.getDistanceFromUser()).isEqualTo(1000);
-			assertThat(thirdPlace.getDistanceFromPrevious()).isEqualTo(1000);
+			assertThat(thirdPlace.getDistanceFromUser()).isNotNull();
+			assertThat(thirdPlace.getDistanceFromUser()).isPositive();
+			assertThat(thirdPlace.getDistanceFromPrevious()).isNotNull();
+			assertThat(thirdPlace.getDistanceFromPrevious()).isPositive();
 		}
 
 		@Test
@@ -295,8 +298,6 @@ class PlaceServiceTest {
 		@DisplayName("사용자 위치가 없어도 장소 간 거리는 계산된다")
 		void getPlacesForCourseWithoutUserLocation() {
 			// given
-			given(googlePlaceService.calculateDistance(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
-				.willReturn(1000); // 1km
 			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
 				.placeId("place1")
 				.name("장소1")
@@ -311,8 +312,8 @@ class PlaceServiceTest {
 				.longitude(126.9850)
 				.build();
 
-			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
-			given(googlePlaceService.getPlaceDetail("place2")).willReturn(place2);
+			given(placeSearchService.getPlaceDetail("place1")).willReturn(place1);
+			given(placeSearchService.getPlaceDetail("place2")).willReturn(place2);
 
 			// when
 			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
@@ -322,7 +323,8 @@ class PlaceServiceTest {
 			assertThat(result).hasSize(2);
 			assertThat(result.get(0).getDistanceFromUser()).isNull();
 			assertThat(result.get(1).getDistanceFromUser()).isNull();
-			assertThat(result.get(1).getDistanceFromPrevious()).isEqualTo(1000);
+			assertThat(result.get(1).getDistanceFromPrevious()).isNotNull();
+			assertThat(result.get(1).getDistanceFromPrevious()).isPositive();
 		}
 
 		@Test
@@ -336,9 +338,9 @@ class PlaceServiceTest {
 				.longitude(126.9800)
 				.build();
 
-			given(googlePlaceService.getPlaceDetail("place1")).willReturn(place1);
-			given(googlePlaceService.getPlaceDetail("place2")).willReturn(null); // 실패
-			given(googlePlaceService.getPlaceDetail("place3")).willThrow(new RuntimeException("API 오류"));
+			given(placeSearchService.getPlaceDetail("place1")).willReturn(place1);
+			given(placeSearchService.getPlaceDetail("place2")).willReturn(null); // 실패
+			given(placeSearchService.getPlaceDetail("place3")).willThrow(new RuntimeException("API 오류"));
 
 			// when
 			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
@@ -458,6 +460,82 @@ class PlaceServiceTest {
 			// then
 			assertThat(summary.getTotalDistance()).isEqualTo(0);
 			assertThat(summary.getPlaceCount()).isEqualTo(0);
+		}
+	}
+
+	@Nested
+	@DisplayName("거리 계산 검증")
+	class DistanceCalculationValidation {
+
+		@Test
+		@DisplayName("같은 좌표의 거리는 0이다")
+		void calculateDistanceSameCoordinates() {
+			// given - 서울시청 같은 좌표
+			PlaceDetailResponse place = PlaceDetailResponse.builder()
+				.placeId("same-place")
+				.name("서울시청")
+				.category("관공서")
+				.latitude(37.5665)
+				.longitude(126.9780)
+				.build();
+
+			given(placeSearchService.getPlaceDetail("same-place")).willReturn(place);
+
+			// when - 같은 좌표에서 거리 계산
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				List.of("same-place"), 37.5665, 126.9780);
+
+			// then
+			assertThat(result).hasSize(1);
+			assertThat(result.get(0).getDistanceFromUser()).isEqualTo(0);
+		}
+
+		@Test
+		@DisplayName("서울-부산 간 거리가 합리적 범위에 있다")
+		void calculateDistanceSeoulToBusan() {
+			// given - 부산 해운대 좌표
+			PlaceDetailResponse busanPlace = PlaceDetailResponse.builder()
+				.placeId("busan-haeundae")
+				.name("해운대해수욕장")
+				.category("관광지")
+				.latitude(35.1585) // 부산 해운대
+				.longitude(129.1604)
+				.build();
+
+			given(placeSearchService.getPlaceDetail("busan-haeundae")).willReturn(busanPlace);
+
+			// when - 서울시청에서 부산 해운대까지 거리 계산
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				List.of("busan-haeundae"), 37.5665, 126.9780);
+
+			// then - 서울-부산 직선거리는 약 330km 정도
+			assertThat(result).hasSize(1);
+			Integer distance = result.get(0).getDistanceFromUser();
+			assertThat(distance).isBetween(300000, 400000); // 300km-400km 범위
+		}
+
+		@Test
+		@DisplayName("짧은 거리도 정확히 계산한다")
+		void calculateDistanceShortDistance() {
+			// given - 서울시청에서 가까운 곳 (광화문광장)
+			PlaceDetailResponse nearPlace = PlaceDetailResponse.builder()
+				.placeId("gwanghwamun")
+				.name("광화문광장")
+				.category("광장")
+				.latitude(37.5759) // 광화문광장
+				.longitude(126.9768)
+				.build();
+
+			given(placeSearchService.getPlaceDetail("gwanghwamun")).willReturn(nearPlace);
+
+			// when - 서울시청에서 광화문광장까지 거리 계산
+			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
+				List.of("gwanghwamun"), 37.5665, 126.9780);
+
+			// then - 서울시청-광화문광장은 약 1km 내외
+			assertThat(result).hasSize(1);
+			Integer distance = result.get(0).getDistanceFromUser();
+			assertThat(distance).isBetween(500, 1500); // 0.5km-1.5km 범위
 		}
 	}
 }
