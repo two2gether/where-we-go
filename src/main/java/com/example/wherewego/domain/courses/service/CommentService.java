@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
 public class CommentService {
 
 	private final CommentRepository commentRepository;
@@ -31,6 +30,7 @@ public class CommentService {
 	private final CourseRepository courseRepository;
 
 	// 코스 댓글 생성
+	@Transactional
 	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
 		log.debug("댓글 생성 요청 - courseId: {}, userId: {}, content: {}", courseId, userId, requestDto.getContent());
 
@@ -46,8 +46,7 @@ public class CommentService {
 				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
 			});
 
-		// 비공개 코스일 경우, 작성자가 아닌 유저는 댓글 작성 불가
-		if (Boolean.FALSE.equals(course.getIsPublic()) && !course.getUser().getId().equals(userId)) {
+		if (isNotCourseOwner(userId, course)) {
 			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",
 				courseId, course.getUser().getId(), userId);
 			throw new CustomException(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE);
@@ -66,6 +65,7 @@ public class CommentService {
 	}
 
 	// 코스 댓글 삭제
+	@Transactional
 	public void deleteComment(Long commentId, Long userId) {
 		log.debug("댓글 삭제 요청 - commentId: {}, userId: {}", commentId, userId);
 
@@ -76,7 +76,7 @@ public class CommentService {
 			});
 
 		// 인가 검사 (작성자 본인인지 확인)
-		if (!comment.getUser().getId().equals(userId)) {
+		if (!userId.equals(comment.getUser().getId())) {
 			log.warn("댓글 삭제 실패 - 인가되지 않은 접근: userId {}, commentOwnerId {}", userId, comment.getUser().getId());
 			throw new CustomException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
 		}
@@ -86,6 +86,7 @@ public class CommentService {
 	}
 
 	// 코스 댓글 수정
+	@Transactional
 	public CommentResponseDto updateComment(Long commentId, Long userId, CommentRequestDto requestDto) {
 		log.debug("댓글 수정 요청 - commentId: {}, userId: {}, newContent: {}", commentId, userId, requestDto.getContent());
 
@@ -131,6 +132,10 @@ public class CommentService {
 
 	private CommentResponseDto toDto(Comment comment) {
 		return CommentResponseDto.of(comment);
+	}
+
+	private boolean isNotCourseOwner(Long userId, Course course) {
+		return !course.getIsPublic() && !course.getUser().getId().equals(userId);
 	}
 
 }
