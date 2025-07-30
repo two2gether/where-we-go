@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetailsService;
 import com.example.wherewego.domain.auth.security.JwtAuthenticationFilter;
@@ -29,12 +30,16 @@ public class SecurityConfig {
 	private final CustomUserDetailsService userDetailsService;
 	private final JwtUtil jwtUtil;
 	private final TokenBlacklistService tokenBlacklistService;
+	private final CorsConfigurationSource corsConfigurationSource;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 			// CSRF 비활성화
 			.csrf(csrf -> csrf.disable())
+
+			// CORS 설정
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))
 
 			// 람다로 바뀐 세션 설정
 			.sessionManagement(session ->
@@ -43,9 +48,18 @@ public class SecurityConfig {
 
 			// 인가 설정
 			.authorizeHttpRequests(auth -> auth
+				// 인증 필요한 API들
 				.requestMatchers("/api/users/mypage").authenticated()
 				.requestMatchers(HttpMethod.PUT, "/api/users/mypage").authenticated()
+				
+				// 인증 불필요한 공개 API들
 				.requestMatchers("/api/auth/**").permitAll()
+				.requestMatchers("/api/places/search").permitAll()
+				.requestMatchers("/api/courses/list").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
+				
+				// 나머지는 인증 필요
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter(),

@@ -60,7 +60,7 @@ public class CourseController {
 	/**
 	 * 코스 목록 조회 api
 	 */
-	@GetMapping
+	@PostMapping("/list")
 	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> courseList(
 		@Validated @RequestBody CourseListFilterDto filterDto,
 		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
