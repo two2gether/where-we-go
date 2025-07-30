@@ -109,42 +109,32 @@ public class CourseService {
 			coursePage = courseRepository.findByRegionAndIsPublicTrue(region, pageable);
 		}
 
-		// 3. 페이징 처리
-		// int offset = (int)pageable.getOffset(); // 시작 인덱스
-		// int limit = pageable.getPageSize(); // 가져올 개수
-		// int total = courseList.size(); // 전체 개수
-		//
-		// List<Course> paged = courseList.stream()
-		// 	.skip(offset)
-		// 	.limit(limit)
-		// 	.toList();
-
-		// 4. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
+		// 3. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
 		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
 		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
-				// 4-1. 각 코스의 장소 순서 조회
+				// 3-1. 각 코스의 장소 순서 조회
 				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
 
-				// 4-2. placeId 리스트 추출
+				// 3-2. placeId 리스트 추출
 				List<String> placeIds = placeOrders.stream()
 					.map(PlacesOrder::getPlaceId)
 					.toList();
 
-				// 4-3. 장소 정보 조회 (목록에서는 위치정보 필요 없어서 null 처리)
+				// 3-3. 장소 정보 조회 (목록에서는 위치정보 필요 없어서 null 처리)
 				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
 					placeIds, null, null
 				);
 
-				// 4-4. 매퍼로 DTO 변환
+				// 3-4. 매퍼로 DTO 변환
 				return CourseMapper.toListWithPlaces(course, places);
 			})
 			.toList();
 
-		// 5. PageImpl 로 Page 객체 생성
+		// 4. PageImpl 로 Page 객체 생성
 		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 
-		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
+		// 5. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
 	}
 
