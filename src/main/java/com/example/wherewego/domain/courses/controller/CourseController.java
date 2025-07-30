@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;

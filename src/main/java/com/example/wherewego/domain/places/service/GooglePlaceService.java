@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceResponse;
@@ -335,7 +335,6 @@ public class GooglePlaceService implements PlaceSearchService {
 			.bodyToMono(GooglePlaceDetailResponse.class)
 			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
 			.block();
-
 
 		return response;
 	}

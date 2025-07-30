@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.response.CourseBookmarkResponseDto;
 import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
 import com.example.wherewego.domain.courses.entity.Course;

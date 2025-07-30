@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
 
 import io.lettuce.core.dynamic.annotation.Param;

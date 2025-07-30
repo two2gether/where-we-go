@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
 import com.example.wherewego.domain.places.dto.response.KakaoPlaceResponse;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
@@ -89,10 +89,8 @@ public class KakaoPlaceService implements PlaceSearchService {
 				.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
 				.block();
 
-
 			// JSON을 객체로 변환
 			KakaoPlaceResponse kakaoResponse = parseJsonResponse(rawJsonResponse);
-
 
 			if (kakaoResponse == null) {
 				return Collections.emptyList();
@@ -141,35 +139,35 @@ public class KakaoPlaceService implements PlaceSearchService {
 		KakaoPlaceResponse.PlaceDocument document, Double userLat, Double userLon) {
 
 		PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
-				.placeId(document.getId())  // 카카오 API place_id 직접 사용
-				.name(document.getPlaceName())
-				.category(document.getCategoryGroupName())  // category_group_name 직접 사용
-				.address(document.getAddressName())
-				.roadAddress(document.getRoadAddressName())
-				.phone(document.getPhone())
-				.latitude(parseDouble(document.getLatitude()))
-				.longitude(parseDouble(document.getLongitude()))
-				.placeUrl(document.getPlaceUrl())
-				.averageRating(0.0)  // 기본값, 통계 없을 때
-				.reviewCount(0)     // 기본값, 통계 없을 때
-				.bookmarkCount(0)
-				.isBookmarked(false);
+			.placeId(document.getId())  // 카카오 API place_id 직접 사용
+			.name(document.getPlaceName())
+			.category(document.getCategoryGroupName())  // category_group_name 직접 사용
+			.address(document.getAddressName())
+			.roadAddress(document.getRoadAddressName())
+			.phone(document.getPhone())
+			.latitude(parseDouble(document.getLatitude()))
+			.longitude(parseDouble(document.getLongitude()))
+			.placeUrl(document.getPlaceUrl())
+			.averageRating(0.0)  // 기본값, 통계 없을 때
+			.reviewCount(0)     // 기본값, 통계 없을 때
+			.bookmarkCount(0)
+			.isBookmarked(false);
 
-			// 지역 정보 매핑
-			PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
-				.depth1(document.getRegion1DepthName())
-				.depth2(document.getRegion2DepthName())
-				.build();
-			builder.region(region);
+		// 지역 정보 매핑
+		PlaceDetailResponse.Region region = PlaceDetailResponse.Region.builder()
+			.depth1(document.getRegion1DepthName())
+			.depth2(document.getRegion2DepthName())
+			.build();
+		builder.region(region);
 
-			// regionSummary 생성 (예: "서울 강남구")
-			String regionSummary = generateRegionSummary(
-				document.getRegion1DepthName(),
-				document.getRegion2DepthName()
-			);
-			builder.regionSummary(regionSummary);
+		// regionSummary 생성 (예: "서울 강남구")
+		String regionSummary = generateRegionSummary(
+			document.getRegion1DepthName(),
+			document.getRegion2DepthName()
+		);
+		builder.regionSummary(regionSummary);
 
-			// 거리 계산은 상위 서비스에서 처리
+		// 거리 계산은 상위 서비스에서 처리
 
 		try {
 			return builder.build();
@@ -186,7 +184,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 		if (value == null || value.trim().isEmpty()) {
 			return null;
 		}
-		
+
 		try {
 			return Double.parseDouble(value);
 		} catch (NumberFormatException e) {
@@ -231,7 +229,7 @@ public class KakaoPlaceService implements PlaceSearchService {
 			.replace("도", "")
 			.trim();
 	}
-	
+
 	/**
 	 * JSON 응답을 안전하게 파싱
 	 */

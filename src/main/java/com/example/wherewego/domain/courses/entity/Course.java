@@ -2,8 +2,8 @@ package com.example.wherewego.domain.courses.entity;
 
 import java.util.List;
 
-import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.user.entity.User;
 
 import jakarta.persistence.Column;

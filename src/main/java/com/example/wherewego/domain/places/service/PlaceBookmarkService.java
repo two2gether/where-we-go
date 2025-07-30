@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
@@ -97,14 +97,14 @@ public class PlaceBookmarkService {
 	 * PlaceSearchService를 통해 장소 상세 정보 조회
 	 */
 	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
-		
+
 		// PlaceSearchService를 통해 장소 정보 조회
 		PlaceDetailResponse place = placeSearchService.getPlaceDetail(placeId);
-		
+
 		if (place == null) {
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
-		
+
 		// 북마크 상태 설정 (북마크 목록이므로 항상 true)
 		return place.toBuilder()
 			.isBookmarked(true)
