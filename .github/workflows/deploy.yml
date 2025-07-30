@@ -2,7 +2,7 @@ name: CI/CD Deploy
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ feat-user ]
 
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app
-          path: build/libs/cicdtest-[0-9.]*-SNAPSHOT.jar
+          path: build/libs/Where-we-go-[0-9.]*-SNAPSHOT.jar
 
   deploy:
     needs: build
