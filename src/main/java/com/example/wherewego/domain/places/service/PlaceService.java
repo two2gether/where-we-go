@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,6 @@ import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -25,13 +25,19 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PlaceService {
 
 	private final PlaceReviewRepository placeReviewRepository;
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final PlaceSearchService placeSearchService;
+
+	public PlaceService(PlaceReviewRepository placeReviewRepository, PlaceBookmarkRepository placeBookmarkRepository,
+		@Qualifier(value = "googlePlaceService") PlaceSearchService placeSearchService) {
+		this.placeReviewRepository = placeReviewRepository;
+		this.placeBookmarkRepository = placeBookmarkRepository;
+		this.placeSearchService = placeSearchService;
+	}
 
 	/**
 	 * 거리 계산과 북마크 상태를 포함한 장소 검색
@@ -53,29 +59,30 @@ public class PlaceService {
 	/**
 	 * 장소에 거리 정보와 북마크/통계 정보 추가
 	 */
-	private PlaceDetailResponse addDistanceAndStatsToPlace(PlaceDetailResponse place, PlaceSearchRequest request, Long userId) {
+	private PlaceDetailResponse addDistanceAndStatsToPlace(PlaceDetailResponse place, PlaceSearchRequest request,
+		Long userId) {
 		PlaceDetailResponse.PlaceDetailResponseBuilder builder = place.toBuilder();
-		
+
 		// 거리 정보 추가 (사용자 위치가 있는 경우)
 		if (request.getUserLocation() != null &&
 			request.getUserLocation().getLatitude() != null &&
 			request.getUserLocation().getLongitude() != null &&
-			place.getLatitude() != null && 
+			place.getLatitude() != null &&
 			place.getLongitude() != null) {
-			
+
 			Double userLat = request.getUserLocation().getLatitude();
 			Double userLon = request.getUserLocation().getLongitude();
 			Integer distance = calculateDistanceInternal(userLat, userLon, place.getLatitude(), place.getLongitude());
 			builder.distance(distance);
 		}
-		
+
 		// 북마크/통계 정보 추가
 		PlaceStatsDto stats = getPlaceStats(place.getPlaceId(), userId);
 		builder.averageRating(stats.getAverageRating())
 			.reviewCount(stats.getReviewCount().intValue())
 			.bookmarkCount(stats.getBookmarkCount().intValue())
 			.isBookmarked(stats.getIsBookmarked());
-		
+
 		return builder.build();
 	}
 
@@ -246,7 +253,7 @@ public class PlaceService {
 			CoursePlaceInfo placeInfo = processSinglePlaceForCourse(
 				placeId, visitOrder, userLatitude, userLongitude, previousPlace
 			);
-			
+
 			if (placeInfo != null) {
 				result.add(placeInfo);
 				previousPlace = placeInfo;
@@ -334,10 +341,10 @@ public class PlaceService {
 
 	/**
 	 * 두 지점 간 거리 계산 (Haversine 공식)
-	 * 
+	 *
 	 * Haversine 공식은 지구를 완전한 구체로 가정하여 두 지점 간의 최단 거리(직선거리)를 계산합니다.
 	 * GPS 좌표계에서 위도/경도를 이용해 실제 지구상의 거리를 구하는 표준적인 방법입니다.
-	 * 
+	 *
 	 * @param lat1 첫 번째 지점 위도 (도 단위)
 	 * @param lon1 첫 번째 지점 경도 (도 단위)
 	 * @param lat2 두 번째 지점 위도 (도 단위)
@@ -355,7 +362,7 @@ public class PlaceService {
 
 		// 2단계: Haversine 공식으로 구면상의 각도 관계 계산
 		double haversineValue = calculateHaversineValue(lat1Rad, lat2Rad, deltaLat, deltaLon);
-		
+
 		// 3단계: 각도 관계를 실제 각도(라디안)로 변환
 		double angularDistance = 2 * Math.atan2(Math.sqrt(haversineValue), Math.sqrt(1 - haversineValue));
 
@@ -365,7 +372,7 @@ public class PlaceService {
 
 	/**
 	 * Haversine 공식의 핵심 계산 부분
-	 * 
+	 *
 	 * 구면 삼각법을 이용해 두 지점 사이의 각도 관계를 계산합니다.
 	 * 공식: a = sin²(Δlat/2) + cos(lat1) × cos(lat2) × sin²(Δlon/2)
 	 * 이 값은 두 지점 사이의 구면상 "반현(半弦)" 값을 나타냅니다.
@@ -375,43 +382,43 @@ public class PlaceService {
 		double sinHalfDeltaLat = Math.sin(deltaLat / 2);
 		// 경도 차이의 절반에 대한 사인값 제곱  
 		double sinHalfDeltaLon = Math.sin(deltaLon / 2);
-		
+
 		// Haversine 공식: 구면상 두 점 사이의 각도 관계를 수치로 표현
 		return sinHalfDeltaLat * sinHalfDeltaLat +                    // 위도 차이 영향
-			   Math.cos(lat1Rad) * Math.cos(lat2Rad) *               // 위도별 경도 보정
-			   sinHalfDeltaLon * sinHalfDeltaLon;                    // 경도 차이 영향
+			Math.cos(lat1Rad) * Math.cos(lat2Rad) *               // 위도별 경도 보정
+				sinHalfDeltaLon * sinHalfDeltaLon;                    // 경도 차이 영향
 	}
-	
+
 	/**
 	 * 단일 장소를 Course용 데이터로 처리
 	 */
 	private CoursePlaceInfo processSinglePlaceForCourse(
-			String placeId, int visitOrder, Double userLatitude, Double userLongitude,
-			CoursePlaceInfo previousPlace) {
-		
+		String placeId, int visitOrder, Double userLatitude, Double userLongitude,
+		CoursePlaceInfo previousPlace) {
+
 		try {
 			PlaceDetailResponse placeDetail = placeSearchService.getPlaceDetail(placeId);
-			
+
 			if (placeDetail == null) {
 				return null;
 			}
-			
+
 			return buildCoursePlaceInfo(placeDetail, visitOrder, userLatitude, userLongitude, previousPlace);
-			
+
 		} catch (Exception e) {
 			log.error("{}번째 장소 처리 중 오류 발생 - placeId: {}", visitOrder, placeId, e);
 			return null;
 		}
 	}
-	
+
 	/**
 	 * PlaceDetailResponse로 CoursePlaceInfo 생성
 	 */
 	private CoursePlaceInfo buildCoursePlaceInfo(
-			PlaceDetailResponse placeDetail, int visitOrder, 
-			Double userLatitude, Double userLongitude,
-			CoursePlaceInfo previousPlace) {
-		
+		PlaceDetailResponse placeDetail, int visitOrder,
+		Double userLatitude, Double userLongitude,
+		CoursePlaceInfo previousPlace) {
+
 		// 사용자 위치로부터의 직선 거리 계산
 		Integer distanceFromUser = calculateDistanceIfPossible(
 			userLatitude, userLongitude,

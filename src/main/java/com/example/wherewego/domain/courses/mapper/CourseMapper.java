@@ -42,23 +42,40 @@ public class CourseMapper {
 			.build();
 	}
 
-	public static CourseListResponseDto toList(Course course) {
-		return new CourseListResponseDto(
-			course.getId(),
-			course.getTitle(),
-			course.getDescription(),
-			course.getThemes(),
-			course.getRegion(),
-			course.getLikeCount(),
-			course.getAverageRating(),
-			course.getIsPublic(),
-			course.getCreatedAt()
-		);
+	// public static CourseListResponseDto toList(Course course) {
+	// 	return new CourseListResponseDto(
+	// 		course.getId(),
+	// 		course.getUser().getNickname(),
+	// 		course.getTitle(),
+	// 		course.getDescription(),
+	// 		course.getThemes(),
+	// 		course.getRegion(),
+	// 		course.getLikeCount(),
+	// 		course.getAverageRating(),
+	// 		course.getIsPublic(),
+	// 		course.getCreatedAt()
+	// 	);
+	// }
+
+	public static CourseListResponseDto toListWithPlaces(Course course, List<CoursePlaceInfo> places) {
+		return CourseListResponseDto.builder()
+			.courseId(course.getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.themes(course.getThemes())
+			.region(course.getRegion())
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.places(places)
+			.build();
 	}
 
 	public static CourseDetailResponseDto toDetailDto(Course course, List<CoursePlaceInfo> places) {
 		return CourseDetailResponseDto.builder()
 			.courseId(course.getId())
+			.nickname(course.getUser().getNickname())
 			.title(course.getTitle())
 			.description(course.getDescription())
 			.region(course.getRegion())

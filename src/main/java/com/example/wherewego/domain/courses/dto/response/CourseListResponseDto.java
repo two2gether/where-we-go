@@ -16,10 +16,12 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CourseListResponseDto {
 	private Long courseId;
+	private String nickname;
 	private String title;
 	private String description;
 	private List<CourseTheme> themes;
 	private String region;
+	private List<CoursePlaceInfo> places;
 	private int likeCount;
 	private double averageRating;
 	private Boolean isPublic;

@@ -120,10 +120,26 @@ public class CourseService {
 			.limit(limit)
 			.toList();
 
-		// 4. [엔티티 -> 응답 dto 변환] (map 활용)
+		// 4. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
 		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
 		List<CourseListResponseDto> dtoList = paged.stream()
-			.map(CourseMapper::toList)
+			.map(course -> {
+				// 4-1. 각 코스의 장소 순서 조회
+				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+
+				// 4-2. placeId 리스트 추출
+				List<String> placeIds = placeOrders.stream()
+					.map(PlacesOrder::getPlaceId)
+					.toList();
+
+				// 4-3. 장소 정보 조회 (목록에서는 위치정보 필요 없어서 null 처리)
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
+					placeIds, null, null
+				);
+
+				// 4-4. 매퍼로 DTO 변환
+				return CourseMapper.toListWithPlaces(course, places);
+			})
 			.toList();
 
 		// 5. PageImpl 로 Page 객체 생성
@@ -156,18 +172,8 @@ public class CourseService {
 		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
 			userLatitude, userLongitude);
 
-		CourseDetailResponseDto responseDto = CourseDetailResponseDto.builder()
-			.courseId(findCourse.getId())
-			.title(findCourse.getTitle())
-			.description(findCourse.getDescription())
-			.region(findCourse.getRegion())
-			.themes(findCourse.getThemes())
-			.places(placesForCourseWithRoute)
-			.likeCount(findCourse.getLikeCount())
-			.averageRating(findCourse.getAverageRating())
-			.isPublic(findCourse.getIsPublic())
-			.createdAt(findCourse.getCreatedAt())
-			.build();
+		// 매퍼 사용
+		CourseDetailResponseDto responseDto = CourseMapper.toDetailDto(findCourse, placesForCourseWithRoute);
 
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
 		// return CourseMapper.toDetailDto(findCourse, places);
@@ -256,26 +262,21 @@ public class CourseService {
 			);
 		}
 
-		// 3. 조건에 따라 인기 코스 조회
-		// 정렬 : 이번 달 북마크 수 내림차순
-		// List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
-
-		// 3. 페이징 처리
-		// int offset = (int)pageable.getOffset();
-		// int limit = pageable.getPageSize();
-		// int total = popularCourseIds.size();
-		//
-		// List<Long> pagedIds = popularCourseIds.stream()
-		// 	.skip(offset)
-		// 	.limit(limit)
-		// 	.toList();
-
-		// 4. Id로 Course 엔티티 가져오기 (북마크 포함)
-		// List<Course> popularCourses = courseRepository.findByIdIn(pagedIds);
-
-		// 5. [엔티티 -> 응답 dto 변환]
+		// 5. [엔티티 -> 응답 dto 변환] - 코스별 장소 조회 및 매핑
 		List<CourseListResponseDto> dtoList = coursePage.stream()
-			.map(CourseMapper::toList)
+			.map(course -> {
+				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+
+				List<String> placeIds = placeOrders.stream()
+					.map(PlacesOrder::getPlaceId)
+					.toList();
+
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
+					placeIds, null, null
+				);
+
+				return CourseMapper.toListWithPlaces(course, places);
+			})
 			.toList();
 
 		// 6. PageImpl 로 Page 객체 생성
