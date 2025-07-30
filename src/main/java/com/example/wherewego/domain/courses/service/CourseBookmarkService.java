@@ -45,16 +45,19 @@ public class CourseBookmarkService {
 	}
 
 	@Transactional
-	public void courseBookmarkDelete(Long userId, Long courseId) {
+	public CourseBookmarkResponseDto courseBookmarkDelete(Long userId, Long courseId) {
 		// 코스 존재 검사
 		Course course = courseService.getCourseById(courseId);
 		// 북마크 존재 검사
 		CourseBookmark bookmark = bookmarkRepository.findByUserIdAndCourseId(userId, courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_NOT_FOUND));
+		Long bookmarkId = bookmark.getId();
 		// 북마크 hard delete
 		bookmarkRepository.delete(bookmark);
 		// 북마크 수 -1
 		course.decrementBookmarkCount();
+		// 반환
+		return new CourseBookmarkResponseDto(bookmarkId, userId, courseId);
 	}
 
 }

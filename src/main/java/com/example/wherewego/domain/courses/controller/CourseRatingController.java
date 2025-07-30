@@ -34,12 +34,12 @@ public class CourseRatingController {
 
     // 평점 삭제
     @DeleteMapping("/courses/{courseId}/rating")
-    public ResponseEntity<ApiResponse<Void>> courseRatingDelete(
+    public ResponseEntity<ApiResponse<CourseRatingResponseDto>> courseRatingDelete(
             @PathVariable Long courseId,
             @AuthenticationPrincipal CustomUserDetail userDetail
     ) {
         Long userId = userDetail.getUser().getId();
-        ratingService.courseRatingDelete(userId, courseId);
-        return ResponseEntity.ok(ApiResponse.ok("평점이 삭제되었습니다.", null));
+        CourseRatingResponseDto response = ratingService.courseRatingDelete(userId, courseId);
+        return ResponseEntity.ok(ApiResponse.ok("평점이 삭제되었습니다.", response));
     }
 }

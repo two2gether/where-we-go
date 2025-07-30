@@ -44,15 +44,18 @@ public class CourseLikeService {
 	}
 
 	@Transactional
-	public void courseLikeDelete(Long userId, Long courseId) {
+	public CourseLikeResponseDto courseLikeDelete(Long userId, Long courseId) {
 		// 좋아요 존재 검사
 		Like like = likeRepository.findByUserIdAndCourseId(userId, courseId)
 				.orElseThrow(() -> new CustomException(ErrorCode.LIKE_NOT_FOUND));
+		Long likeId = like.getId();
 		// hard delete
 		likeRepository.delete(like);
 		// 코스 테이블의 좋아요 수(like_count) -1
 		Course course = courseService.getCourseById(courseId);
 		course.decrementLikeCount();
+		// 반환
+		return new CourseLikeResponseDto(likeId, userId, courseId);
 	}
 
 }

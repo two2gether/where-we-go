@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.courses.controller;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseLikeResponseDto;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.global.response.ApiResponse;
@@ -30,12 +31,13 @@ public class CourseLikeController {
 
     // 코스 좋아요 삭제
     @DeleteMapping("/courses/{courseId}/like")
-    public ResponseEntity<ApiResponse<Void>> courseLikeDelete(
+    public ResponseEntity<ApiResponse<CourseLikeResponseDto>> courseLikeDelete(
             @PathVariable Long courseId,
             @AuthenticationPrincipal CustomUserDetail userDetails
     ) {
         Long userId = userDetails.getUser().getId();
-        likeService.courseLikeDelete(userId, courseId);
-        return ResponseEntity.ok(ApiResponse.ok("좋아요가 삭제되었습니다.", null));
+
+        CourseLikeResponseDto response = likeService.courseLikeDelete(userId, courseId);
+        return ResponseEntity.ok(ApiResponse.ok("좋아요가 삭제되었습니다.", response));
     }
 }

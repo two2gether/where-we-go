@@ -46,15 +46,19 @@ public class CourseRatingService {
     }
 
     @Transactional
-    public void courseRatingDelete(Long userId, Long courseId) {
+    public CourseRatingResponseDto courseRatingDelete(Long userId, Long courseId) {
         // 평점 존재 검사
         Rating rating = ratingRepository.findByUserIdAndCourseId(userId, courseId).orElseThrow(() -> new CustomException(ErrorCode.RATING_NOT_FOUND));
+        Long ratingId = rating.getId();
+        int score = rating.getRating();
         // hard delete
         ratingRepository.delete(rating);
         // Course 평균 평점 업데이트
         Course course = courseService.getCourseById(courseId);
         double newAvgRating = ratingRepository.findAverageByCourseId(courseId);
         course.updateAverageRating(newAvgRating);
+        // 반환
+        return new CourseRatingResponseDto(ratingId, userId, courseId, score);
     }
 
 }

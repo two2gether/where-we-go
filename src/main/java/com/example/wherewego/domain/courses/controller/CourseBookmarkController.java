@@ -31,12 +31,12 @@ public class CourseBookmarkController {
 
     // 코스 북마크 취소
     @DeleteMapping("/courses/{courseId}/bookmark")
-    public ResponseEntity<ApiResponse<Void>> courseBookmarkDelete(
+    public ResponseEntity<ApiResponse<CourseBookmarkResponseDto>> courseBookmarkDelete(
             @PathVariable Long courseId,
             @AuthenticationPrincipal CustomUserDetail userDetails
     ) {
         Long userId = userDetails.getUser().getId();
-        bookmarkService.courseBookmarkDelete(userId, courseId);
-        return ResponseEntity.ok(ApiResponse.ok("북마크가 취소되었습니다.", null));
+        CourseBookmarkResponseDto response = bookmarkService.courseBookmarkDelete(userId, courseId);
+        return ResponseEntity.ok(ApiResponse.ok("북마크가 취소되었습니다.", response));
     }
 }
