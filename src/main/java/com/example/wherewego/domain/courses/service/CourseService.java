@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.courses.service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,28 +100,28 @@ public class CourseService {
 
 		// 2. 조건에 따라 코스 목록 조회
 		// Fetch Join으로 전체 리스트 조회
-		List<Course> courseList;
+		Page<Course> coursePage;
 		if (themes != null && !themes.isEmpty()) {
 			// 테마가 있을 경우 : 지역+테마 조건으로 조회
-			courseList = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes);
+			coursePage = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes, pageable);
 		} else {
 			// 테마가 없을 경우 : 지역 조건만으로 조회
-			courseList = courseRepository.findByRegionAndIsPublicTrue(region);
+			coursePage = courseRepository.findByRegionAndIsPublicTrue(region, pageable);
 		}
 
 		// 3. 페이징 처리
-		int offset = (int)pageable.getOffset(); // 시작 인덱스
-		int limit = pageable.getPageSize(); // 가져올 개수
-		int total = courseList.size(); // 전체 개수
-
-		List<Course> paged = courseList.stream()
-			.skip(offset)
-			.limit(limit)
-			.toList();
+		// int offset = (int)pageable.getOffset(); // 시작 인덱스
+		// int limit = pageable.getPageSize(); // 가져올 개수
+		// int total = courseList.size(); // 전체 개수
+		//
+		// List<Course> paged = courseList.stream()
+		// 	.skip(offset)
+		// 	.limit(limit)
+		// 	.toList();
 
 		// 4. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
 		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
-		List<CourseListResponseDto> dtoList = paged.stream()
+		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
 				// 4-1. 각 코스의 장소 순서 조회
 				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
@@ -143,7 +142,7 @@ public class CourseService {
 			.toList();
 
 		// 5. PageImpl 로 Page 객체 생성
-		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, total);
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 
 		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
@@ -246,8 +245,8 @@ public class CourseService {
 		List<CourseTheme> themes = filterDto.getThemes();
 
 		// 1-2. 이번 달 시작 날짜 구하기 + 오늘까지
-		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime startOfMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
 
 		// 2. 조건에 따라 인기 코스 조회
 		// 정렬 : 이번 달 북마크 수 내림차순
