@@ -1,10 +1,8 @@
 package com.example.wherewego.domain.auth.service;
 
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,9 +29,6 @@ public class AuthService {
 	private final JwtUtil jwtUtil;
 
 	public UserResponseDto signup(SignupRequestDto request) {
-		if (!request.getPassword().equals(request.getConfirmPassword())) {
-			throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-		}
 		if (userRepository.existsByEmail(request.getEmail())) {
 			throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
 		}
