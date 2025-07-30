@@ -30,7 +30,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app
+
           path: build/libs/Where-we-go-[0-9.]*-SNAPSHOT.jar
+
 
   deploy:
     needs: build
@@ -63,3 +65,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             bash /home/ubuntu/app/run-deploy.sh
+
+            
+
