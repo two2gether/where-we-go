@@ -15,6 +15,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.wherewego.domain.auth.Provider;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
@@ -47,7 +48,7 @@ public class UserControllerTest {
 			.password("encodedPassword")
 			.nickname("테스터")
 			.profileImage(null)
-			.provider("local")
+			.provider(Provider.LOCAL)
 			.build();
 		return new CustomUserDetail(u);
 	}
@@ -82,7 +83,7 @@ public class UserControllerTest {
 			.email("test@example.com")
 			.nickname("테스터")
 			.profileImage(null)
-			.provider("local")
+			.provider(Provider.LOCAL)
 			.providerId(null)
 			.createdAt("2025-07-25T00:00:00")
 			.updatedAt("2025-07-25T00:00:00")
@@ -114,7 +115,7 @@ public class UserControllerTest {
 			.nickname("수정닉네임")
 			.email("test@example.com")
 			.profileImage("http://example.com/new.png")
-			.provider("local")
+			.provider(Provider.LOCAL)
 			.providerId(null)
 			.createdAt("2025-01-01T00:00:00")
 			.updatedAt("2025-07-25T17:00:00")

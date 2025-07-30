@@ -144,9 +144,6 @@ public class Course extends BaseEntity {
 
 		return this;
 	}
-	/**
-	 * 코스 삭제 기능
-	 */
 
 	// === 카운트 관련 메서드 ===
 
@@ -218,5 +215,4 @@ public class Course extends BaseEntity {
 	public void updateDailyScore(Integer newDailyScore) {
 		this.dailyScore = newDailyScore;
 	}
-
 }

@@ -1,11 +1,12 @@
 package com.example.wherewego.domain.courses.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -13,8 +14,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
@@ -58,9 +61,12 @@ public class CourseController {
 	 */
 	@GetMapping
 	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> courseList(
-		@Validated @RequestBody CourseListFilterDto filterDto,
+		@RequestParam String region,
+		@RequestParam(required = false) List<CourseTheme> themes,
 		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
+		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+
 		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스 목록 조회를 성공했습니다.", response));
@@ -70,8 +76,12 @@ public class CourseController {
 	 * 코스 상세 조회 api
 	 */
 	@GetMapping("/{courseId}")
-	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(@PathVariable Long courseId) {
-		CourseDetailResponseDto response = courseService.getCourseDetail(courseId);
+	public ResponseEntity<ApiResponse<CourseDetailResponseDto>> courseDetail(
+		@PathVariable Long courseId,
+		@RequestParam(required = false) Double userLatitude,
+		@RequestParam(required = false) Double userLongitude
+	) {
+		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스 조회를 성공했습니다.", response));
 	}
@@ -82,9 +92,11 @@ public class CourseController {
 	@PatchMapping("/{courseId}")
 	public ResponseEntity<ApiResponse<CourseUpdateResponseDto>> updateCourse(
 		@PathVariable Long courseId,
-		@RequestBody @Valid CourseUpdateRequestDto requestDto
+		@RequestBody @Valid CourseUpdateRequestDto requestDto,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
-		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto);
+		Long userId = userDetail.getUser().getId();
+		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto, userId);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 수정되었습니다.", response));
 	}
@@ -102,5 +114,21 @@ public class CourseController {
 		CourseDeleteResponseDto response = courseService.deleteCourseById(courseId, userId);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스가 삭제되었습니다.", response));
+	}
+
+	/**
+	 * 인기 코스 목록 조회 api
+	 */
+	@GetMapping("/popular")
+	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> popularCourseList(
+		@RequestParam String region,
+		@RequestParam(required = false) List<CourseTheme> themes,
+		@PageableDefault(page = 0, size = 10) Pageable pageable
+	) {
+		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+
+		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
+
+		return ResponseEntity.ok(ApiResponse.ok("인기 코스 목록 조회 성공", response));
 	}
 }

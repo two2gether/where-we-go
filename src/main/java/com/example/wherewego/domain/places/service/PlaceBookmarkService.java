@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.places.service;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +17,6 @@ import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -24,20 +24,25 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PlaceBookmarkService {
 
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final UserRepository userRepository;
-	private final GooglePlaceService googlePlaceService;
+	private final PlaceSearchService placeSearchService;
+
+	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserRepository userRepository,
+		@Qualifier(value = "googlePlaceService") PlaceSearchService placeSearchService) {
+		this.placeBookmarkRepository = placeBookmarkRepository;
+		this.userRepository = userRepository;
+		this.placeSearchService = placeSearchService;
+	}
 
 	/**
 	 * 북마크 추가
 	 */
 	@Transactional
 	public BookmarkCreateResponseDto addBookmark(Long userId, String placeId) {
-		log.debug("북마크 추가 - userId: {}, placeId: {}", userId, placeId);
 
 		// 이미 북마크된 장소인지 확인
 		if (placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)) {
@@ -67,7 +72,6 @@ public class PlaceBookmarkService {
 	 */
 	public UserBookmarkListDto getUserBookmarks(Long userId, int page, int size,
 		Double userLatitude, Double userLongitude) {
-		log.debug("사용자 북마크 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
 
 		Pageable pageable = PageRequest.of(page, size);
 		Page<PlaceBookmark> bookmarkPage = placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
@@ -75,7 +79,7 @@ public class PlaceBookmarkService {
 		// 북마크된 장소들의 상세 정보를 외부 API에서 조회
 		var bookmarkItems = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
-				// Google Places API를 통해 실제 장소 정보 조회
+				// Place API를 통해 실제 장소 정보 조회
 				PlaceDetailResponse place = getPlaceDetailFromApi(bookmark.getPlaceId(), userLatitude, userLongitude);
 
 				return UserBookmarkListDto.BookmarkItem.builder()
@@ -96,32 +100,21 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * Google Places API를 통해 장소 상세 정보 조회
+	 * PlaceSearchService를 통해 장소 상세 정보 조회
 	 */
 	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
-		log.debug("장소 상세 정보 조회 - placeId: {}", placeId);
-		
-		try {
-			// Google Places API를 통해 장소 정보 조회
-			PlaceDetailResponse place = googlePlaceService.getPlaceDetail(placeId);
-			
-			if (place == null) {
-				log.warn("장소 정보를 찾을 수 없음 - placeId: {}", placeId);
-				throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
-			}
-			
-			// 북마크 상태 설정 (북마크 목록이므로 항상 true)
-			return place.toBuilder()
-				.isBookmarked(true)
-				.build();
-				
-		} catch (CustomException e) {
-			// CustomException은 그대로 재전파
-			throw e;
-		} catch (Exception e) {
-			log.error("장소 정보 조회 중 예외 발생 - placeId: {}", placeId, e);
-			throw new CustomException(ErrorCode.PLACE_API_ERROR);
+
+		// PlaceSearchService를 통해 장소 정보 조회
+		PlaceDetailResponse place = placeSearchService.getPlaceDetail(placeId);
+
+		if (place == null) {
+			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
+
+		// 북마크 상태 설정 (북마크 목록이므로 항상 true)
+		return place.toBuilder()
+			.isBookmarked(true)
+			.build();
 	}
 
 	/**
@@ -129,7 +122,6 @@ public class PlaceBookmarkService {
 	 */
 	@Transactional
 	public void removeBookmark(Long userId, String placeId) {
-		log.debug("북마크 제거 - userId: {}, placeId: {}", userId, placeId);
 
 		// 북마크 존재 확인 및 조회
 		PlaceBookmark bookmark = placeBookmarkRepository.findByUserIdAndPlaceId(userId, placeId)
@@ -137,7 +129,6 @@ public class PlaceBookmarkService {
 
 		// 북마크 삭제
 		placeBookmarkRepository.delete(bookmark);
-		log.info("북마크 제거 완료 - bookmarkId: {}", bookmark.getId());
 	}
 
 	/**
