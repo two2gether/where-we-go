@@ -99,7 +99,6 @@ public class CourseService {
 		List<CourseTheme> themes = filterDto.getThemes();
 
 		// 2. 조건에 따라 코스 목록 조회
-		// Fetch Join으로 전체 리스트 조회
 		Page<Course> coursePage;
 		if (themes != null && !themes.isEmpty()) {
 			// 테마가 있을 경우 : 지역+테마 조건으로 조회
@@ -175,13 +174,19 @@ public class CourseService {
 	@Transactional
 	public CourseUpdateResponseDto updateCourseInfo(
 		Long courseId,
-		CourseUpdateRequestDto requestDto
+		CourseUpdateRequestDto requestDto,
+		Long userId
 	) {
 		// 1. 수정할 코스 DB 에서 조회.
 		Course findCourse = courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
-		// 2. 코스 업데이트
+		// 2. 사용자 권한 체크 - 본인 코스만 수정할 수 있게
+		if (!findCourse.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_COURSE_ACCESS);
+		}
+
+		// 3. 코스 업데이트
 		Course updatedCourse = findCourse.updateCourseInfoFromRequest(
 			requestDto.getTitle(),
 			requestDto.getDescription(),
@@ -190,7 +195,7 @@ public class CourseService {
 			requestDto.getIsPublic()
 		);
 
-		// 3. dto 반환하기[엔티티 -> 응답 dto 변환]
+		// 4. dto 반환하기[엔티티 -> 응답 dto 변환]
 		return CourseMapper.toUpdateDto(updatedCourse);
 	}
 

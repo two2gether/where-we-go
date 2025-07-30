@@ -12,14 +12,15 @@ import org.springframework.data.jpa.repository.Query;
 import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
 
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
 	@Query("""
-		    SELECT c FROM Course c
+		    SELECT DISTINCT c FROM Course c
 		    LEFT JOIN FETCH c.themes t
-		    WHERE c.region = :region
+		    LEFT JOIN FETCH c.user
+		    WHERE c.region LIKE CONCAT('%', :region, '%')
 		      AND c.isPublic = true
 			  AND c.isDeleted = false
 		      AND t IN (:themes)
@@ -34,7 +35,8 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes
-		    WHERE c.region = :region
+		    LEFT JOIN FETCH c.user
+		    WHERE c.region LIKE CONCAT('%', :region, '%')
 			  AND c.isDeleted = false
 		      AND c.isPublic = true
 		""")
@@ -44,6 +46,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
 		    WHERE c.id = :courseId
 		            AND c.isDeleted = false
 		""")
@@ -52,16 +55,15 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    WHERE c.region = :region
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    JOIN CourseBookmark b ON b.course = c
+		    WHERE c.region LIKE CONCAT('%', :region, '%')
 		      AND c.isPublic = true
-		      AND EXISTS (
-		          SELECT 1
-		          FROM CourseBookmark b
-		          WHERE b.course = c
-		            AND b.createdAt BETWEEN :startOfMonth AND :now
-		      )
+		      AND c.isDeleted = false
+		      AND b.createdAt BETWEEN :startOfMonth AND :now
 		    GROUP BY c.id
-		    ORDER BY COUNT(CASE WHEN c.createdAt BETWEEN :startOfMonth AND :now THEN 1 END) DESC
+		    ORDER BY COUNT(b.id) DESC
 		""")
 	Page<Course> findPopularCoursesByRegionThisMonth(
 		@Param("region") String region,
@@ -73,13 +75,16 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-			JOIN CourseBookmark b ON b.course = c
-			WHERE c.region = :region
-			  AND c.isPublic = true
-			  AND :themes MEMBER OF c.themes
-			  AND b.createdAt BETWEEN :startOfMonth AND :now
-			GROUP BY c.id
-			ORDER BY COUNT(b.id) DESC
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    JOIN CourseBookmark b ON b.course = c
+		    WHERE c.region LIKE CONCAT('%', :region, '%')
+		      AND c.isPublic = true
+		      AND c.isDeleted = false
+		      AND EXISTS (SELECT t3 FROM c.themes t3 WHERE t3 IN (:themes))
+		      AND b.createdAt BETWEEN :startOfMonth AND :now
+		    GROUP BY c.id
+		    ORDER BY COUNT(b.id) DESC
 		""")
 	Page<Course> findPopularCoursesByRegionAndThemesThisMonth(
 		@Param("region") String region,

@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.user.dto;
 
+import com.example.wherewego.domain.auth.Provider;
 import com.example.wherewego.domain.user.entity.User;
 
 import lombok.AllArgsConstructor;
@@ -14,7 +15,7 @@ public class MyPageResponseDto {
 	private String nickname;
 	private String email;
 	private String profileImage;
-	private String provider;
+	private Provider provider;
 	private String providerId;
 	private String createdAt;
 	private String updatedAt;
