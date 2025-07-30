@@ -92,9 +92,11 @@ public class CourseController {
 	@PatchMapping("/{courseId}")
 	public ResponseEntity<ApiResponse<CourseUpdateResponseDto>> updateCourse(
 		@PathVariable Long courseId,
-		@RequestBody @Valid CourseUpdateRequestDto requestDto
+		@RequestBody @Valid CourseUpdateRequestDto requestDto,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
-		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto);
+		Long userId = userDetail.getUser().getId();
+		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto, userId);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 수정되었습니다.", response));
 	}
