@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.auth.service;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -51,15 +52,12 @@ public class AuthService {
 	}
 
 	public LoginResponseDto login(LoginRequestDto request) {
+		// Spring Security 인증 (사용자 존재 여부 + 비밀번호 검증)
 		Authentication auth = new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
 		authenticationManager.authenticate(auth);
 
-		User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
-			.orElseThrow(() ->
-				new UsernameNotFoundException("해당 이메일의 사용자를 찾을 수 없습니다.")
-			);
-
-		String token = jwtUtil.generateToken(user.getEmail());
+		// 인증 성공 시 JWT 토큰 생성
+		String token = jwtUtil.generateToken(request.getEmail());
 
 		return LoginResponseDto.builder()
 			.token(token)

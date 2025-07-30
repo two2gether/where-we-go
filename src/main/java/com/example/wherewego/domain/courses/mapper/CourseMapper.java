@@ -60,6 +60,7 @@ public class CourseMapper {
 	public static CourseListResponseDto toListWithPlaces(Course course, List<CoursePlaceInfo> places) {
 		return CourseListResponseDto.builder()
 			.courseId(course.getId())
+			.nickname(course.getUser().getNickname())
 			.title(course.getTitle())
 			.description(course.getDescription())
 			.themes(course.getThemes())
