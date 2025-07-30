@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 
@@ -15,17 +17,18 @@ import com.example.wherewego.domain.places.dto.response.KakaoPlaceResponse;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
 import com.example.wherewego.global.exception.CustomException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-// @Service  // 카카오 API 비활성화
-@RequiredArgsConstructor
+@Service  // 카카오 API 비활성화
 public class KakaoPlaceService implements PlaceSearchService {
-
 	private static final String SEARCH_ENDPOINT = "/v2/local/search/keyword.json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
 	private final WebClient kakaoWebClient;
+
+	public KakaoPlaceService(@Qualifier("kakaoWebClient") WebClient kakaoWebClient) {
+		this.kakaoWebClient = kakaoWebClient;
+	}
 
 	@Override
 	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {

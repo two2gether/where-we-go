@@ -7,7 +7,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -62,9 +61,12 @@ public class CourseController {
 	 */
 	@PostMapping("/list")
 	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> courseList(
-		@Validated @RequestBody CourseListFilterDto filterDto,
+		@RequestParam String region,
+		@RequestParam(required = false) List<CourseTheme> themes,
 		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
+		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+
 		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스 목록 조회를 성공했습니다.", response));
@@ -90,9 +92,11 @@ public class CourseController {
 	@PatchMapping("/{courseId}")
 	public ResponseEntity<ApiResponse<CourseUpdateResponseDto>> updateCourse(
 		@PathVariable Long courseId,
-		@RequestBody @Valid CourseUpdateRequestDto requestDto
+		@RequestBody @Valid CourseUpdateRequestDto requestDto,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
-		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto);
+		Long userId = userDetail.getUser().getId();
+		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto, userId);
 
 		return ResponseEntity.ok(ApiResponse.ok("코스가 성공적으로 수정되었습니다.", response));
 	}

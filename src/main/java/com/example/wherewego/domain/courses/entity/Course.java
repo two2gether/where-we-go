@@ -215,5 +215,4 @@ public class Course extends BaseEntity {
 	public void updateDailyScore(Integer newDailyScore) {
 		this.dailyScore = newDailyScore;
 	}
-
 }

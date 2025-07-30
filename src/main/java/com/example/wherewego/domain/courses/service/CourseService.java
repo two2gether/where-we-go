@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.courses.service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,34 +99,49 @@ public class CourseService {
 		List<CourseTheme> themes = filterDto.getThemes();
 
 		// 2. 조건에 따라 코스 목록 조회
-		// Fetch Join으로 전체 리스트 조회
-		List<Course> courseList;
+		Page<Course> coursePage;
 		if (themes != null && !themes.isEmpty()) {
 			// 테마가 있을 경우 : 지역+테마 조건으로 조회
-			courseList = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes);
+			coursePage = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes, pageable);
 		} else {
 			// 테마가 없을 경우 : 지역 조건만으로 조회
-			courseList = courseRepository.findByRegionAndIsPublicTrue(region);
+			coursePage = courseRepository.findByRegionAndIsPublicTrue(region, pageable);
 		}
 
 		// 3. 페이징 처리
-		int offset = (int)pageable.getOffset(); // 시작 인덱스
-		int limit = pageable.getPageSize(); // 가져올 개수
-		int total = courseList.size(); // 전체 개수
+		// int offset = (int)pageable.getOffset(); // 시작 인덱스
+		// int limit = pageable.getPageSize(); // 가져올 개수
+		// int total = courseList.size(); // 전체 개수
+		//
+		// List<Course> paged = courseList.stream()
+		// 	.skip(offset)
+		// 	.limit(limit)
+		// 	.toList();
 
-		List<Course> paged = courseList.stream()
-			.skip(offset)
-			.limit(limit)
-			.toList();
-
-		// 4. [엔티티 -> 응답 dto 변환] (map 활용)
+		// 4. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
 		// 조회된 Course -> CourseListResponseDto (Mapper 사용)
-		List<CourseListResponseDto> dtoList = paged.stream()
-			.map(CourseMapper::toList)
+		List<CourseListResponseDto> dtoList = coursePage.stream()
+			.map(course -> {
+				// 4-1. 각 코스의 장소 순서 조회
+				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+
+				// 4-2. placeId 리스트 추출
+				List<String> placeIds = placeOrders.stream()
+					.map(PlacesOrder::getPlaceId)
+					.toList();
+
+				// 4-3. 장소 정보 조회 (목록에서는 위치정보 필요 없어서 null 처리)
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
+					placeIds, null, null
+				);
+
+				// 4-4. 매퍼로 DTO 변환
+				return CourseMapper.toListWithPlaces(course, places);
+			})
 			.toList();
 
 		// 5. PageImpl 로 Page 객체 생성
-		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, total);
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 
 		// 6. 커스텀 페이징 응답 dto 로 변환 후 반환
 		return PagedResponse.from(dtoPage);
@@ -156,18 +170,8 @@ public class CourseService {
 		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
 			userLatitude, userLongitude);
 
-		CourseDetailResponseDto responseDto = CourseDetailResponseDto.builder()
-			.courseId(findCourse.getId())
-			.title(findCourse.getTitle())
-			.description(findCourse.getDescription())
-			.region(findCourse.getRegion())
-			.themes(findCourse.getThemes())
-			.places(placesForCourseWithRoute)
-			.likeCount(findCourse.getLikeCount())
-			.averageRating(findCourse.getAverageRating())
-			.isPublic(findCourse.getIsPublic())
-			.createdAt(findCourse.getCreatedAt())
-			.build();
+		// 매퍼 사용
+		CourseDetailResponseDto responseDto = CourseMapper.toDetailDto(findCourse, placesForCourseWithRoute);
 
 		// 2. dto 반환하기[엔티티 -> 응답 dto 변환]
 		// return CourseMapper.toDetailDto(findCourse, places);
@@ -180,13 +184,19 @@ public class CourseService {
 	@Transactional
 	public CourseUpdateResponseDto updateCourseInfo(
 		Long courseId,
-		CourseUpdateRequestDto requestDto
+		CourseUpdateRequestDto requestDto,
+		Long userId
 	) {
 		// 1. 수정할 코스 DB 에서 조회.
 		Course findCourse = courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
-		// 2. 코스 업데이트
+		// 2. 사용자 권한 체크 - 본인 코스만 수정할 수 있게
+		if (!findCourse.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_COURSE_ACCESS);
+		}
+
+		// 3. 코스 업데이트
 		Course updatedCourse = findCourse.updateCourseInfoFromRequest(
 			requestDto.getTitle(),
 			requestDto.getDescription(),
@@ -195,7 +205,7 @@ public class CourseService {
 			requestDto.getIsPublic()
 		);
 
-		// 3. dto 반환하기[엔티티 -> 응답 dto 변환]
+		// 4. dto 반환하기[엔티티 -> 응답 dto 변환]
 		return CourseMapper.toUpdateDto(updatedCourse);
 	}
 
@@ -240,8 +250,8 @@ public class CourseService {
 		List<CourseTheme> themes = filterDto.getThemes();
 
 		// 1-2. 이번 달 시작 날짜 구하기 + 오늘까지
-		LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime startOfMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
 
 		// 2. 조건에 따라 인기 코스 조회
 		// 정렬 : 이번 달 북마크 수 내림차순
@@ -256,26 +266,21 @@ public class CourseService {
 			);
 		}
 
-		// 3. 조건에 따라 인기 코스 조회
-		// 정렬 : 이번 달 북마크 수 내림차순
-		// List<Course> popularCourses = courseRepository.findPopularCoursesByMonth(region, themes, startOfMonth);
-
-		// 3. 페이징 처리
-		// int offset = (int)pageable.getOffset();
-		// int limit = pageable.getPageSize();
-		// int total = popularCourseIds.size();
-		//
-		// List<Long> pagedIds = popularCourseIds.stream()
-		// 	.skip(offset)
-		// 	.limit(limit)
-		// 	.toList();
-
-		// 4. Id로 Course 엔티티 가져오기 (북마크 포함)
-		// List<Course> popularCourses = courseRepository.findByIdIn(pagedIds);
-
-		// 5. [엔티티 -> 응답 dto 변환]
+		// 5. [엔티티 -> 응답 dto 변환] - 코스별 장소 조회 및 매핑
 		List<CourseListResponseDto> dtoList = coursePage.stream()
-			.map(CourseMapper::toList)
+			.map(course -> {
+				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+
+				List<String> placeIds = placeOrders.stream()
+					.map(PlacesOrder::getPlaceId)
+					.toList();
+
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
+					placeIds, null, null
+				);
+
+				return CourseMapper.toListWithPlaces(course, places);
+			})
 			.toList();
 
 		// 6. PageImpl 로 Page 객체 생성
