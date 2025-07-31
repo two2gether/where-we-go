@@ -31,6 +31,7 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME2 }}
       DB_USERNAME: ${{ secrets.DB_USERNAME2 }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD2 }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
     steps:
       - name: Download JAR Artifact
         uses: actions/download-artifact@v4
@@ -60,7 +61,7 @@ jobs:
           host: ${{ secrets.EC2_HOST2 }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY2 }}
-          envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD
+          envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,GOOGLE_API_KEY
           script: |
             pkill -f 'java.*app.jar' || true
             export DB_HOST=$DB_HOST
@@ -68,7 +69,5 @@ jobs:
             export DB_NAME=$DB_NAME
             export DB_USERNAME=$DB_USERNAME
             export DB_PASSWORD=$DB_PASSWORD
-            nohup java -jar /home/ubuntu/app/Where-we-go-0.0.1-SNAPSHOT.jar \
-            --spring.datasource.url=jdbc:mysql://$DB_HOST:$DB_PORT/$DB_NAME \
-            --spring.datasource.username=$DB_USERNAME \
-            --spring.datasource.password=$DB_PASSWORD > /home/ubuntu/app/app.log 2>&1 &
+            export GOOGLE_API_KEY=$GOOGLE_API_KEY
+            nohup java -jar /home/ubuntu/app/Where-we-go-0.0.1-SNAPSHOT.jar > /home/ubuntu/app/app.log 2>&1 &
