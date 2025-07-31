@@ -8,16 +8,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
 
-import org.springframework.data.repository.query.Param;
-
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
 	@Query("""
-		    SELECT DISTINCT c FROM Course c
+		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes t
 		    LEFT JOIN FETCH c.user
 		    WHERE c.region LIKE CONCAT('%', :region, '%')
