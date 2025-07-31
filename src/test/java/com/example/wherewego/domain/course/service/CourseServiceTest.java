@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.service;
+package com.example.wherewego.domain.course.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +25,7 @@ import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;

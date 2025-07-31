@@ -296,7 +296,22 @@ public class CourseService {
 		Page<Course> page = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
 
 		List<CourseListResponseDto> dtoList = page.getContent().stream()
-			.map(CourseMapper::toList)
+			.map(course -> {
+				// 장소 순서 조회
+				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+
+				// placeId 리스트 추출
+				List<String> placeIds = placeOrders.stream()
+					.map(PlacesOrder::getPlaceId)
+					.toList();
+
+				// 장소 정보 가져오기 (위치 정보는 제외)
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
+					placeIds, null, null
+				);
+
+				return CourseMapper.toListWithPlaces(course, places);
+			})
 			.toList();
 
 		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, page.getTotalElements());
