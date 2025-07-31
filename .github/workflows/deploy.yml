@@ -1,7 +1,7 @@
 name: CI/CD Deploy
 on:
   push:
-    branches: [ dev ]
+    branches: [ feat/place-system ]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,11 +26,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST2 }}
+      DB_PORT: ${{ secrets.DB_PORT2 }}
+      DB_NAME: ${{ secrets.DB_NAME2 }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME2 }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD2 }}
     steps:
       - name: Download JAR Artifact
         uses: actions/download-artifact@v4
@@ -39,27 +39,27 @@ jobs:
       - name: Create app directory on EC2
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.EC2_HOST2 }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY2 }}
           envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD
           script: |
             mkdir -p /home/ubuntu/app
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.EC2_HOST2 }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY2 }}
           source: "*.jar"
           target: "/home/ubuntu/app/"
           overwrite: true
       - name: Restart Spring Boot on EC2
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.EC2_HOST2 }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY2 }}
           envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD
           script: |
             pkill -f 'java.*app.jar' || true
