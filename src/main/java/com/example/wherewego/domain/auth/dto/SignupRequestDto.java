@@ -27,9 +27,6 @@ public class SignupRequestDto {
 	)
 	private String password;
 
-	@NotBlank(message = "비밀번호 확인은 필수 입력값입니다.")
-	private String confirmPassword;
-
 	@NotBlank(message = "닉네임은 필수 입력값입니다.")
 	@Size(min = 2, max = 20, message = "닉네임은 2~20자 사이여야 합니다.")
 	private String nickname;
