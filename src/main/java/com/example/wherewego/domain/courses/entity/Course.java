@@ -87,7 +87,21 @@ public class Course extends BaseEntity {
 	 */
 	@Column(name = "average_rating", nullable = false)
 	@Builder.Default
-	private Double averageRating = (double)0L;
+	private Double averageRating = 0.0;
+
+	/**
+	 * 평점 총합
+	 */
+	@Column(name = "rating_sum", nullable = false)
+	@Builder.Default
+	private Double ratingSum = 0.0;
+
+	/**
+	 * 평점 개수
+	 */
+	@Column(name = "rating_count", nullable = false)
+	@Builder.Default
+	private Integer ratingCount = 0;
 
 	/**
 	 * 조회수
@@ -203,7 +217,17 @@ public class Course extends BaseEntity {
 	}
 
 	/**
-	 * 평균 평점 업데이트
+	 * 평점 통계 업데이트 (서비스에서 계산된 값 설정)
+	 * 비즈니스 로직은 CourseStatisticsService에서 처리
+	 */
+	public void updateRatingStatistics(Double ratingSum, Integer ratingCount, Double averageRating) {
+		this.ratingSum = ratingSum;
+		this.ratingCount = ratingCount;
+		this.averageRating = averageRating;
+	}
+
+	/**
+	 * 평균 평점 업데이트 (기존 메서드 - 호환성 유지)
 	 */
 	public void updateAverageRating(Double newAverageRating) {
 		this.averageRating = newAverageRating;
