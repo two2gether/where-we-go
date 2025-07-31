@@ -1,4 +1,5 @@
 name: CI/CD Deploy
+
 on:
   push:
     branches: [ dev ]
@@ -71,21 +72,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD
           script: |
-            pkill -f 'java.*app.jar' || true
-            export DB_HOST=${DB_HOST}
-            export DB_PORT=${DB_PORT}
-            export DB_NAME=${DB_NAME}
-            export DB_USERNAME=${DB_USERNAME}
-            export DB_PASSWORD=${DB_PASSWORD}
-
-            echo "=== ENVIRONMENT CHECK ==="
-            echo "DB_HOST=$DB_HOST"
-            echo "DB_PORT=$DB_PORT"
-            echo "DB_NAME=$DB_NAME"
-            echo "DB_USERNAME=$DB_USERNAME"
-            echo "=========================="
+            bash /home/ubuntu/app/run-deploy.sh
 
             nohup java -jar /home/ubuntu/app/Where-we-go-0.0.1-SNAPSHOT.jar \
               --spring.datasource.url=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true \
               --spring.datasource.username=${DB_USERNAME} \
-              --spring.datasource.password=${DB_PASSWORD} > /home/ubuntu/app/app.log 2>&1 &
+              --spring.datasource.password=${DB_PASSWORD} \
+              > /home/ubuntu/app/app.log 2>&1 &
