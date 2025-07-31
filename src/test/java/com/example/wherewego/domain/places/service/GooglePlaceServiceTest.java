@@ -1,8 +1,6 @@
 package com.example.wherewego.domain.places.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,7 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
+import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GooglePlaceService 테스트")
@@ -34,16 +32,16 @@ class GooglePlaceServiceTest {
 
 		@Test
 		@DisplayName("PlaceSearchService 인터페이스를 구현한다")
-		void implementsPlaceSearchService() {
+		void shouldImplementPlaceSearchService() {
 			// then
 			assertThat(googlePlaceService).isInstanceOf(PlaceSearchService.class);
 		}
 
 		@Test
 		@DisplayName("PlaceSearchRequest 유효성 검증")
-		void validatePlaceSearchRequest() {
+		void shouldValidatePlaceSearchRequest() {
 			// given
-			PlaceSearchRequest request = PlaceSearchRequest.builder()
+			PlaceSearchRequestDto request = PlaceSearchRequestDto.builder()
 				.query("서울역")
 				.build();
 
@@ -54,15 +52,15 @@ class GooglePlaceServiceTest {
 
 		@Test
 		@DisplayName("사용자 위치가 있는 PlaceSearchRequest 생성")
-		void createPlaceSearchRequestWithUserLocation() {
+		void shouldCreatePlaceSearchRequestWithUserLocation() {
 			// given
-			PlaceSearchRequest.UserLocation userLocation = PlaceSearchRequest.UserLocation.builder()
+			PlaceSearchRequestDto.UserLocation userLocation = PlaceSearchRequestDto.UserLocation.builder()
 				.latitude(37.5665)
 				.longitude(126.9780)
 				.radius(1000)
 				.build();
 
-			PlaceSearchRequest request = PlaceSearchRequest.builder()
+			PlaceSearchRequestDto request = PlaceSearchRequestDto.builder()
 				.query("카페")
 				.userLocation(userLocation)
 				.build();

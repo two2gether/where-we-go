@@ -23,7 +23,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
-import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.entity.PlaceBookmark;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
@@ -66,10 +66,10 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("북마크를 정상적으로 추가한다")
-		void addBookmarkSuccess() {
+		void shouldAddBookmark() {
 			// given
 			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findById(userId)).willReturn(Optional.of(testUser));
+			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.of(testUser));
 
 			PlaceBookmark savedBookmark = PlaceBookmark.builder()
 				.id(1L)
@@ -91,7 +91,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("이미 북마크된 장소를 추가하려고 하면 예외가 발생한다")
-		void addBookmarkAlreadyExists() {
+		void shouldThrowExceptionWhenBookmarkAlreadyExists() {
 			// given
 			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(true);
 
@@ -103,10 +103,9 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("존재하지 않는 사용자로 북마크를 추가하려고 하면 예외가 발생한다")
-		void addBookmarkUserNotFound() {
+		void shouldThrowExceptionWhenUserNotFound() {
 			// given
-			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findById(userId)).willReturn(Optional.empty());
+			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.empty());
 
 			// when & then
 			assertThatThrownBy(() -> placeBookmarkService.addBookmark(userId, placeId))
@@ -126,7 +125,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("사용자의 북마크 목록을 정상적으로 조회한다")
-		void getUserBookmarksSuccess() {
+		void shouldGetUserBookmarks() {
 			// given
 			PlaceBookmark bookmark1 = PlaceBookmark.builder()
 				.id(1L)
@@ -149,7 +148,7 @@ class PlaceBookmarkServiceTest {
 			given(placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
 				.willReturn(bookmarkPage);
 
-			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place1 = PlaceDetailResponseDto.builder()
 				.placeId("place2")
 				.name("장소2")
 				.category("카페")
@@ -158,7 +157,7 @@ class PlaceBookmarkServiceTest {
 				.isBookmarked(true)
 				.build();
 
-			PlaceDetailResponse place2 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place2 = PlaceDetailResponseDto.builder()
 				.placeId("place1")
 				.name("장소1")
 				.category("음식점")
@@ -198,7 +197,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("북마크가 없는 경우 빈 목록을 반환한다")
-		void getUserBookmarksEmpty() {
+		void shouldReturnEmptyListWhenNoBookmarks() {
 			// given
 			Pageable pageable = PageRequest.of(page, size);
 			Page<PlaceBookmark> emptyPage = new PageImpl<>(List.of(), pageable, 0);
@@ -216,7 +215,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("장소 정보 조회 실패 시 CustomException이 발생한다")
-		void getUserBookmarksPlaceNotFound() {
+		void shouldThrowExceptionWhenPlaceNotFound() {
 			// given
 			PlaceBookmark bookmark = PlaceBookmark.builder()
 				.id(1L)
@@ -240,7 +239,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("외부 API 오류가 적절히 전파된다")
-		void getUserBookmarksApiError() {
+		void shouldThrowExceptionWhenApiError() {
 			// given
 			PlaceBookmark bookmark = PlaceBookmark.builder()
 				.id(1L)
@@ -270,7 +269,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("북마크를 정상적으로 제거한다")
-		void removeBookmarkSuccess() {
+		void shouldRemoveBookmark() {
 			// given
 			PlaceBookmark bookmark = PlaceBookmark.builder()
 				.id(1L)
@@ -290,7 +289,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("존재하지 않는 북마크를 제거하려고 하면 예외가 발생한다")
-		void removeBookmarkNotFound() {
+		void shouldThrowExceptionWhenBookmarkNotFound() {
 			// given
 			given(placeBookmarkRepository.findByUserIdAndPlaceId(userId, placeId))
 				.willReturn(Optional.empty());
@@ -308,7 +307,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("북마크가 존재하면 true를 반환한다")
-		void isBookmarkedTrue() {
+		void shouldReturnTrueWhenBookmarkExists() {
 			// given
 			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(true);
 
@@ -321,7 +320,7 @@ class PlaceBookmarkServiceTest {
 
 		@Test
 		@DisplayName("북마크가 존재하지 않으면 false를 반환한다")
-		void isBookmarkedFalse() {
+		void shouldReturnFalseWhenBookmarkNotExists() {
 			// given
 			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
 

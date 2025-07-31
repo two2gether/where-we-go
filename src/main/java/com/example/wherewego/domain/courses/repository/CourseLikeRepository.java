@@ -1,13 +1,15 @@
 package com.example.wherewego.domain.courses.repository;
 
-import com.example.wherewego.domain.courses.entity.Like;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import com.example.wherewego.domain.courses.entity.CourseLike;
 
 @Repository
-public interface CourseLikeRepository extends JpaRepository<Like, Long> {
-    boolean existsByUserIdAndCourseId(Long userId, Long courseId);
-    Optional<Like> findByUserIdAndCourseId(Long userId, Long courseId);
+public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
+	boolean existsByUserIdAndCourseId(Long userId, Long courseId);
+
+	Optional<CourseLike> findByUserIdAndCourseId(Long userId, Long courseId);
 }

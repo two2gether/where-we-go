@@ -1,7 +1,9 @@
 package com.example.wherewego.domain.places.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.entity.User;
+import com.example.wherewego.global.exception.CustomException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,24 +48,35 @@ import lombok.NoArgsConstructor;
 )
 public class PlaceReview extends BaseEntity {
 
+	/**
+	 * 장소 리뷰 고유 ID
+	 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// 리뷰 작성자
+	/**
+	 * 리뷰 작성자
+	 */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	// 카카오 API 장소 ID (문자열)
+	/**
+	 * 카카오 API 장소 ID
+	 */
 	@Column(name = "place_id", nullable = false, length = 20)
 	private String placeId;
 
-	// 평점 (1-5점)
+	/**
+	 * 평점 (1-5점)
+	 */
 	@Column(nullable = false)
 	private Integer rating;
 
-	// 리뷰 내용 (선택사항)
+	/**
+	 * 리뷰 내용 (선택사항)
+	 */
 	@Column(columnDefinition = "TEXT")
 	private String content;
 
@@ -82,7 +95,7 @@ public class PlaceReview extends BaseEntity {
 	@PreUpdate
 	private void validateRating() {
 		if (rating == null || rating < 1 || rating > 5) {
-			throw new IllegalArgumentException("평점은 1-5 사이의 값이어야 합니다.");
+			throw new CustomException(ErrorCode.INVALID_RATING_VALUE);
 		}
 	}
 }
