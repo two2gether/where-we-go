@@ -7,7 +7,7 @@ import com.example.wherewego.domain.user.entity.User;
 
 public class EventMapper {
 	// DTO → Entity
-	public EventProduct toEntity(EventCreateRequestDto request, User user) {
+	public static EventProduct toEntity(EventCreateRequestDto request, User user) {
 		return EventProduct.builder()
 			.productName(request.getProductName())
 			.productImage(request.getProductImage())
@@ -19,7 +19,7 @@ public class EventMapper {
 	}
 
 	// Entity → Response DTO
-	public EventCreateResponseDto toDto(EventProduct entity) {
+	public static EventCreateResponseDto toDto(EventProduct entity) {
 		return EventCreateResponseDto.builder()
 			.productId(entity.getId())
 			.createdAt(entity.getCreatedAt())

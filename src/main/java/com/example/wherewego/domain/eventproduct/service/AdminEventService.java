@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 public class AdminEventService {
 
 	private final EventRepository eventRepository;
-	private final EventMapper eventMapper;
 	private final UserRepository userRepository;
 
 	/**
@@ -52,12 +51,12 @@ public class AdminEventService {
 		// }
 
 		// 3. [요청 DTO -> 엔티티 변환] - mapper 사용
-		EventProduct product = eventMapper.toEntity(requestDto, user);
+		EventProduct product = EventMapper.toEntity(requestDto, user);
 
 		// 4. 엔티티 DB에 저장
 		EventProduct savedProduct = eventRepository.save(product);
 
 		// 5. [저장된 엔티티 -> 응답 DTO 변환]
-		return eventMapper.toDto(savedProduct);
+		return EventMapper.toDto(savedProduct);
 	}
 }
