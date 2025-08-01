@@ -73,6 +73,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("이메일 또는 비밀번호가 올바르지 않습니다."));
     }
 
+
     /**
      * Exception 처리
      * 서버오류를 처리
