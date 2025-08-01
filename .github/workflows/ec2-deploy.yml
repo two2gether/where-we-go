@@ -39,13 +39,12 @@ jobs:
     
     env:
       DB_HOST: ${{ secrets.DB_HOST2 }}
-      DB_PORT: ${{ secrets.DB_PORT2 }}
+      DB_PORT: ${{ secrets.DB_PORT || '3306' }}
       DB_NAME: ${{ secrets.DB_NAME2 }}
       DB_USERNAME: ${{ secrets.DB_USERNAME2 }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD2 }}
       JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
       GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
-      KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
     
     steps:
     - name: Download JAR Artifact
@@ -88,7 +87,7 @@ jobs:
         host: ${{ secrets.EC2_HOST2 }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY2 }}
-        envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,JWT_SECRET_KEY,GOOGLE_MAPS_API_KEY,KAKAO_REST_API_KEY
+        envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,JWT_SECRET_KEY,GOOGLE_MAPS_API_KEY
         script: |
           cd /home/ubuntu/app
           
@@ -101,7 +100,6 @@ jobs:
           DB_PASSWORD=$DB_PASSWORD
           JWT_SECRET_KEY=$JWT_SECRET_KEY
           GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
-          KAKAO_REST_API_KEY=$KAKAO_REST_API_KEY
           EOF
           
           # 환경변수 로드
@@ -115,7 +113,6 @@ jobs:
             --spring.datasource.password=$DB_PASSWORD \
             --jwt.secret.key=$JWT_SECRET_KEY \
             --google.api.key=$GOOGLE_MAPS_API_KEY \
-            --kakao.api.key=$KAKAO_REST_API_KEY \
             > app.log 2>&1 &
             
           # 애플리케이션 시작 확인
