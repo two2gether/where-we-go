@@ -94,9 +94,20 @@ jobs:
         script: |
           echo "Stopping existing Java applications..."
           sudo pkill -9 -f 'java.*where-we-go' || echo "No where-we-go process found"
-          sudo pkill -9 -f 'Where-we-go' || echo "No Where-we-go process found"  
-          sleep 2
+          sudo pkill -9 -f 'Where-we-go' || echo "No Where-we-go process found"
+          
+          # 포트 8080 사용 프로세스 강제 종료
+          sudo lsof -ti:8080 | xargs -r sudo kill -9 || echo "No process using port 8080"
+          
+          sleep 5
           echo "Stop process completed"
+          
+          # 포트 확인
+          if sudo lsof -i:8080; then
+            echo "⚠️ Port 8080 still in use"
+          else
+            echo "✅ Port 8080 is free"
+          fi
           
     - name: Start Spring Boot Application
       uses: appleboy/ssh-action@v0.1.10
@@ -123,7 +134,14 @@ jobs:
           export $(cat .env | xargs)
           
           # Spring Boot 애플리케이션 시작
-          nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar --spring.profiles.active=aws --spring.datasource.url=jdbc:mysql://$DB_HOST:$DB_PORT/$DB_NAME?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true --spring.datasource.username=$DB_USERNAME --spring.datasource.password=$DB_PASSWORD --jwt.secret.key=$JWT_SECRET_KEY --google.api.key=$GOOGLE_MAPS_API_KEY > app.log 2>&1 &
+          nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar \
+            --spring.profiles.active=aws \
+            --spring.datasource.url="jdbc:mysql://$DB_HOST:$DB_PORT/$DB_NAME?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true" \
+            --spring.datasource.username="$DB_USERNAME" \
+            --spring.datasource.password="$DB_PASSWORD" \
+            --jwt.secret.key="$JWT_SECRET_KEY" \
+            --google.api.key="$GOOGLE_MAPS_API_KEY" \
+            > app.log 2>&1 &
             
           # 애플리케이션 시작 확인
           sleep 15
