@@ -87,15 +87,35 @@ jobs:
             cd /home/ubuntu/app
             nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
             
-            # Wait and check status
-            sleep 10
+            # Wait longer for Spring Boot to fully initialize
+            echo "Waiting for Spring Boot to initialize (this may take 1-2 minutes)..."
+            sleep 30
+            
+            # Check if process is still running
             if ps aux | grep -q "Where-we-go-0.0.1-SNAPSHOT.jar[^[]"; then
-              echo "✅ Application started successfully!"
+              echo "✅ Application process is running!"
               echo "PID: $(pgrep -f 'Where-we-go-0.0.1-SNAPSHOT.jar')"
+              
+              # Wait for application to be ready with health checks
+              echo "Checking application readiness..."
+              for i in {1..18}; do
+                if curl -f -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                  echo "✅ Application is healthy and ready!"
+                  curl -s http://localhost:8080/actuator/health
+                  exit 0
+                fi
+                echo "Attempt $i/18: Application still starting... waiting 10 seconds"
+                sleep 10
+              done
+              
+              echo "⚠️ Application process is running but health check failed after 3 minutes"
+              echo "Last 30 lines of logs:"
+              tail -30 app.log
+              echo "Application may still be starting - check manually with: curl http://localhost:8080/actuator/health"
             else
-              echo "❌ Application failed to start"
-              echo "Recent logs:"
-              tail -20 app.log 2>/dev/null || echo "No log file found"
+              echo "❌ Application process has stopped unexpectedly"
+              echo "Full application logs:"
+              cat app.log
               exit 1
             fi
             EOF
