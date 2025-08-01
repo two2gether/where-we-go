@@ -2,6 +2,7 @@ package com.example.wherewego.domain.user.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
 import com.example.wherewego.domain.auth.Provider;
+import com.example.wherewego.domain.auth.UserRole;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -71,6 +72,13 @@ public class User extends BaseEntity {
 	 */
 	@Column(length = 100, name = "provider_id")
 	private String providerId;
+
+	/**
+	 * 유저 권한
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private UserRole role;
 
 	public void setIsDeleted(boolean isDeleted) {
 		this.isDeleted = isDeleted;
