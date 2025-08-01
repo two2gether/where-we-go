@@ -73,6 +73,13 @@ public class EventProduct extends BaseEntity {
 	private int stock;
 
 	/**
+	 * 삭제 여부
+	 */
+	@Column(name = "is_deleted", nullable = false)
+	@Builder.Default
+	private Boolean isDeleted = false;
+
+	/**
 	 * 상품 수정 기능
 	 */
 	public EventProduct updateEventInfoFromRequest(String productName, String productImage, String description,

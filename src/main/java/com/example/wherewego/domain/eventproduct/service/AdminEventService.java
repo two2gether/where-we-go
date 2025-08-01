@@ -102,4 +102,41 @@ public class AdminEventService {
 		// 5. [저장된 엔티티 -> 응답 DTO 변환]
 		return EventMapper.toUpdateDto(updatedProduct);
 	}
+
+	/**
+	 * 이벤트 상품을 소프트 삭제합니다.
+	 * 관리자만 삭제할 수 있습니다.
+	 *
+	 * @param productId 삭제할 상품 ID
+	 * @param userId 삭제를 요청한 사용자 ID (관리자)
+	 * @throws CustomException 상품를 찾을 수 없거나 삭제 권한이 없는 경우
+	 */
+	@Transactional
+	public void deleteEventById(
+		Long productId,
+		Long userId
+	) {
+		// 1. 상품 조회하기
+		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+
+		// 2. 사용자 조회
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		// 3. 사용자 권한 체크 - 관리자만 삭제 가능.
+		// if (!findProduct.getRole().equals(UserRole.ADMIN)) {
+		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
+		// }
+
+		// User admin = userRepository.findById(adminId)
+		// 	.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		//
+		// if (!admin.getRole().equals(Role.ADMIN)) {
+		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_PRODUCT_DELETE);
+		// }
+
+		// 4. Soft Delete
+		findProduct.softDelete();
+	}
 }
