@@ -92,21 +92,32 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY2 }}
         script: |
-          echo "Stopping existing Java applications..."
-          sudo pkill -9 -f 'java.*where-we-go' || echo "No where-we-go process found"
-          sudo pkill -9 -f 'Where-we-go' || echo "No Where-we-go process found"
+          echo "🔄 Stopping all existing Java applications..."
           
-          # 포트 8080 사용 프로세스 강제 종료
-          sudo lsof -ti:8080 | xargs -r sudo kill -9 || echo "No process using port 8080"
+          # 모든 Java 프로세스 확인 및 where-we-go 관련 프로세스 강제 종료
+          for pid in $(pgrep -f "java.*Where-we-go" || true); do
+            if [ ! -z "$pid" ]; then
+              echo "Killing Java process: $pid"
+              sudo kill -9 $pid || echo "Failed to kill $pid"
+            fi
+          done
           
-          sleep 5
-          echo "Stop process completed"
+          # 포트 8080 사용하는 모든 프로세스 강제 종료
+          sudo lsof -ti:8080 | xargs -r sudo kill -9 || echo "No process using port 8080 via lsof"
+          sudo fuser -k 8080/tcp || echo "No process using port 8080 via fuser"
           
-          # 포트 확인
+          # 추가적으로 pkill로 한번 더
+          sudo pkill -9 -f 'java.*[Ww]here.*[Ww]e.*[Gg]o' || echo "No matching processes via pkill"
+          
+          sleep 10
+          echo "✅ Stop process completed"
+          
+          # 최종 포트 확인
           if sudo lsof -i:8080; then
-            echo "⚠️ Port 8080 still in use"
+            echo "⚠️ Port 8080 still in use - attempting additional cleanup"
+            sudo netstat -tlnp | grep 8080 | awk '{print $7}' | cut -d'/' -f1 | xargs -r sudo kill -9
           else
-            echo "✅ Port 8080 is free"
+            echo "✅ Port 8080 is now free"
           fi
           
     - name: Start Spring Boot Application
