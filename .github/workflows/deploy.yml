@@ -33,7 +33,7 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
     steps:
       - name: Download JAR Artifact
