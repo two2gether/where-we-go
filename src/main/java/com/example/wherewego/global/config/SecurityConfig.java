@@ -43,6 +43,9 @@ public class SecurityConfig {
 
 			// 인가 설정
 			.authorizeHttpRequests(auth -> auth
+				// 헬스체크 엔드포인트는 모든 사용자 접근 허용
+				.requestMatchers("/health", "/actuator/health").permitAll()
+				
 				// 인증 API는 모든 사용자 접근 허용
 				.requestMatchers("/api/auth/**").permitAll()
 				

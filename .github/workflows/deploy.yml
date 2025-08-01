@@ -93,3 +93,43 @@ jobs:
               tail -n 50 app.log || true
               exit 1
             fi
+            
+            echo "🔍 Proceeding to health check for final verification..."
+
+      - name: Health Check
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # 헬스 체크 (최대 2분 재시도)
+            for i in {1..4}; do
+              echo "Health check attempt ${i}/4..."
+            
+              # 프로세스 확인
+              if pgrep -f 'java.*Where-we-go' > /dev/null; then
+                echo "✅ Java process is running"
+            
+                # 헬스 엔드포인트 확인
+                if curl -f "http://localhost:8080/health" -s > /dev/null 2>&1; then
+                  echo "✅ Health check passed!"
+                  curl -s "http://localhost:8080/health" | head -3
+                  exit 0
+                else
+                  echo "Health endpoint not ready yet..."
+                fi
+              else
+                echo "Java process not found..."
+              fi
+            
+              echo "Waiting 30 seconds..."
+              sleep 30
+            done
+            
+            echo "❌ Health check failed after 4 attempts"
+            echo "📋 Application log:"
+            tail -50 /home/ubuntu/app/app.log
+            echo "📋 Process status:"
+            ps aux | grep java
+            exit 1

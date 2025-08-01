@@ -28,7 +28,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		
 		// 인증이 필요 없는 경로는 JWT 검사 건너뛰기
 		String path = request.getRequestURI();
-		if (path.startsWith("/api/auth/")) {
+		if (path.startsWith("/api/auth/") || 
+			path.equals("/health") || 
+			path.equals("/actuator/health")) {
 			filterChain.doFilter(request, response);
 			return;
 		}
