@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 
 
@@ -74,18 +73,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("이메일 또는 비밀번호가 올바르지 않습니다."));
     }
 
-    /**
-     * HTTP 메서드 지원하지 않는 경우 처리
-     * 주로 잘못된 HTTP 메서드 호출시 발생 (예: POST만 지원하는 엔드포인트에 GET 요청)
-     */
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
-        // 요청 정보를 더 자세히 로깅 (디버깅용)
-        log.warn("지원하지 않는 HTTP 메서드 요청: {} → 지원 메서드: {}", 
-                e.getMethod(), 
-                String.join(", ", e.getSupportedMethods() != null ? e.getSupportedMethods() : new String[]{"없음"}));
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiResponse.error("지원하지 않는 HTTP 메서드입니다."));
-    }
 
     /**
      * Exception 처리
