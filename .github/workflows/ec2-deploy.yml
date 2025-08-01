@@ -78,8 +78,11 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY2 }}
         script: |
-          pkill -f 'java.*where-we-go' || true
+          echo "Stopping existing Java applications..."
+          pkill -f 'java.*where-we-go' || echo "No existing application found"
+          pkill -f 'Where-we-go' || echo "No Where-we-go process found"
           sleep 5
+          echo "Stop process completed"
           
     - name: Start Spring Boot Application
       uses: appleboy/ssh-action@v0.1.10
