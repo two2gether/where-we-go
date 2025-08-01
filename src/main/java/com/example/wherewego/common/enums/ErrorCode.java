@@ -1,7 +1,8 @@
 package com.example.wherewego.common.enums;
 
-import lombok.Getter;
 import org.springframework.http.HttpStatus;
+
+import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
@@ -29,16 +30,20 @@ public enum ErrorCode {
 	COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 코스입니다."),
 	UNAUTHORIZED_COURSE_ACCESS(HttpStatus.FORBIDDEN, "해당 코스에 대한 권한이 없습니다."),
 
+	// 이벤트 상품 에러 정의
+	EVENT_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
+	UNAUTHORIZED_EVENT_PRODUCT_ACCESS(HttpStatus.FORBIDDEN, "해당 상품에 대한 권한이 없습니다."),
+
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 
-    // 북마크 관련 에러 정의
-    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 장소입니다."),
-    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크한 기록이 없습니다."),
+	// 북마크 관련 에러 정의
+	BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 장소입니다."),
+	BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크한 기록이 없습니다."),
 
-    // 장소 관련 에러 정의
-    PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 정보를 찾을 수 없습니다."),
-    PLACE_API_ERROR(HttpStatus.BAD_GATEWAY, "장소 정보 조회에 실패했습니다."),
+	// 장소 관련 에러 정의
+	PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 정보를 찾을 수 없습니다."),
+	PLACE_API_ERROR(HttpStatus.BAD_GATEWAY, "장소 정보 조회에 실패했습니다."),
 
 	// 평점 관련 에러 정의
 	RATING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 평점을 등록한 코스입니다."),

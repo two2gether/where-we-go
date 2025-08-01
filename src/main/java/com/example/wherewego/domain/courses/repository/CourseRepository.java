@@ -16,7 +16,7 @@ import com.example.wherewego.domain.courses.entity.Course;
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
 	@Query("""
-		    SELECT DISTINCT c FROM Course c
+		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes t
 		    LEFT JOIN FETCH c.user
 		    WHERE c.region LIKE CONCAT('%', :region, '%')

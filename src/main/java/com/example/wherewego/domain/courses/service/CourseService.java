@@ -18,6 +18,7 @@ import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
@@ -199,7 +200,7 @@ public class CourseService {
 			return exactMatch;
 		}
 
-		// 2차: 지역명으로 시작하는 검색 (인덱스 활용 가능)  
+		// 2차: 지역명으로 시작하는 검색 (인덱스 활용 가능)
 		// 예: "강남" → region LIKE "강남%" ("강남구", "강남동" 매칭)
 		Page<Course> startsWithMatch = courseRepository.findByRegionStartsWithAndIsPublicTrue(searchTerm, pageable);
 		if (startsWithMatch.hasContent()) {
