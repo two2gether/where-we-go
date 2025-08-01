@@ -1,12 +1,16 @@
 package com.example.wherewego.domain.eventproduct.entity;
 
 import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.user.entity.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,10 +36,23 @@ public class EventProduct extends BaseEntity {
 	private Long id;
 
 	/**
+	 * 상품 등록 관리자
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = false)
+	private User user;
+
+	/**
 	 * 상품명
 	 */
-	@Column(nullable = false, length = 100)
-	private String name;
+	@Column(name = "product_name", nullable = false, length = 100)
+	private String productName;
+
+	/**
+	 * 상품 이미지 (URL)
+	 */
+	@Column(name = "product_image", length = 500)
+	private String productImage;
 
 	/**
 	 * 상품 설명
