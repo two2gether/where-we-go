@@ -80,8 +80,18 @@ jobs:
           script: |
             cd /home/ubuntu/app
             
-            # Stop existing app
-            sudo pkill -f 'java.*Where-we-go' || true
+            # Stop existing app gracefully
+            if pgrep -f 'java.*Where-we-go' > /dev/null; then
+              echo "Stopping existing application..."
+              sudo pkill -f 'java.*Where-we-go' || true
+              sleep 10
+              # If still running, force kill
+              if pgrep -f 'java.*Where-we-go' > /dev/null; then
+                sudo pkill -9 -f 'java.*Where-we-go' || true
+              fi
+            fi
+            
+            # Clean up port 8080
             sudo fuser -k 8080/tcp || true
             sleep 5
             
@@ -95,15 +105,30 @@ jobs:
               --google.api.key="$GOOGLE_MAPS_API_KEY" \
               > app.log 2>&1 &
             
-            # Health check - 더 충분한 시간 대기
-            sleep 60
-            for i in {1..5}; do
+            # Wait for application to start and verify
+            echo "Waiting for application to start..."
+            sleep 30
+            
+            # Check if process started
+            if ! pgrep -f 'java.*Where-we-go' > /dev/null; then
+              echo "❌ Application process not found!"
+              tail -20 app.log
+              exit 1
+            fi
+            
+            # Health check with more time
+            echo "Application process found, starting health checks..."
+            sleep 30  # Additional wait for full initialization
+            
+            for i in {1..6}; do
+              echo "Health check attempt $i/6..."
               if curl -f "http://localhost:8080/health" -s; then
                 echo "✅ Deployment successful!"
+                curl -s "http://localhost:8080/health"
                 exit 0
               fi
-              echo "Health check attempt $i/5 failed, waiting 15 seconds..."
-              sleep 15
+              echo "Health check failed, waiting 20 seconds..."
+              sleep 20
             done
             
             echo "❌ Health check failed"
