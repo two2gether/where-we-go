@@ -32,6 +32,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/test/mvp'
 
     env:
       DB_HOST: ${{ secrets.DB_HOST }}
@@ -155,7 +156,6 @@ jobs:
             if pgrep -f 'java.*Where-we-go' > /dev/null; then
               echo "✅ Application process started successfully"
               echo "📋 Application log:"
-              tail -20 app.log
             else
               echo "⚠️ Application process not found, but continuing to health check"
               echo "📋 Current log:"
