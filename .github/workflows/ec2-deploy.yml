@@ -128,15 +128,16 @@ jobs:
           # 애플리케이션 시작 확인
           sleep 15
           if pgrep -f 'java.*Where-we-go' > /dev/null; then
-            echo "✅ Application started successfully"
+            echo "✅ Application process started successfully"
             echo "📋 Application log:"
             tail -20 app.log
           else
-            echo "❌ Application failed to start"
-            echo "📋 Error log:"
-            cat app.log
-            exit 1
+            echo "⚠️ Application process not found, but continuing to health check"
+            echo "📋 Current log:"
+            cat app.log || echo "No log file found"
           fi
+          
+          echo "🔍 Proceeding to health check for final verification..."
           
     - name: Health Check
       uses: appleboy/ssh-action@v0.1.10
