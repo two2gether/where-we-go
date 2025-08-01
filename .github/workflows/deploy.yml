@@ -57,7 +57,52 @@ jobs:
           source: "*.jar"
           target: "/home/ubuntu/app/"
           overwrite: true
-      - name: Restart Spring Boot on EC2
+      - name: Create deployment script
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,GOOGLE_MAPS_API_KEY,JWT_SECRET_KEY
+          script: |
+            cat > /home/ubuntu/deploy.sh << 'EOF'
+            #!/bin/bash
+            echo "Starting deployment process..."
+            
+            # Stop existing application
+            pkill -f 'Where-we-go-0.0.1-SNAPSHOT.jar' || true
+            sleep 3
+            
+            # Set environment variables
+            export DB_HOST=$1
+            export DB_PORT=$2
+            export DB_NAME=$3
+            export DB_USERNAME=$4
+            export DB_PASSWORD=$5
+            export GOOGLE_MAPS_API_KEY=$6
+            export JWT_SECRET_KEY=$7
+            export SPRING_PROFILES_ACTIVE=dev
+            
+            # Start application
+            cd /home/ubuntu/app
+            nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+            
+            # Wait and check status
+            sleep 10
+            if ps aux | grep -q "Where-we-go-0.0.1-SNAPSHOT.jar[^[]"; then
+              echo "✅ Application started successfully!"
+              echo "PID: $(pgrep -f 'Where-we-go-0.0.1-SNAPSHOT.jar')"
+            else
+              echo "❌ Application failed to start"
+              echo "Recent logs:"
+              tail -20 app.log 2>/dev/null || echo "No log file found"
+              exit 1
+            fi
+            EOF
+            
+            chmod +x /home/ubuntu/deploy.sh
+            
+      - name: Execute deployment script
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -66,23 +111,4 @@ jobs:
           command_timeout: 15m
           envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,GOOGLE_MAPS_API_KEY,JWT_SECRET_KEY
           script: |
-            echo "Starting deployment process..." && \
-            pkill -f 'Where-we-go-0.0.1-SNAPSHOT.jar' || true && \
-            sleep 3 && \
-            export DB_HOST=$DB_HOST && \
-            export DB_PORT=$DB_PORT && \
-            export DB_NAME=$DB_NAME && \
-            export DB_USERNAME=$DB_USERNAME && \
-            export DB_PASSWORD=$DB_PASSWORD && \
-            export GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY && \
-            export JWT_SECRET_KEY=$JWT_SECRET_KEY && \
-            export SPRING_PROFILES_ACTIVE=dev && \
-            cd /home/ubuntu/app && \
-            nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar > app.log 2>&1 & \
-            sleep 10 && \
-            if ps aux | grep -q "Where-we-go-0.0.1-SNAPSHOT.jar[^[]"; then \
-              echo "✅ Application started successfully! PID: $(pgrep -f 'Where-we-go-0.0.1-SNAPSHOT.jar')"; \
-            else \
-              echo "❌ Application failed to start"; \
-              tail -20 app.log 2>/dev/null || echo "No log file found"; \
-            fi
+            /home/ubuntu/deploy.sh "$DB_HOST" "$DB_PORT" "$DB_NAME" "$DB_USERNAME" "$DB_PASSWORD" "$GOOGLE_MAPS_API_KEY" "$JWT_SECRET_KEY"
