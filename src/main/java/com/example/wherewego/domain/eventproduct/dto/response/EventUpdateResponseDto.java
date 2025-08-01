@@ -1,4 +1,6 @@
-package com.example.wherewego.domain.eventproduct.dto.request;
+package com.example.wherewego.domain.eventproduct.dto.response;
+
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -9,14 +11,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 이벤트 생성 요청 DTO
- * 새로운 이벤트 상품을 생성할 때 사용하는 요청 데이터 클래스입니다.
+ * 이벤트 상품 수정 응답 DTO
+ * 기존 이벤트 상품이 수정되었을 때 반환하는 응답 데이터 클래스입니다.
  */
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class EventCreateRequestDto {
+@AllArgsConstructor
+@NoArgsConstructor
+public class EventUpdateResponseDto {
+	/**
+	 * 수정된 상품의 고유 식별자
+	 */
+	private Long productId;
 	/**
 	 * 상품명
 	 */
@@ -47,4 +53,9 @@ public class EventCreateRequestDto {
 	@NotNull(message = "상품 재고는 필수입니다.")
 	@Min(1)
 	private Integer stock;
+
+	/**
+	 * 이벤트 상품 수정 일시
+	 */
+	private LocalDateTime updatedAt;
 }

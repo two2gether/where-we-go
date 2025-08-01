@@ -9,14 +9,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 이벤트 생성 요청 DTO
- * 새로운 이벤트 상품을 생성할 때 사용하는 요청 데이터 클래스입니다.
+ * 이벤트 상품 수정 요청 DTO
+ * 기존 상품의 정보를 수정할 때 사용하는 요청 데이터 클래스입니다.
  */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EventCreateRequestDto {
+public class EventUpdateRequestDto {
+	
 	/**
 	 * 상품명
 	 */

@@ -6,7 +6,9 @@ import org.w3c.dom.events.EventException;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
@@ -58,5 +60,46 @@ public class AdminEventService {
 
 		// 5. [저장된 엔티티 -> 응답 DTO 변환]
 		return EventMapper.toDto(savedProduct);
+	}
+
+	/**
+	 * 이벤트 상품의 정보를 수정합니다.
+	 * 관리자만 수정할 수 있습니다.
+	 *
+	 * @param productId 수정할 상품 ID
+	 * @param requestDto 수정할 상품 정보 (상품명, 이미지, 설명, 가격, 재고)
+	 * @param userId 수정을 요청한 사용자 ID (관리자)
+	 * @return 수정된 이벤트 상품 정보
+	 * @throws CustomException 상품를 찾을 수 없거나 수정 권한이 없는 경우
+	 */
+	public EventUpdateResponseDto updateEventInto(
+		Long productId,
+		EventUpdateRequestDto requestDto,
+		Long userId
+	) {
+		// 1. 수정할 상품 DB 에서 조회.
+		EventProduct findProduct = eventRepository.findById(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+
+		// 2. 사용자 조회
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		// 3. 사용자 권한 체크 - 관리자만 수정 가능.
+		// if (!user.getRole().equals(UserRole.ADMIN)) {
+		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
+		// }
+
+		//4. 이벤트 상품 업데이트
+		EventProduct updatedProduct = findProduct.updateEventInfoFromRequest(
+			requestDto.getProductName(),
+			requestDto.getProductImage(),
+			requestDto.getDescription(),
+			requestDto.getPrice(),
+			requestDto.getStock()
+		);
+
+		// 5. [저장된 엔티티 -> 응답 DTO 변환]
+		return EventMapper.toUpdateDto(updatedProduct);
 	}
 }

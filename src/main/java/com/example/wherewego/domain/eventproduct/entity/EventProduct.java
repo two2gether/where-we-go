@@ -71,4 +71,19 @@ public class EventProduct extends BaseEntity {
 	 */
 	@Column(nullable = false)
 	private int stock;
+
+	/**
+	 * 상품 수정 기능
+	 */
+	public EventProduct updateEventInfoFromRequest(String productName, String productImage, String description,
+		Integer price, Integer stock) {
+		this.productName = productName;
+		this.productImage = productImage;
+		this.description = description;
+		this.price = price;
+		this.stock = stock;
+
+		return this;
+	}
+
 }
