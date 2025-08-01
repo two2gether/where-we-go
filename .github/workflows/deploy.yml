@@ -74,3 +74,5 @@ jobs:
             export DB_PASSWORD=$DB_PASSWORD
             export GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
             export JWT_SECRET_KEY=$JWT_SECRET_KEY
+            cd /home/ubuntu/app
+            nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
