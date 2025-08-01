@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
-import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.entity.PlaceBookmark;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
@@ -20,7 +20,8 @@ import com.example.wherewego.global.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 장소 북마크 서비스
+ * 장소 북마크 관리 서비스
+ * 사용자의 장소 북마크 추가, 삭제, 조회 및 북마크 상태 확인 기능을 제공합니다.
  */
 @Slf4j
 @Service
@@ -31,15 +32,28 @@ public class PlaceBookmarkService {
 	private final UserRepository userRepository;
 	private final PlaceSearchService placeSearchService;
 
+	/**
+	 * PlaceBookmarkService 생성자
+	 *
+	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
+	 * @param userRepository 사용자 관련 데이터베이스 접근 객체  
+	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 */
 	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserRepository userRepository,
-		@Qualifier(value = "googlePlaceService") PlaceSearchService placeSearchService) {
+		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService) {
 		this.placeBookmarkRepository = placeBookmarkRepository;
 		this.userRepository = userRepository;
 		this.placeSearchService = placeSearchService;
 	}
 
 	/**
-	 * 북마크 추가
+	 * 사용자가 특정 장소를 북마크에 추가합니다.
+	 * 이미 북마크된 장소인 경우 예외를 발생시키며, 성공 시 북마크 ID를 반환합니다.
+	 *
+	 * @param userId 북마크를 추가할 사용자 ID
+	 * @param placeId 북마크할 장소 ID
+	 * @return 북마크 생성 결과 (북마크 ID 및 상태 포함)
+	 * @throws CustomException 이미 북마크된 장소이거나 사용자를 찾을 수 없는 경우
 	 */
 	@Transactional
 	public BookmarkCreateResponseDto addBookmark(Long userId, String placeId) {
@@ -50,7 +64,7 @@ public class PlaceBookmarkService {
 		}
 
 		// 사용자 조회
-		User user = userRepository.findById(userId)
+		User user = userRepository.findByIdAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 북마크 생성
@@ -68,7 +82,15 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * 사용자 북마크 목록 조회
+	 * 사용자의 북마크 목록을 페이지단위로 조회합니다.
+	 * 각 북마크에 대해 외부 API를 통해 실시간 장소 정보를 가져오며, 생성일 순으로 정렬됩니다.
+	 *
+	 * @param userId 북마크 목록을 조회할 사용자 ID
+	 * @param page 페이지 번호 (0부터 시작)
+	 * @param size 페이지당 아이템 수
+	 * @param userLatitude 사용자 위치 위도 (거리 계산용, null 가능)
+	 * @param userLongitude 사용자 위치 경도 (거리 계산용, null 가능)
+	 * @return 페이지네이션 정보와 북마크 목록
 	 */
 	public UserBookmarkListDto getUserBookmarks(Long userId, int page, int size,
 		Double userLatitude, Double userLongitude) {
@@ -80,7 +102,8 @@ public class PlaceBookmarkService {
 		var bookmarkItems = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
 				// Place API를 통해 실제 장소 정보 조회
-				PlaceDetailResponse place = getPlaceDetailFromApi(bookmark.getPlaceId(), userLatitude, userLongitude);
+				PlaceDetailResponseDto place = getPlaceDetailFromApi(bookmark.getPlaceId(), userLatitude,
+					userLongitude);
 
 				return UserBookmarkListDto.BookmarkItem.builder()
 					.bookmarkId(bookmark.getId())
@@ -100,12 +123,19 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * PlaceSearchService를 통해 장소 상세 정보 조회
+	 * 외부 API를 통해 북마크된 장소의 상세 정보를 조회하고 북마크 상태를 설정합니다.
+	 * 북마크 목록에서 호출되므로 북마크 상태는 항상 true로 설정됩니다.
+	 *
+	 * @param placeId 조회할 장소 ID
+	 * @param userLatitude 사용자 위치 위도 (거리 계산용, null 가능)
+	 * @param userLongitude 사용자 위치 경도 (거리 계산용, null 가능)
+	 * @return 북마크 상태가 설정된 장소 상세 정보
+	 * @throws CustomException 장소를 찾을 수 없는 경우
 	 */
-	private PlaceDetailResponse getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
+	private PlaceDetailResponseDto getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
 
 		// PlaceSearchService를 통해 장소 정보 조회
-		PlaceDetailResponse place = placeSearchService.getPlaceDetail(placeId);
+		PlaceDetailResponseDto place = placeSearchService.getPlaceDetail(placeId);
 
 		if (place == null) {
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
@@ -118,7 +148,12 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * 북마크 제거
+	 * 사용자의 특정 장소 북마크를 제거합니다.
+	 * 북마크가 존재하지 않는 경우 예외를 발생시킵니다.
+	 *
+	 * @param userId 북마크를 제거할 사용자 ID
+	 * @param placeId 북마크를 제거할 장소 ID
+	 * @throws CustomException 북마크를 찾을 수 없는 경우
 	 */
 	@Transactional
 	public void removeBookmark(Long userId, String placeId) {
@@ -132,7 +167,12 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * 특정 사용자의 특정 장소 북마크 여부 확인
+	 * 사용자가 특정 장소를 북마크했는지 확인합니다.
+	 * 단순한 boolean 값을 반환하여 북마크 상태를 빠르게 확인할 수 있습니다.
+	 *
+	 * @param userId 확인할 사용자 ID
+	 * @param placeId 확인할 장소 ID
+	 * @return 북마크 여부 (true: 북마크됨, false: 북마크 안됨)
 	 */
 	public boolean isBookmarked(Long userId, String placeId) {
 		return placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId);

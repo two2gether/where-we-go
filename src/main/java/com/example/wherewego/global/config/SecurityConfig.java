@@ -43,9 +43,37 @@ public class SecurityConfig {
 
 			// 인가 설정
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/users/mypage").authenticated()
-				.requestMatchers(HttpMethod.PUT, "/api/users/mypage").authenticated()
+				// 인증 API는 모든 사용자 접근 허용
 				.requestMatchers("/api/auth/**").permitAll()
+				
+				// 공개 API - 인증 없이 접근 가능
+				.requestMatchers(HttpMethod.GET, "/api/courses").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
+				
+				// 장소 관련 API - 인증 필요
+				.requestMatchers("/api/places/**").authenticated()
+				
+				// 코스 생성/수정/삭제 - 인증 필요
+				.requestMatchers(HttpMethod.POST, "/api/courses").authenticated()
+				.requestMatchers(HttpMethod.PATCH, "/api/courses/*").authenticated()
+				.requestMatchers(HttpMethod.DELETE, "/api/courses/*").authenticated()
+				
+				// 댓글 생성/수정/삭제 - 인증 필요
+				.requestMatchers(HttpMethod.POST, "/api/courses/*/comments").authenticated()
+				.requestMatchers(HttpMethod.PATCH, "/api/courses/*/comments/*").authenticated()
+				.requestMatchers(HttpMethod.DELETE, "/api/courses/*/comments/*").authenticated()
+				
+				// 좋아요/북마크/평점 - 인증 필요
+				.requestMatchers("/api/courses/*/like").authenticated()
+				.requestMatchers("/api/courses/*/bookmark").authenticated()
+				.requestMatchers("/api/courses/*/rating").authenticated()
+				
+				// 사용자 관련 API - 인증 필요
+				.requestMatchers("/api/users/**").authenticated()
+				
+				// 기타 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter(),

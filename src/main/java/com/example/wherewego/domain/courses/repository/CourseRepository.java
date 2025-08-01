@@ -8,11 +8,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.example.wherewego.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
-
-import org.springframework.data.repository.query.Param;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
@@ -41,6 +40,30 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		      AND c.isPublic = true
 		""")
 	Page<Course> findByRegionAndIsPublicTrue(@Param("region") String region,
+		Pageable pageable);
+	
+	// 성능 최적화: 정확한 지역 매칭 (인덱스 활용 가능)
+	@Query("""
+		    SELECT c FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.region = :region
+			  AND c.isDeleted = false
+		      AND c.isPublic = true
+		""")
+	Page<Course> findByExactRegionAndIsPublicTrue(@Param("region") String region,
+		Pageable pageable);
+		
+	// 성능 최적화: 지역 시작 문자로 검색 (인덱스 활용 가능)
+	@Query("""
+		    SELECT c FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.region LIKE CONCAT(:region, '%')
+			  AND c.isDeleted = false
+		      AND c.isPublic = true
+		""")
+	Page<Course> findByRegionStartsWithAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
 
 	@Query("""
@@ -93,4 +116,5 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		@Param("now") LocalDateTime now,
 		Pageable pageable
 	);
+
 }

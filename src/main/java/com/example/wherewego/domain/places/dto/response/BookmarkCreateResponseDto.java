@@ -27,6 +27,12 @@ import lombok.NoArgsConstructor;
 @Builder
 public class BookmarkCreateResponseDto {
 
+	/**
+	 * 생성된 북마크의 고유 식별자
+	 */
 	private Long bookmarkId;
+	/**
+	 * 북마크 상태 (추가 후에는 항상 true)
+	 */
 	private Boolean isBookmarked;
 }

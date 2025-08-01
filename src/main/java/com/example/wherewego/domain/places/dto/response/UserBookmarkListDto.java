@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * 사용자 북마크 목록 응답 DTO
- * 
+ *
  * 사용 API: GET /api/places/users/bookmarks
- * 
+ *
  * 전체 응답 예시:
  * {
  *   "success": true,
@@ -53,10 +53,25 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UserBookmarkListDto {
 
+	/**
+	 * 북마크 아이템 목록
+	 */
 	private List<BookmarkItem> content;
+	/**
+	 * 전체 북마크 수
+	 */
 	private Long totalElements;
+	/**
+	 * 전체 페이지 수
+	 */
 	private Integer totalPages;
+	/**
+	 * 페이지당 결과 수
+	 */
 	private Integer size;
+	/**
+	 * 현재 페이지 번호 (0부터 시작)
+	 */
 	private Integer number;
 
 	/**
@@ -67,8 +82,17 @@ public class UserBookmarkListDto {
 	@AllArgsConstructor
 	@Builder
 	public static class BookmarkItem {
+		/**
+		 * 북마크 고유 식별자
+		 */
 		private Long bookmarkId;
-		private PlaceDetailResponse place;
+		/**
+		 * 북마크된 장소 상세 정보
+		 */
+		private PlaceDetailResponseDto place;
+		/**
+		 * 북마크 생성 일시
+		 */
 		private LocalDateTime createdAt;
 	}
 }

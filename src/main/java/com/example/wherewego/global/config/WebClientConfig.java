@@ -5,41 +5,26 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.global.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
 public class WebClientConfig {
 
-	@Value("${kakao.api.key}")
-	private String kakaoApiKey;
 
 	@Value("${google.api.key}")
 	private String googleApiKey;
 
-	@Bean(name = "kakaoWebClient")
-	public WebClient kakaoWebClient() {
-		// API 키 로딩 확인을 위한 로깅
-		log.info("카카오 API 키 로딩 확인 - 키 존재 여부: {}, 키 길이: {}",
-			kakaoApiKey != null, kakaoApiKey != null ? kakaoApiKey.length() : 0);
 
-		if (kakaoApiKey == null || kakaoApiKey.trim().isEmpty()) {
-			log.error("카카오 API 키가 설정되지 않았습니다!");
-			throw new IllegalStateException("카카오 API 키가 필요합니다");
-		}
-
-		String authHeader = "KakaoAK " + kakaoApiKey;
-		log.debug("Authorization 헤더 설정: {}", authHeader.substring(0, Math.min(20, authHeader.length())) + "...");
-
-		return WebClient.builder()
-			.baseUrl("https://dapi.kakao.com")
-			.defaultHeader("Authorization", authHeader)
-			.codecs(configurer -> configurer
-				.defaultCodecs()
-				.maxInMemorySize(2 * 1024 * 1024))
-			.build();
-	}
-
+	/**
+	 * 구글 Maps Places API 호출을 위한 WebClient Bean을 생성합니다.
+	 * 구글 API 키 검증과 기본 설정을 포함합니다.
+	 * 
+	 * @return 구글 API 전용 WebClient 인스턴스
+	 * @throws CustomException 구글 API 키가 설정되지 않은 경우
+	 */
 	@Bean(name = "googleWebClient")
 	public WebClient googleWebClient() {
 		// API 키 로딩 확인을 위한 로깅
@@ -48,7 +33,7 @@ public class WebClientConfig {
 
 		if (googleApiKey == null || googleApiKey.trim().isEmpty()) {
 			log.error("구글 Maps API 키가 설정되지 않았습니다!");
-			throw new IllegalStateException("구글 Maps API 키가 필요합니다");
+			throw new CustomException(ErrorCode.GOOGLE_API_KEY_MISSING);
 		}
 
 		log.debug("구글 API 키 설정 완료: {}...{}",
