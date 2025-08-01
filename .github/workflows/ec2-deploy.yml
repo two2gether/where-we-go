@@ -52,14 +52,27 @@ jobs:
       with:
         name: wherewego-app
         
-    - name: Create app directory on EC2
+    - name: Setup EC2 environment
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.EC2_HOST2 }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY2 }}
         script: |
+          # 애플리케이션 디렉토리 생성
           mkdir -p /home/ubuntu/app
+          
+          # Java 17 설치 확인 및 설치
+          if ! java -version 2>&1 | grep -q "17"; then
+            echo "Installing Java 17..."
+            sudo apt update
+            sudo apt install -y openjdk-17-jdk
+          else
+            echo "Java 17 already installed"
+          fi
+          
+          # Java 버전 확인
+          java -version
           
     - name: Copy JAR to EC2
       uses: appleboy/scp-action@v0.1.7
@@ -143,17 +156,29 @@ jobs:
           for i in {1..4}; do
             echo "Health check attempt ${i}/4..."
             
-            if curl -f "http://localhost:8080/actuator/health" -o /dev/null -s; then
-              echo "✅ Health check passed!"
-              curl -s "http://localhost:8080/actuator/health" | jq '.' || echo "Health endpoint responded"
-              exit 0
+            # 프로세스 확인
+            if pgrep -f 'java.*where-we-go' > /dev/null; then
+              echo "✅ Java process is running"
+              
+              # 헬스 엔드포인트 확인
+              if curl -f "http://localhost:8080/health" -s > /dev/null 2>&1; then
+                echo "✅ Health check passed!"
+                curl -s "http://localhost:8080/health" | head -3
+                exit 0
+              else
+                echo "Health endpoint not ready yet..."
+              fi
+            else
+              echo "Java process not found..."
             fi
             
-            echo "Health check failed, waiting 30 seconds..."
+            echo "Waiting 30 seconds..."
             sleep 30
           done
           
           echo "❌ Health check failed after 4 attempts"
           echo "📋 Application log:"
           tail -50 /home/ubuntu/app/app.log
+          echo "📋 Process status:"
+          ps aux | grep java
           exit 1
