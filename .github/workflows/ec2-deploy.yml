@@ -105,30 +105,34 @@ jobs:
               --google.api.key="$GOOGLE_MAPS_API_KEY" \
               > app.log 2>&1 &
             
-            # Wait for application to start and verify
-            echo "Waiting for application to start..."
-            sleep 30
+            # Immediate health check loop - start early and frequent
+            echo "Starting health checks immediately..."
             
-            # Check if process started
-            if ! pgrep -f 'java.*Where-we-go' > /dev/null; then
-              echo "❌ Application process not found!"
-              tail -20 app.log
-              exit 1
-            fi
+            for i in {1..20}; do
+              echo "Health check attempt $i/20 ($(date))..."
             
-            # Health check with more time
-            echo "Application process found, starting health checks..."
-            sleep 30  # Additional wait for full initialization
+              # Check if process is still running
+              if ! pgrep -f 'java.*Where-we-go' > /dev/null; then
+                echo "❌ Application process died!"
+                tail -30 app.log
+                exit 1
+              fi
             
-            for i in {1..6}; do
-              echo "Health check attempt $i/6..."
-              if curl -f "http://localhost:8080/health" -s; then
+              # Try health check
+              if curl -f "http://localhost:8080/health" -s > /dev/null 2>&1; then
                 echo "✅ Deployment successful!"
+                echo "Health response:"
                 curl -s "http://localhost:8080/health"
                 exit 0
               fi
-              echo "Health check failed, waiting 20 seconds..."
-              sleep 20
+            
+              # Show recent logs for debugging
+              if [ $i -eq 5 ] || [ $i -eq 10 ] || [ $i -eq 15 ]; then
+                echo "=== Recent logs at attempt $i ==="
+                tail -10 app.log
+              fi
+            
+              sleep 15
             done
             
             echo "❌ Health check failed"
