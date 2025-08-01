@@ -72,5 +72,5 @@ jobs:
             export DB_NAME=$DB_NAME
             export DB_USERNAME=$DB_USERNAME
             export DB_PASSWORD=$DB_PASSWORD
-            export GOOGLE_MAPS_API_KEY=AIzaSyBQ8EFGpAi19CHen4xtwK-ACUZKFqPxgRg
+            export GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
             export JWT_SECRET_KEY=$JWT_SECRET_KEY
