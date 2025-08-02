@@ -6,6 +6,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -21,6 +22,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 @Configuration
 @EnableCaching
+@Profile("!local") // local 프로필에서는 캐싱 비활성화
 public class CacheConfig {
 
     /**
@@ -50,9 +52,9 @@ public class CacheConfig {
             .withCacheConfiguration("place-stats", 
                 defaultConfig.entryTtl(Duration.ofMinutes(10))) // 장소 통계: 10분
             .withCacheConfiguration("google-place-details", 
-                defaultConfig.entryTtl(Duration.ofHours(12))) // Google API 상세정보: 12시간 (연장)
+                defaultConfig.entryTtl(Duration.ofDays(7))) // Google API 상세정보: 7일 (Google 약관 준수)
             .withCacheConfiguration("google-place-search", 
-                defaultConfig.entryTtl(Duration.ofMinutes(20))) // Google API 검색: 20분
+                defaultConfig.entryTtl(Duration.ofHours(1))) // Google API 검색: 1시간 (빈번한 변경 고려)
             .build();
     }
 }
