@@ -43,16 +43,23 @@ import lombok.NoArgsConstructor;
 )
 public class PlaceBookmark extends BaseEntity {
 
+	/**
+	 * 장소 북마크 고유 ID
+	 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// 북마크한 사용자 (다대일 관계)
+	/**
+	 * 북마크한 사용자
+	 */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	// 카카오 API 장소 ID (문자열)
+	/**
+	 * 구글 API 장소 ID
+	 */
 	@Column(name = "place_id", nullable = false, length = 30)
 	private String placeId;
 

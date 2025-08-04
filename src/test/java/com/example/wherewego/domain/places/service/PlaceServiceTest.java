@@ -1,19 +1,13 @@
 package com.example.wherewego.domain.places.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
 import com.example.wherewego.domain.courses.dto.response.CourseRouteSummary;
-import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
@@ -54,7 +48,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("로그인 사용자의 장소 통계를 정상적으로 조회한다")
-		void getPlaceStatsWithUser() {
+		void shouldGetPlaceStatsWithUser() {
 			// given
 			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
 			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
@@ -77,7 +71,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("게스트 사용자의 장소 통계를 정상적으로 조회한다")
-		void getPlaceStatsForGuest() {
+		void shouldGetPlaceStatsForGuest() {
 			// given
 			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
 			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
@@ -98,7 +92,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("평점이 null인 경우 0.0으로 반환한다")
-		void getPlaceStatsWithNullRating() {
+		void shouldReturnZeroWhenRatingIsNull() {
 			// given
 			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(0L);
 			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(null);
@@ -113,7 +107,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("평점이 소수점 2자리로 포맷팅된다")
-		void getPlaceStatsWithFormattedRating() {
+		void shouldFormatRatingToTwoDecimals() {
 			// given
 			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(3L);
 			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.666666);
@@ -136,7 +130,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("로그인 사용자의 여러 장소 통계를 정상적으로 조회한다")
-		void getPlaceStatsMapWithUser() {
+		void shouldGetPlaceStatsMapWithUser() {
 			// given
 			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds))
 				.willReturn(Arrays.asList("place1", "place3"));
@@ -189,7 +183,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("게스트 사용자의 여러 장소 통계를 정상적으로 조회한다")
-		void getPlaceStatsMapForGuest() {
+		void shouldGetPlaceStatsMapForGuest() {
 			// given
 			given(placeReviewRepository.countByPlaceId(any())).willReturn(5L);
 			given(placeReviewRepository.getAverageRatingByPlaceId(any())).willReturn(4.0);
@@ -217,9 +211,9 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("경로 정보와 함께 장소 정보를 정상적으로 조회한다")
-		void getPlacesForCourseWithRouteSuccess() {
+		void shouldGetPlacesForCourseWithRoute() {
 			// given
-			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place1 = PlaceDetailResponseDto.builder()
 				.placeId("place1")
 				.name("장소1")
 				.category("음식점")
@@ -227,7 +221,7 @@ class PlaceServiceTest {
 				.longitude(126.9800)
 				.build();
 
-			PlaceDetailResponse place2 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place2 = PlaceDetailResponseDto.builder()
 				.placeId("place2")
 				.name("장소2")
 				.category("카페")
@@ -235,7 +229,7 @@ class PlaceServiceTest {
 				.longitude(126.9850)
 				.build();
 
-			PlaceDetailResponse place3 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place3 = PlaceDetailResponseDto.builder()
 				.placeId("place3")
 				.name("장소3")
 				.category("관광지")
@@ -285,7 +279,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("장소 ID 목록이 비어있으면 빈 리스트를 반환한다")
-		void getPlacesForCourseWithEmptyList() {
+		void shouldReturnEmptyListWhenPlaceListIsEmpty() {
 			// when
 			List<CoursePlaceInfo> result = placeService.getPlacesForCourseWithRoute(
 				List.of(), userLat, userLng);
@@ -296,16 +290,16 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("사용자 위치가 없어도 장소 간 거리는 계산된다")
-		void getPlacesForCourseWithoutUserLocation() {
+		void shouldCalculateDistanceBetweenPlacesWithoutUserLocation() {
 			// given
-			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place1 = PlaceDetailResponseDto.builder()
 				.placeId("place1")
 				.name("장소1")
 				.latitude(37.5700)
 				.longitude(126.9800)
 				.build();
 
-			PlaceDetailResponse place2 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place2 = PlaceDetailResponseDto.builder()
 				.placeId("place2")
 				.name("장소2")
 				.latitude(37.5750)
@@ -329,9 +323,9 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("장소 정보 조회 실패 시 해당 장소는 건너뛴다")
-		void getPlacesForCourseWithFailedPlace() {
+		void shouldSkipFailedPlace() {
 			// given
-			PlaceDetailResponse place1 = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place1 = PlaceDetailResponseDto.builder()
 				.placeId("place1")
 				.name("장소1")
 				.latitude(37.5700)
@@ -358,7 +352,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("전체 경로의 총 거리를 정상적으로 계산한다")
-		void calculateTotalRouteDistanceSuccess() {
+		void shouldCalculateTotalRouteDistance() {
 			// given
 			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
 				.visitOrder(1)
@@ -389,7 +383,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("장소 목록이 비어있으면 0을 반환한다")
-		void calculateTotalRouteDistanceWithEmptyList() {
+		void shouldReturnZeroWhenPlaceListIsEmpty() {
 			// when
 			Integer totalDistance = placeService.calculateTotalRouteDistance(List.of());
 
@@ -399,7 +393,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("거리 정보가 없는 구간은 건너뛴다")
-		void calculateTotalRouteDistanceWithNullDistances() {
+		void shouldSkipNullDistances() {
 			// given
 			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
 				.visitOrder(1)
@@ -429,7 +423,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("경로 요약 정보를 정상적으로 계산한다")
-		void calculateRouteSummarySuccess() {
+		void shouldCalculateRouteSummary() {
 			// given
 			CoursePlaceInfo place1 = CoursePlaceInfo.builder()
 				.visitOrder(1)
@@ -453,7 +447,7 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("장소 목록이 비어있으면 기본값을 반환한다")
-		void calculateRouteSummaryWithEmptyList() {
+		void shouldReturnDefaultValuesWhenPlaceListIsEmpty() {
 			// when
 			CourseRouteSummary summary = placeService.calculateRouteSummary(List.of());
 
@@ -469,9 +463,9 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("같은 좌표의 거리는 0이다")
-		void calculateDistanceSameCoordinates() {
+		void shouldReturnZeroForSameCoordinates() {
 			// given - 서울시청 같은 좌표
-			PlaceDetailResponse place = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto place = PlaceDetailResponseDto.builder()
 				.placeId("same-place")
 				.name("서울시청")
 				.category("관공서")
@@ -492,9 +486,9 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("서울-부산 간 거리가 합리적 범위에 있다")
-		void calculateDistanceSeoulToBusan() {
+		void shouldCalculateReasonableDistanceSeoulToBusan() {
 			// given - 부산 해운대 좌표
-			PlaceDetailResponse busanPlace = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto busanPlace = PlaceDetailResponseDto.builder()
 				.placeId("busan-haeundae")
 				.name("해운대해수욕장")
 				.category("관광지")
@@ -516,9 +510,9 @@ class PlaceServiceTest {
 
 		@Test
 		@DisplayName("짧은 거리도 정확히 계산한다")
-		void calculateDistanceShortDistance() {
+		void shouldCalculateShortDistanceAccurately() {
 			// given - 서울시청에서 가까운 곳 (광화문광장)
-			PlaceDetailResponse nearPlace = PlaceDetailResponse.builder()
+			PlaceDetailResponseDto nearPlace = PlaceDetailResponseDto.builder()
 				.placeId("gwanghwamun")
 				.name("광화문광장")
 				.category("광장")

@@ -19,9 +19,12 @@ public enum ErrorCode {
 	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."),
 	ALREADY_WITHDRAW_USER(HttpStatus.BAD_REQUEST, "이미 회원탈퇴된 유저입니다."),
 	DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 존재하는 닉네임입니다."),
-	DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 존재하는 이메일입니다."),
+	DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 사용 중인 이메일입니다."),
 	INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 일치하지 않습니다."),
+	INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
 	UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, "로그인 하지 않은 사용자입니다."),
+	MISSING_USER_ID(HttpStatus.BAD_REQUEST, "사용자 ID는 필수입니다."),
+	MISSING_COURSE_ID(HttpStatus.BAD_REQUEST, "코스 ID는 필수입니다."),
 
 	// 코스 관련 에러 정의
 	COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 코스입니다."),
@@ -50,7 +53,11 @@ public enum ErrorCode {
 	// 댓글 관련 에러 정의
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글입니다."),
 	UNAUTHORIZED_COMMENT_ACCESS(HttpStatus.FORBIDDEN, "해당 댓글에 대한 권한이 없습니다."),
-	CANNOT_COMMENT_ON_PRIVATE_COURSE(HttpStatus.FORBIDDEN, "비공개 코스에는 댓글을 작성할 수 없습니다.");
+	CANNOT_COMMENT_ON_PRIVATE_COURSE(HttpStatus.FORBIDDEN, "비공개 코스에는 댓글을 작성할 수 없습니다."),
+
+	// 설정 및 구성 관련 에러 정의
+	MISSING_API_KEY(HttpStatus.INTERNAL_SERVER_ERROR, "필수 API 키가 설정되지 않았습니다."),
+	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다.");
 
 	private final HttpStatus status;
 	private final String message;

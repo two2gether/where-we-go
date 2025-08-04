@@ -8,10 +8,12 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +32,8 @@ import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
+@ExtendWith(MockitoExtension.class)
+@DisplayName("CommentService 테스트")
 class CommentServiceTest {
 
 	@InjectMocks
@@ -49,8 +53,6 @@ class CommentServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		MockitoAnnotations.openMocks(this);
-
 		user = User.builder()
 			.id(1L)
 			.nickname("tester")
@@ -63,107 +65,127 @@ class CommentServiceTest {
 			.build();
 	}
 
-	@Test
-	@DisplayName("댓글 생성 성공")
-	void createComment_success() {
-		// given
-		CommentRequestDto requestDto = new CommentRequestDto("댓글 내용");
+	@Nested
+	@DisplayName("댓글 생성")
+	class CreateComment {
 
-		given(userRepository.findById(1L)).willReturn(Optional.of(user));
-		given(courseRepository.findById(10L)).willReturn(Optional.of(course));
-		given(commentRepository.save(any(Comment.class)))
-			.willAnswer(invocation -> invocation.getArgument(0));
+		@Test
+		@DisplayName("댓글을 정상적으로 생성한다")
+		void shouldCreateComment() {
+			// given
+			CommentRequestDto requestDto = new CommentRequestDto("댓글 내용");
 
-		// when
-		CommentResponseDto result = commentService.createComment(10L, 1L, requestDto);
+			given(userRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(user));
+			given(courseRepository.findByIdWithThemes(10L)).willReturn(Optional.of(course));
+			given(commentRepository.save(any(Comment.class)))
+				.willAnswer(invocation -> invocation.getArgument(0));
 
-		// then
-		assertThat(result).isNotNull();
-		assertThat(result.getContent()).isEqualTo("댓글 내용");
-		assertThat(result.getNickname()).isEqualTo("tester");
+			// when
+			CommentResponseDto result = commentService.createComment(10L, 1L, requestDto);
+
+			// then
+			assertThat(result).isNotNull();
+			assertThat(result.getContent()).isEqualTo("댓글 내용");
+			assertThat(result.getNickname()).isEqualTo("tester");
+		}
+
+		@Test
+		@DisplayName("비공개 코스에 작성자가 아닌 사람이 댓글을 작성하려고 하면 예외가 발생한다")
+		void shouldThrowExceptionWhenNotOwnerTriesToCommentOnPrivateCourse() {
+			// given
+			Course privateCourse = Course.builder()
+				.id(20L)
+				.user(User.builder().id(999L).build()) // 작성자는 ID 999인 다른 사람
+				.isPublic(false)  //비공개코스 생성
+				.build();
+
+			CommentRequestDto requestDto = new CommentRequestDto("비공개 댓글");
+
+			given(userRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(user)); //현재 로그인된 사용자는 id=1
+			given(courseRepository.findByIdWithThemes(20L)).willReturn(Optional.of(privateCourse));
+
+			// when & then
+			assertThatThrownBy(() -> commentService.createComment(20L, 1L, requestDto))
+				.isInstanceOf(CustomException.class)
+				.hasMessageContaining(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE.getMessage());
+		}
 	}
 
-	@Test
-	@DisplayName("댓글 생성 실패 - 비공개 코스에 작성자가 아닌 사람이 작성하려고 하는 경우")
-	void createComment_privateCourseNotOwner() {
-		// given
-		Course privateCourse = Course.builder()
-			.id(20L)
-			.user(User.builder().id(999L).build()) // 작성자는 ID 999인 다른 사람
-			.isPublic(false)  //비공개코스 생성
-			.build();
+	@Nested
+	@DisplayName("댓글 삭제")
+	class DeleteComment {
 
-		CommentRequestDto requestDto = new CommentRequestDto("비공개 댓글");
+		@Test
+		@DisplayName("댓글을 정상적으로 삭제한다")
+		void shouldDeleteComment() {
+			// given
+			Comment comment = Comment.builder()
+				.id(100L)
+				.content("삭제할 댓글")
+				.user(user)
+				.course(course)
+				.build();
 
-		given(userRepository.findById(1L)).willReturn(Optional.of(user)); //현재 로그인된 사용자는 id=1
-		given(courseRepository.findById(20L)).willReturn(Optional.of(privateCourse));
+			given(commentRepository.findById(100L)).willReturn(Optional.of(comment));
 
-		// when & then
-		assertThatThrownBy(() -> commentService.createComment(20L, 1L, requestDto))
-			.isInstanceOf(CustomException.class)
-			.hasMessageContaining(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE.getMessage());
+			// when
+			commentService.deleteComment(100L, 1L);
+
+			// then
+			verify(commentRepository).delete(comment);
+		}
 	}
 
-	@Test
-	@DisplayName("댓글 삭제 성공")
-	void deleteComment_success() {
-		// given
-		Comment comment = Comment.builder()
-			.id(100L)
-			.content("삭제할 댓글")
-			.user(user)
-			.course(course)
-			.build();
+	@Nested
+	@DisplayName("댓글 수정")
+	class UpdateComment {
 
-		given(commentRepository.findById(100L)).willReturn(Optional.of(comment));
+		@Test
+		@DisplayName("댓글을 정상적으로 수정한다")
+		void shouldUpdateComment() {
+			// given
+			Comment comment = Comment.builder()
+				.id(101L)
+				.content("기존 댓글")
+				.user(user)
+				.course(course)
+				.build();
 
-		// when
-		commentService.deleteComment(100L, 1L);
+			CommentRequestDto requestDto = new CommentRequestDto("수정된 댓글");
 
-		// then
-		verify(commentRepository).delete(comment);
+			given(commentRepository.findById(101L)).willReturn(Optional.of(comment));
+
+			// when
+			CommentResponseDto result = commentService.updateComment(101L, 1L, requestDto);
+
+			// then
+			assertThat(result.getContent()).isEqualTo("수정된 댓글");
+		}
 	}
 
-	@Test
-	@DisplayName("댓글 수정 성공")
-	void updateComment_success() {
-		// given
-		Comment comment = Comment.builder()
-			.id(101L)
-			.content("기존 댓글")
-			.user(user)
-			.course(course)
-			.build();
+	@Nested
+	@DisplayName("댓글 목록 조회")
+	class GetComments {
 
-		CommentRequestDto requestDto = new CommentRequestDto("수정된 댓글");
+		@Test
+		@DisplayName("코스별 댓글 목록을 정상적으로 조회한다")
+		void shouldGetCommentsByCourse() {
+			// given
+			Pageable pageable = PageRequest.of(0, 10);
+			List<Comment> comments = List.of(
+				Comment.builder().id(1L).content("댓글1").user(user).course(course).build(),
+				Comment.builder().id(2L).content("댓글2").user(user).course(course).build()
+			);
+			Page<Comment> commentPage = new PageImpl<>(comments, pageable, comments.size());
 
-		given(commentRepository.findById(101L)).willReturn(Optional.of(comment));
+			given(commentRepository.findAllByCourseIdOrderByCreatedAtDesc(10L, pageable)).willReturn(commentPage);
 
-		// when
-		CommentResponseDto result = commentService.updateComment(101L, 1L, requestDto);
+			// when
+			PagedResponse<CommentResponseDto> result = commentService.getCommentsByCourse(10L, pageable);
 
-		// then
-		assertThat(result.getContent()).isEqualTo("수정된 댓글");
-	}
-
-	@Test
-	@DisplayName("코스별 댓글 목록 조회 성공")
-	void getCommentsByCourse_success() {
-		// given
-		Pageable pageable = PageRequest.of(0, 10);
-		List<Comment> comments = List.of(
-			Comment.builder().id(1L).content("댓글1").user(user).course(course).build(),
-			Comment.builder().id(2L).content("댓글2").user(user).course(course).build()
-		);
-		Page<Comment> commentPage = new PageImpl<>(comments, pageable, comments.size());
-
-		given(commentRepository.findAllByCourseIdOrderByCreatedAtDesc(10L, pageable)).willReturn(commentPage);
-
-		// when
-		PagedResponse<CommentResponseDto> result = commentService.getCommentsByCourse(10L, pageable);
-
-		// then
-		assertThat(result.content()).hasSize(2);
-		assertThat(result.content().get(0).getContent()).isEqualTo("댓글1");
+			// then
+			assertThat(result.content()).hasSize(2);
+			assertThat(result.content().get(0).getContent()).isEqualTo("댓글1");
+		}
 	}
 }
