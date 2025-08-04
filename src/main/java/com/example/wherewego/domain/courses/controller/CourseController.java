@@ -7,7 +7,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
@@ -64,7 +64,7 @@ public class CourseController {
 		Long userId = userDetail.getUser().getId();
 		CourseCreateResponseDto response = courseService.createCourse(requestDto, userId);
 
-		return ApiResponse.created( "코스가 성공적으로 생성되었습니다.", response);
+		return ApiResponse.created("코스가 성공적으로 생성되었습니다.", response);
 	}
 
 	/**
@@ -76,13 +76,9 @@ public class CourseController {
 	 * @param pageable 페이징 정보 (기본: 10개씩, 생성일 내림차순)
 	 * @return 페이징된 코스 목록과 메타데이터
 	 */
-<<<<<<< HEAD
-	@PostMapping("/list")
-	public ResponseEntity<ApiResponse<PagedResponse<CourseListResponseDto>>> courseList(
-=======
+
 	@GetMapping
 	public ApiResponse<PagedResponse<CourseListResponseDto>> getCourseList(
->>>>>>> 8b29307797060e5c739c329fd4cbe5a57ad50d5d
 		@RequestParam String region,
 		@RequestParam(required = false) List<CourseTheme> themes,
 		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -91,7 +87,7 @@ public class CourseController {
 
 		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
 
-		return ApiResponse.ok( "코스 목록 조회를 성공했습니다.", response);
+		return ApiResponse.ok("코스 목록 조회를 성공했습니다.", response);
 	}
 
 	/**
@@ -111,7 +107,7 @@ public class CourseController {
 	) {
 		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude);
 
-		return ApiResponse.ok( "코스 조회를 성공했습니다.", response);
+		return ApiResponse.ok("코스 조회를 성공했습니다.", response);
 	}
 
 	/**
@@ -132,7 +128,7 @@ public class CourseController {
 		Long userId = userDetail.getUser().getId();
 		CourseUpdateResponseDto response = courseService.updateCourseInfo(courseId, requestDto, userId);
 
-		return ApiResponse.ok( "코스가 성공적으로 수정되었습니다.", response);
+		return ApiResponse.ok("코스가 성공적으로 수정되었습니다.", response);
 	}
 
 	/**
@@ -157,7 +153,7 @@ public class CourseController {
 		Long userId = userDetail.getUser().getId();
 		courseService.deleteCourseById(courseId, userId);
 
-		return ApiResponse.noContent( "코스가 삭제되었습니다.");
+		return ApiResponse.noContent("코스가 삭제되었습니다.");
 	}
 
 	/**
@@ -184,6 +180,6 @@ public class CourseController {
 
 		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
 
-		return ApiResponse.ok( "인기 코스 목록 조회 성공", response);
+		return ApiResponse.ok("인기 코스 목록 조회 성공", response);
 	}
 }

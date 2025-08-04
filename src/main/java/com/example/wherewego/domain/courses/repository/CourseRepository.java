@@ -41,7 +41,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		""")
 	Page<Course> findByRegionAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
-	
+
 	// 성능 최적화: 정확한 지역 매칭 (인덱스 활용 가능)
 	@Query("""
 		    SELECT c FROM Course c
@@ -53,7 +53,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		""")
 	Page<Course> findByExactRegionAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
-		
+
 	// 성능 최적화: 지역 시작 문자로 검색 (인덱스 활용 가능)
 	@Query("""
 		    SELECT c FROM Course c
@@ -117,9 +117,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		Pageable pageable
 	);
 
-<<<<<<< HEAD
 	// 내가 만든 코스 목록 조회
 	Page<Course> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
-=======
->>>>>>> 8b29307797060e5c739c329fd4cbe5a57ad50d5d
+
 }
