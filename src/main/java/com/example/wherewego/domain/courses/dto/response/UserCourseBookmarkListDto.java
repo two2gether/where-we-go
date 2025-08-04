@@ -21,22 +21,16 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UserCourseBookmarkListDto {
 
-	/**
-	 * 북마크한 코스 정보 DTO
-	 *
-	 * 사용 API: GET /api/users/mypage/coursebookmark
-	 */
-
 	private Long courseId;
 	private String title;
 	private String description;
 
-	// TODO: PlaceID + visitOrder 추가 예정
 	private List<CourseTheme> themes;
 	private String region;
 	private int likeCount;
 	private double averageRating;
 	private Boolean isPublic;
+	private List<CoursePlaceInfo> places;
 	private LocalDateTime createdAt;         // 코스 생성일
 	private LocalDateTime bookmarkCreatedAt; // 북마크한 날짜
 

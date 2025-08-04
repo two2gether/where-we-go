@@ -18,7 +18,6 @@ import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
@@ -389,7 +388,16 @@ public class CourseService {
 		return PagedResponse.from(dtoPage);
 	}
 
-	// 내가 만든 코스 목록 조회
+	/**
+	 * 내가 만든 코스 목록 조회
+	 *
+	 * 사용자가 직접 생성한 코스 목록을 페이징하여 조회합니다.
+	 * 각 코스에 포함된 장소 정보도 함께 반환합니다.
+	 *
+	 * @param userId 조회할 사용자 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @return 내가 생성한 코스 목록과 페이지네이션 정보
+	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Pageable pageable) {
 		Page<Course> page = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
@@ -404,7 +412,7 @@ public class CourseService {
 					.map(PlacesOrder::getPlaceId)
 					.toList();
 
-				// 장소 정보 가져오기 (위치 정보는 제외)
+				// 장소 정보 가져오기 (목록에서는 위치정보 필요 없어서 null 처리)
 				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
 					placeIds, null, null
 				);
@@ -417,4 +425,5 @@ public class CourseService {
 
 		return PagedResponse.from(dtoPage);
 	}
+
 }
