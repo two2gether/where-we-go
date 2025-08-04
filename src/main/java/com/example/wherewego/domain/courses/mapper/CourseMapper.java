@@ -44,21 +44,6 @@ public class CourseMapper {
 			.build();
 	}
 
-	// public static CourseListResponseDto toList(Course course) {
-	// 	return new CourseListResponseDto(
-	// 		course.getId(),
-	// 		course.getUser().getNickname(),
-	// 		course.getTitle(),
-	// 		course.getDescription(),
-	// 		course.getThemes(),
-	// 		course.getRegion(),
-	// 		course.getLikeCount(),
-	// 		course.getAverageRating(),
-	// 		course.getIsPublic(),
-	// 		course.getCreatedAt()
-	// 	);
-	// }
-
 	public static CourseListResponseDto toListWithPlaces(Course course, List<CoursePlaceInfo> places) {
 		return CourseListResponseDto.builder()
 			.courseId(course.getId())

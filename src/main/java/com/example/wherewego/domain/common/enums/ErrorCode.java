@@ -30,6 +30,10 @@ public enum ErrorCode {
 	COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 코스입니다."),
 	UNAUTHORIZED_COURSE_ACCESS(HttpStatus.FORBIDDEN, "해당 코스에 대한 권한이 없습니다."),
 
+	// 이벤트 상품 에러 정의
+	EVENT_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
+	UNAUTHORIZED_EVENT_PRODUCT_ACCESS(HttpStatus.FORBIDDEN, "해당 상품에 대한 권한이 없습니다."),
+
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 
