@@ -4,9 +4,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.service.EventService;
 import com.example.wherewego.global.response.ApiResponse;
@@ -40,5 +42,19 @@ public class EventController {
 		PagedResponse<EventListResponseDto> response = eventService.findAllEvents(pageable);
 
 		return ApiResponse.ok("이벤트 상품 목록 조회를 성공했습니다.", response);
+	}
+
+	/**
+	 * 이벤트 상품 정보를 조회하고 조회수를 증가시킵니다.
+	 *
+	 * @param productId 조회할 상품 ID
+	 * @return 이벤트 상품 상세 정보
+	 */
+	@GetMapping("/{productId}")
+	public ApiResponse<EventDetailResponseDto> getEventDetail(@PathVariable Long productId) {
+
+		EventDetailResponseDto response = eventService.findEventById(productId);
+
+		return ApiResponse.ok("이벤트 상품 상세 조회를 성공했습니다.", response);
 	}
 }

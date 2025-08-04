@@ -73,6 +73,13 @@ public class EventProduct extends BaseEntity {
 	private int stock;
 
 	/**
+	 * 조회수
+	 */
+	@Column(name = "view_count", nullable = false)
+	@Builder.Default
+	private Integer viewCount = 0;
+
+	/**
 	 * 삭제 여부
 	 */
 	@Column(name = "is_deleted", nullable = false)
@@ -93,4 +100,10 @@ public class EventProduct extends BaseEntity {
 		return this;
 	}
 
+	/**
+	 * 조회수 증가
+	 */
+	public void incrementViewCount() {
+		this.viewCount++;
+	}
 }

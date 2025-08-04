@@ -7,10 +7,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
+import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -44,5 +47,24 @@ public class EventService {
 		Page<EventListResponseDto> dtoPage = new PageImpl<>(eventListDto, pageable, eventPage.getTotalElements());
 
 		return PagedResponse.from(dtoPage);
+	}
+
+	/**
+	 * 이벤트 상품 상세 정보를 조회하고 조회수를 증가시킵니다. (삭제되지 않은 상품만)
+	 *
+	 * @param productId 조회할 상품 ID
+	 * @return 이벤트 상품 상세 정보
+	 * @throws CustomException 상품을 찾을 수 없는 경우
+	 */
+	public EventDetailResponseDto findEventById(Long productId) {
+		// 1. 상품 조회
+		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+
+		// 2. 조회수 증가
+		findProduct.incrementViewCount();
+
+		// 3. [조회된 엔티티 -> 응답 DTO 변환]
+		return EventMapper.toDetailDto(findProduct);
 	}
 }
