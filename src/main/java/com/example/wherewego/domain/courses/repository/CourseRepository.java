@@ -118,6 +118,14 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	);
 
 	// 내가 만든 코스 목록 조회
-	Page<Course> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.user.id = :userId
+		      AND c.isDeleted = false
+		""")
+	Page<Course> findByUserIdAndIsDeletedFalse(@Param("userId") Long userId, Pageable pageable);
 
 }

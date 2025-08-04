@@ -400,29 +400,34 @@ public class CourseService {
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Pageable pageable) {
-		Page<Course> page = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
+		// 1. 내가 만든 코스 목록 페이징 조회
+		Page<Course> coursePage = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
 
-		List<CourseListResponseDto> dtoList = page.getContent().stream()
+		// 2. 코스 ID 목록 추출
+		List<Long> courseIds = coursePage.getContent().stream()
+			.map(Course::getId)
+			.toList();
+
+		// 3. 장소 순서 정보 일괄 조회
+		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+
+		// 4. courseId → placeOrders 그룹핑
+		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
+			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
+
+		// 5. 각 Course → CourseListResponseDto로 변환 (장소 포함)
+		List<CourseListResponseDto> dtoList = coursePage.getContent().stream()
 			.map(course -> {
-				// 장소 순서 조회
-				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
-
-				// placeId 리스트 추출
-				List<String> placeIds = placeOrders.stream()
-					.map(PlacesOrder::getPlaceId)
-					.toList();
-
-				// 장소 정보 가져오기 (목록에서는 위치정보 필요 없어서 null 처리)
-				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(
-					placeIds, null, null
-				);
+				List<PlacesOrder> orders = placeOrdersByCourse.getOrDefault(course.getId(), new ArrayList<>());
+				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
 
 				return CourseMapper.toListWithPlaces(course, places);
 			})
 			.toList();
 
-		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, page.getTotalElements());
-
+		// 6. 최종 페이지 생성 및 반환
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 		return PagedResponse.from(dtoPage);
 	}
 
