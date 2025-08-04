@@ -11,19 +11,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-<<<<<<< HEAD
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
-import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponse;
-import com.example.wherewego.domain.places.dto.response.GooglePlaceResponse;
-import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
-=======
-import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
->>>>>>> 8b29307797060e5c739c329fd4cbe5a57ad50d5d
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;
