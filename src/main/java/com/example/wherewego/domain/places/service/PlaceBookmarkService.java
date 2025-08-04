@@ -31,6 +31,7 @@ public class PlaceBookmarkService {
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final UserRepository userRepository;
 	private final PlaceSearchService placeSearchService;
+	private final PlaceService placeService;
 
 	/**
 	 * PlaceBookmarkService 생성자
@@ -38,12 +39,14 @@ public class PlaceBookmarkService {
 	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
 	 * @param userRepository 사용자 관련 데이터베이스 접근 객체  
 	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 * @param placeService 장소 서비스 (통계 정보 포함)
 	 */
 	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserRepository userRepository,
-		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService) {
+		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService, PlaceService placeService) {
 		this.placeBookmarkRepository = placeBookmarkRepository;
 		this.userRepository = userRepository;
 		this.placeSearchService = placeSearchService;
+		this.placeService = placeService;
 	}
 
 	/**
@@ -98,11 +101,11 @@ public class PlaceBookmarkService {
 		Pageable pageable = PageRequest.of(page, size);
 		Page<PlaceBookmark> bookmarkPage = placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
 
-		// 북마크된 장소들의 상세 정보를 외부 API에서 조회
+		// 북마크된 장소들의 상세 정보를 통계 정보와 함께 조회
 		var bookmarkItems = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
-				// Place API를 통해 실제 장소 정보 조회
-				PlaceDetailResponseDto place = getPlaceDetailFromApi(bookmark.getPlaceId(), userLatitude,
+				// PlaceService를 통해 통계 정보가 포함된 장소 정보 조회 (캐시 활용)
+				PlaceDetailResponseDto place = getPlaceDetailWithStats(bookmark.getPlaceId(), userId, userLatitude,
 					userLongitude);
 
 				return UserBookmarkListDto.BookmarkItem.builder()
@@ -123,19 +126,21 @@ public class PlaceBookmarkService {
 	}
 
 	/**
-	 * 외부 API를 통해 북마크된 장소의 상세 정보를 조회하고 북마크 상태를 설정합니다.
+	 * PlaceService를 통해 북마크된 장소의 상세 정보를 통계와 함께 조회합니다.
+	 * 캐시를 활용하여 성능을 최적화하고, 리뷰수/평점/북마크수 등 통계 정보를 포함합니다.
 	 * 북마크 목록에서 호출되므로 북마크 상태는 항상 true로 설정됩니다.
 	 *
 	 * @param placeId 조회할 장소 ID
+	 * @param userId 사용자 ID
 	 * @param userLatitude 사용자 위치 위도 (거리 계산용, null 가능)
 	 * @param userLongitude 사용자 위치 경도 (거리 계산용, null 가능)
-	 * @return 북마크 상태가 설정된 장소 상세 정보
+	 * @return 통계 정보와 북마크 상태가 설정된 장소 상세 정보
 	 * @throws CustomException 장소를 찾을 수 없는 경우
 	 */
-	private PlaceDetailResponseDto getPlaceDetailFromApi(String placeId, Double userLatitude, Double userLongitude) {
+	private PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId, Double userLatitude, Double userLongitude) {
 
-		// PlaceSearchService를 통해 장소 정보 조회
-		PlaceDetailResponseDto place = placeSearchService.getPlaceDetail(placeId);
+		// PlaceService를 통해 통계 정보가 포함된 장소 정보 조회 (캐시 활용)
+		PlaceDetailResponseDto place = placeService.getPlaceDetailWithStats(placeId, userId);
 
 		if (place == null) {
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);

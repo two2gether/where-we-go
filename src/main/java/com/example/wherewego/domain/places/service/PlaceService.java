@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,7 +132,6 @@ public class PlaceService {
 	 * @param userId 사용자 ID (null 가능)
 	 * @return 통계 정보가 포함된 장소 상세 정보
 	 */
-	@Cacheable(value = "place-details", key = "@cacheKeyUtil.generatePlaceDetailKey(#placeId, #userId)")
 	public PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId) {
 		// 외부 API에서 기본 장소 정보 조회
 		PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(placeId);
@@ -163,7 +161,6 @@ public class PlaceService {
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 통계 및 사용자별 상태 정보
 	 */
-	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
 	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
 		// 장소 통계 조회
 
@@ -209,7 +206,6 @@ public class PlaceService {
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 ID를 키로 하는 통계 정보 맵
 	 */
-	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsMapKey(#placeIds, #userId)")
 	public Map<String, PlaceStatsDto> getPlaceStatsMap(List<String> placeIds, Long userId) {
 		if (placeIds == null || placeIds.isEmpty()) {
 			return Map.of();
