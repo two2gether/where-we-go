@@ -1,8 +1,17 @@
 package com.example.wherewego.domain.eventproduct.service;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
+import com.example.wherewego.domain.eventproduct.entity.EventProduct;
+import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
+import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,4 +25,24 @@ public class EventService {
 
 	private final EventRepository eventRepository;
 
+	/**
+	 * 이벤트 상품 목록을 페이징하여 조회합니다.(삭제되지 않은 상품만)
+	 *
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @return 페이징된 상품 목록 DTO
+	 */
+	public PagedResponse<EventListResponseDto> findAllEvents(Pageable pageable) {
+		// 1. 리스트 조회 - 삭제되지 않은 상품만
+		Page<EventProduct> eventPage = eventRepository.findAllByIsDeletedFalse(pageable);
+
+		// 2. [엔티티 -> 응답 dto 변환]
+		List<EventListResponseDto> eventListDto = eventPage.getContent().stream()
+			.map(EventMapper::toListDto)
+			.toList();
+
+		// 3. PageImpl 로 Page 객체 생성
+		Page<EventListResponseDto> dtoPage = new PageImpl<>(eventListDto, pageable, eventPage.getTotalElements());
+
+		return PagedResponse.from(dtoPage);
+	}
 }

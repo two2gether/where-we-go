@@ -1,9 +1,16 @@
 package com.example.wherewego.domain.eventproduct.controller;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,4 +27,18 @@ public class EventController {
 
 	private final EventService eventService;
 
+	/**
+	 * 이벤트 상품 목록을 페이징하여 조회합니다.
+	 *
+	 * @param pageable 페이징 정보 (기본: 10개씩, 생성일 내림차순)
+	 * @return 페이징된 핫딜 상품 목록과 메타데이터
+	 */
+	@GetMapping
+	public ApiResponse<PagedResponse<EventListResponseDto>> getEventList(
+		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+	) {
+		PagedResponse<EventListResponseDto> response = eventService.findAllEvents(pageable);
+
+		return ApiResponse.ok("이벤트 상품 목록 조회를 성공했습니다.", response);
+	}
 }

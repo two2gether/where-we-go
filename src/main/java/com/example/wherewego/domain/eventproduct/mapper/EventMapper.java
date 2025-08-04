@@ -2,6 +2,7 @@ package com.example.wherewego.domain.eventproduct.mapper;
 
 import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.user.entity.User;
@@ -37,6 +38,18 @@ public class EventMapper {
 			.price(eventProduct.getPrice())
 			.stock(eventProduct.getStock())
 			.updatedAt(eventProduct.getUpdatedAt())
+			.build();
+	}
+
+	// List Response DTO
+	public static EventListResponseDto toListDto(EventProduct product) {
+		return EventListResponseDto.builder()
+			.productId(product.getId())
+			.productName(product.getProductName())
+			.productImage(product.getProductImage())
+			.price(product.getPrice())
+			.stock(product.getStock())
+			.createdAt(product.getCreatedAt())
 			.build();
 	}
 }

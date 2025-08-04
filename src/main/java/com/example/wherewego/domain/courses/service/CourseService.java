@@ -18,7 +18,6 @@ import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
@@ -121,16 +120,6 @@ public class CourseService {
 			// 테마가 없을 경우: 스마트 검색 전략 적용
 			coursePage = searchCoursesByOptimizedRegion(region, pageable);
 		}
-
-		// 3. 페이징 처리
-		// int offset = (int)pageable.getOffset(); // 시작 인덱스
-		// int limit = pageable.getPageSize(); // 가져올 개수
-		// int total = courseList.size(); // 전체 개수
-		//
-		// List<Course> paged = courseList.stream()
-		// 	.skip(offset)
-		// 	.limit(limit)
-		// 	.toList();
 
 		// 4. N+1 쿼리 문제 해결: 모든 코스의 장소들을 한 번에 조회
 		List<Long> courseIds = coursePage.getContent().stream()
