@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.courses.mapper;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
@@ -107,7 +108,7 @@ public class CourseMapper {
 			.courseId(course.getId())
 			.title(course.getTitle())
 			.description(course.getDescription())
-			.themes(course.getThemes())
+			.themes(new ArrayList<>(course.getThemes())) // 초기화
 			.region(course.getRegion())
 			.likeCount(course.getLikeCount())
 			.averageRating(course.getAverageRating())

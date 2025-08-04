@@ -226,7 +226,7 @@ public class UserController {
 		@RequestParam(defaultValue = "20") int size
 	) {
 		Long userId = userDetail.getUser().getId();
-		Pageable pageable = PageRequest.of(page, size, Sort.by("bookmarkCreatedAt").descending());
+		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
 		PagedResponse<UserCourseBookmarkListDto> response =
 			courseBookmarkService.getUserCourseBookmarks(userId, pageable);
