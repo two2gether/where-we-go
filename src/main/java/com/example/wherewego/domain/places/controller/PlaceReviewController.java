@@ -139,30 +139,5 @@ public class PlaceReviewController {
         return ApiResponse.noContent("리뷰가 성공적으로 삭제되었습니다.");
     }
 
-    /**
-     * 특정 장소에 대한 내 리뷰 조회
-     * 
-     * GET /api/places/{placeId}/reviews/me
-     * 
-     * @param placeId 장소 ID
-     * @param userDetail 인증된 사용자 정보
-     * @return 내 리뷰 정보 (없으면 null)
-     */
-    @GetMapping("/{placeId}/reviews/me")
-    public ApiResponse<PlaceReviewResponseDto> getMyReviewForPlace(
-            @PathVariable String placeId,
-            @AuthenticationPrincipal CustomUserDetail userDetail) {
-        
-        log.info("내 리뷰 조회 API 호출 - placeId: {}, userId: {}", placeId, userDetail.getUser().getId());
-        
-        PlaceReviewResponseDto response = placeReviewService.getMyReviewForPlace(
-            placeId, userDetail.getUser().getId());
-        
-        if (response != null) {
-            return ApiResponse.ok("내 리뷰를 성공적으로 조회했습니다.", response);
-        } else {
-            return ApiResponse.ok("작성한 리뷰가 없습니다.", null);
-        }
-    }
 
 }
