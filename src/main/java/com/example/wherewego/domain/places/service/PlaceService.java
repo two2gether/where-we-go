@@ -19,6 +19,8 @@ import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.global.util.CacheKeyUtil;
 
+import org.springframework.cache.annotation.Cacheable;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -161,6 +163,7 @@ public class PlaceService {
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 통계 및 사용자별 상태 정보
 	 */
+	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
 	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
 		// 장소 통계 조회
 

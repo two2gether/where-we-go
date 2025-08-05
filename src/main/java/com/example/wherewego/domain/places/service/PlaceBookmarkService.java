@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
@@ -59,6 +60,7 @@ public class PlaceBookmarkService {
 	 * @throws CustomException 이미 북마크된 장소이거나 사용자를 찾을 수 없는 경우
 	 */
 	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public BookmarkCreateResponseDto addBookmark(Long userId, String placeId) {
 
 		// 이미 북마크된 장소인지 확인
@@ -161,6 +163,7 @@ public class PlaceBookmarkService {
 	 * @throws CustomException 북마크를 찾을 수 없는 경우
 	 */
 	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public void removeBookmark(Long userId, String placeId) {
 
 		// 북마크 존재 확인 및 조회

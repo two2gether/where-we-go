@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewCreateRequestDto;
@@ -70,6 +71,7 @@ public class PlaceReviewService {
 	 * 리뷰 생성 트랜잭션 처리
 	 */
 	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	protected PlaceReviewCreateResponseDto createReviewTransaction(String placeId,
 		PlaceReviewCreateRequestDto requestDto,
 		Long userId) {
