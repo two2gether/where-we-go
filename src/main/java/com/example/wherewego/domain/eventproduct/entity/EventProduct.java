@@ -106,4 +106,5 @@ public class EventProduct extends BaseEntity {
 	public void incrementViewCount() {
 		this.viewCount++;
 	}
+
 }

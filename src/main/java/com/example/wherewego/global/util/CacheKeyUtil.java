@@ -10,67 +10,13 @@ import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
 /**
  * 캐시 키 생성 유틸리티
  * 
- * 일관된 캐시 키 생성을 위한 유틸리티 클래스입니다.
- * 검색 조건, 사용자 정보 등을 조합하여 고유한 캐시 키를 생성합니다.
+ * Google Places API 캐싱을 위한 캐시 키 생성 유틸리티입니다.
  */
 @Component
 public class CacheKeyUtil {
 
     private static final String DELIMITER = ":";
     
-    /**
-     * 장소 상세정보용 캐시 키 생성
-     * 
-     * @param placeId 장소 ID
-     * @param userId 사용자 ID (null 가능)
-     * @return 캐시 키
-     */
-    public String generatePlaceDetailKey(String placeId, Long userId) {
-        StringBuilder keyBuilder = new StringBuilder(placeId);
-        
-        if (userId != null) {
-            keyBuilder.append(DELIMITER).append("user").append(userId);
-        } else {
-            keyBuilder.append(DELIMITER).append("guest");
-        }
-        
-        return keyBuilder.toString();
-    }
-    
-    /**
-     * 장소 통계용 캐시 키 생성
-     * 
-     * @param placeId 장소 ID
-     * @param userId 사용자 ID (null 가능)
-     * @return 캐시 키
-     */
-    public String generatePlaceStatsKey(String placeId, Long userId) {
-        return "stats" + DELIMITER + generatePlaceDetailKey(placeId, userId);
-    }
-    
-    /**
-     * 여러 장소 통계용 캐시 키 생성
-     * 
-     * @param placeIds 장소 ID 목록
-     * @param userId 사용자 ID (null 가능)
-     * @return 캐시 키
-     */
-    public String generatePlaceStatsMapKey(List<String> placeIds, Long userId) {
-        StringBuilder keyBuilder = new StringBuilder("stats-map").append(DELIMITER);
-        
-        // 장소 ID들을 정렬하여 일관된 키 생성
-        placeIds.stream()
-            .sorted()
-            .forEach(placeId -> keyBuilder.append(placeId).append(","));
-        
-        if (userId != null) {
-            keyBuilder.append(DELIMITER).append("user").append(userId);
-        } else {
-            keyBuilder.append(DELIMITER).append("guest");
-        }
-        
-        return keyBuilder.toString();
-    }
     
     /**
      * Google Places API 검색용 캐시 키 생성 (성능 최적화)
@@ -130,6 +76,25 @@ public class CacheKeyUtil {
      */
     public String generateGooglePlaceDetailKey(String placeId) {
         return "google" + DELIMITER + placeId;
+    }
+    
+    /**
+     * 장소 통계용 캐시 키 생성
+     * 
+     * @param placeId 장소 ID
+     * @param userId 사용자 ID (null 가능)
+     * @return 캐시 키
+     */
+    public String generatePlaceStatsKey(String placeId, Long userId) {
+        StringBuilder keyBuilder = new StringBuilder("stats").append(DELIMITER).append(placeId);
+        
+        if (userId != null) {
+            keyBuilder.append(DELIMITER).append("user").append(userId);
+        } else {
+            keyBuilder.append(DELIMITER).append("guest");
+        }
+        
+        return keyBuilder.toString();
     }
     
     /**
