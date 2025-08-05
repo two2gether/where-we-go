@@ -12,8 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.auth.dto.request.GoogleUserInfo;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.global.exception.CustomException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
