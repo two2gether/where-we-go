@@ -2,13 +2,13 @@ package com.example.wherewego.domain.eventproduct.service;
 
 import java.util.List;
 
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;

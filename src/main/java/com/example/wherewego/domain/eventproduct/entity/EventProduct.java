@@ -100,7 +100,6 @@ public class EventProduct extends BaseEntity {
 		return this;
 	}
 
-<<<<<<< HEAD
 	/**
 	 * 조회수 증가
 	 */
@@ -108,6 +107,3 @@ public class EventProduct extends BaseEntity {
 		this.viewCount++;
 	}
 }
-=======
-}
->>>>>>> d28442a29debf80c4cfaabb03ababdb91084264b
