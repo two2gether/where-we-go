@@ -3,7 +3,6 @@ package com.example.wherewego.domain.places.service;
 import java.util.List;
 
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,44 +48,29 @@ public class PlaceReviewService {
 	 * @return 작성된 리뷰 정보
 	 * @throws CustomException 이미 리뷰를 작성한 경우, 사용자를 찾을 수 없는 경우
 	 */
+	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public PlaceReviewCreateResponseDto createReview(String placeId, PlaceReviewCreateRequestDto requestDto,
 		Long userId) {
-		// 1. 장소 존재 여부 검증 (트랜잭션 외부에서 수행)
-		validatePlaceExists(placeId);
+		log.info("장소 리뷰 작성 요청 - placeId: {}, userId: {}, rating: {}", placeId, userId, requestDto.getRating());
 
-		// 2. 트랜잭션 내에서 리뷰 생성 처리
-		return createReviewTransaction(placeId, requestDto, userId);
-	}
-
-	/**
-	 * 장소 존재 여부 검증 (트랜잭션 외부)
-	 */
-	private void validatePlaceExists(String placeId) {
+		// 1. 장소 존재 여부 검증
 		if (placeSearchService.getPlaceDetail(placeId) == null) {
 			log.warn("존재하지 않는 장소에 대한 리뷰 작성 시도 - placeId: {}", placeId);
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
-	}
 
-	/**
-	 * 리뷰 생성 트랜잭션 처리
-	 */
-	@Transactional
-	@CacheEvict(value = "place-stats", allEntries = true)
-	protected PlaceReviewCreateResponseDto createReviewTransaction(String placeId,
-		PlaceReviewCreateRequestDto requestDto,
-		Long userId) {
-		// 1. 중복 리뷰 검증
+		// 2. 중복 리뷰 검증
 		if (placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)) {
 			log.warn("이미 리뷰를 작성한 장소 - placeId: {}, userId: {}", placeId, userId);
 			throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
 		}
 
-		// 2. 사용자 조회
+		// 3. 사용자 조회
 		User user = userRepository.findByIdAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-		// 3. 리뷰 엔티티 생성 및 저장
+		// 4. 리뷰 엔티티 생성 및 저장
 		PlaceReview review = PlaceReview.builder()
 			.user(user)
 			.placeId(placeId)
@@ -97,7 +81,7 @@ public class PlaceReviewService {
 		PlaceReview savedReview = placeReviewRepository.save(review);
 		log.info("장소 리뷰 작성 완료 - reviewId: {}", savedReview.getId());
 
-		// 4. 응답 DTO 생성
+		// 5. 응답 DTO 생성
 		return PlaceReviewCreateResponseDto.builder()
 			.reviewId(savedReview.getId())
 			.rating(savedReview.getRating())
