@@ -6,18 +6,19 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.common.enums.ErrorCode;
-import com.example.wherewego.domain.places.dto.request.PlaceSearchRequest;
-import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponse;
-import com.example.wherewego.domain.places.dto.response.GooglePlaceResponse;
-import com.example.wherewego.domain.places.dto.response.PlaceDetailResponse;
+import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
+import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponseDto;
+import com.example.wherewego.domain.places.dto.response.GooglePlaceResponseDto;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.global.exception.CustomException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,23 +28,44 @@ import lombok.extern.slf4j.Slf4j;
  * 최종적으로 PlaceDetailResponse로 변환하여 기존 API 명세와 호환성을 유지합니다.
  */
 @Slf4j
-@Service
-@RequiredArgsConstructor
+@Service("googlePlaceService")
 public class GooglePlaceService implements PlaceSearchService {
 
 	// API 엔드포인트 상수
 	private static final String TEXT_SEARCH_ENDPOINT = "/textsearch/json";
 	private static final String PLACE_DETAILS_ENDPOINT = "/details/json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
+
 	private final WebClient googleWebClient;
+
 	@Value("${google.api.key}")
 	private String googleApiKey;
 
+	/**
+	 * GooglePlaceService 생성자
+	 *
+	 * @param googleWebClient 구글 API 호출을 위한 WebClient Bean
+	 */
+	public GooglePlaceService(@Qualifier("googleWebClient") WebClient googleWebClient) {
+		this.googleWebClient = googleWebClient;
+	}
+
+	/**
+	 * 구글 Places API를 사용하여 장소를 검색합니다.
+	 * Text Search API와 Place Details API를 조합하여 상세 정보를 제공합니다.
+	 * 검색 결과는 캐싱되어 동일한 검색 조건에 대해 빠른 응답을 제공합니다.
+	 *
+	 * @param request 장소 검색 요청 정보 (검색어, 위치, 페이지 등)
+	 * @return 검색된 장소 목록 (PlaceDetailResponse 형태로 변환)
+	 * @throws CustomException 구글 API 호출 실패 시
+	 */
 	@Override
-	public List<PlaceDetailResponse> searchPlaces(PlaceSearchRequest request) {
+	@Cacheable(value = "google-place-search", key = "@cacheKeyUtil.generateGoogleSearchKey(#request)")
+	public List<PlaceDetailResponseDto> searchPlaces(PlaceSearchRequestDto request) {
+		log.info("Google Places API 검색 요청 - 쿼리: {}", request.getQuery());
 
 		// 구글 Text Search API 호출
-		GooglePlaceResponse googleResponse = callTextSearchApi(request);
+		GooglePlaceResponseDto googleResponse = callTextSearchApi(request);
 
 		if (googleResponse == null || googleResponse.getResults() == null) {
 			log.warn("구글 API 응답이 비어있습니다");
@@ -54,8 +76,9 @@ public class GooglePlaceService implements PlaceSearchService {
 		Double userLat = getUserLatitude(request);
 		Double userLon = getUserLongitude(request);
 
-		List<PlaceDetailResponse> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
+		List<PlaceDetailResponseDto> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
 
+		log.info("Google Places API 검색 완료 - 결과 수: {}", results.size());
 		return results;
 	}
 
@@ -63,12 +86,12 @@ public class GooglePlaceService implements PlaceSearchService {
 	 * Google Place Details를 PlaceDetailResponse로 변환
 	 * 거리 계산은 PlaceService에서 별도로 처리됩니다.
 	 */
-	private PlaceDetailResponse convertToPlaceDetailResponse(GooglePlaceDetailResponse.PlaceDetail detail) {
+	private PlaceDetailResponseDto convertToPlaceDetailResponse(GooglePlaceDetailResponseDto.PlaceDetail detail) {
 		if (detail == null) {
 			return null;
 		}
 
-		PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
+		PlaceDetailResponseDto.PlaceDetailResponseDtoBuilder builder = PlaceDetailResponseDto.builder()
 			.placeId(detail.getPlaceId())
 			.name(detail.getName())
 			.address(detail.getFormattedAddress())
@@ -82,7 +105,7 @@ public class GooglePlaceService implements PlaceSearchService {
 
 		// 위치 정보 추출
 		if (detail.getGeometry() != null && detail.getGeometry().getLocation() != null) {
-			GooglePlaceResponse.Location location = detail.getGeometry().getLocation();
+			GooglePlaceResponseDto.Location location = detail.getGeometry().getLocation();
 			builder.latitude(location.getLat())
 				.longitude(location.getLng());
 		}
@@ -94,7 +117,7 @@ public class GooglePlaceService implements PlaceSearchService {
 		// 주소 구성 요소에서 지역 정보 추출
 		if (detail.getAddressComponents() != null && !detail.getAddressComponents().isEmpty()) {
 			// address_components로 지역 정보 추출
-			PlaceDetailResponse.Region region = extractRegionFromComponents(detail.getAddressComponents());
+			PlaceDetailResponseDto.Region region = extractRegionFromComponents(detail.getAddressComponents());
 			builder.region(region);
 
 			// regionSummary 생성
@@ -103,7 +126,7 @@ public class GooglePlaceService implements PlaceSearchService {
 		} else {
 			log.debug("address_components 누락, formatted_address 사용");
 			// fallback: formatted_address에서 파싱
-			PlaceDetailResponse.Region region = extractRegionFromAddress(detail.getFormattedAddress());
+			PlaceDetailResponseDto.Region region = extractRegionFromAddress(detail.getFormattedAddress());
 			builder.region(region);
 
 			String regionSummary = generateRegionSummary(region);
@@ -184,12 +207,12 @@ public class GooglePlaceService implements PlaceSearchService {
 	 * - administrative_area_level_1: 시/도 (서울특별시, 경기도)
 	 * - sublocality_level_1 or locality: 시/군/구 (강남구, 수원시)
 	 */
-	private PlaceDetailResponse.Region extractRegionFromComponents(
-		List<GooglePlaceDetailResponse.AddressComponent> components) {
+	private PlaceDetailResponseDto.Region extractRegionFromComponents(
+		List<GooglePlaceDetailResponseDto.AddressComponent> components) {
 		String depth1 = null;  // 시/도
 		String depth2 = null;  // 구/군/시
 
-		for (GooglePlaceDetailResponse.AddressComponent component : components) {
+		for (GooglePlaceDetailResponseDto.AddressComponent component : components) {
 			List<String> types = component.getTypes();
 
 			if (types.contains("administrative_area_level_1")) {
@@ -200,7 +223,7 @@ public class GooglePlaceService implements PlaceSearchService {
 			// sublocality_level_2는 사용하지 않음 (일관성을 위해)
 		}
 
-		return PlaceDetailResponse.Region.builder()
+		return PlaceDetailResponseDto.Region.builder()
 			.depth1(depth1)
 			.depth2(depth2)
 			.build();
@@ -210,7 +233,7 @@ public class GooglePlaceService implements PlaceSearchService {
 	 * 지역 요약 문자열 생성 (1,2단계 행정구역만 활용)
 	 * 생성 규칙: "시/도 구/군" (예: "서울 강남구", "경기 파주시")
 	 */
-	private String generateRegionSummary(PlaceDetailResponse.Region region) {
+	private String generateRegionSummary(PlaceDetailResponseDto.Region region) {
 		if (region == null) {
 			return "";
 		}
@@ -239,7 +262,7 @@ public class GooglePlaceService implements PlaceSearchService {
 	/**
 	 * Google Places API 사진 정보를 URL로 변환 (비용생각해서 1개만)
 	 */
-	private String extractPhotoUrl(List<GooglePlaceResponse.Photo> photos) {
+	private String extractPhotoUrl(List<GooglePlaceResponseDto.Photo> photos) {
 		if (photos == null || photos.isEmpty()) {
 			return null;
 		}
@@ -287,10 +310,20 @@ public class GooglePlaceService implements PlaceSearchService {
 			.trim();
 	}
 
+	/**
+	 * 구글 Places API를 사용하여 특정 장소의 상세 정보를 조회합니다.
+	 * Place Details API를 호출하여 장소의 전체 정보를 가져옵니다.
+	 *
+	 * @param placeId 조회할 장소의 고유 ID (구글 Places API에서 제공)
+	 * @return 장소의 상세 정보 (PlaceDetailResponse 형태로 변환)
+	 * @throws CustomException 구글 API 호출 실패 또는 장소를 찾을 수 없는 경우
+	 */
 	@Override
-	public PlaceDetailResponse getPlaceDetail(String placeId) {
+	@Cacheable(value = "google-place-details", key = "@cacheKeyUtil.generateGooglePlaceDetailKey(#placeId)")
+	public PlaceDetailResponseDto getPlaceDetail(String placeId) {
+		log.info("Google Place Details API 요청 - placeId: {}", placeId);
 
-		GooglePlaceDetailResponse detailResponse;
+		GooglePlaceDetailResponseDto detailResponse;
 		try {
 			detailResponse = callPlaceDetailsApi(placeId);
 		} catch (Exception e) {
@@ -310,16 +343,21 @@ public class GooglePlaceService implements PlaceSearchService {
 		}
 
 		// Google API 응답을 PlaceDetailResponse로 변환
-		return convertToPlaceDetailResponse(detailResponse.getResult());
+		PlaceDetailResponseDto result = convertToPlaceDetailResponse(detailResponse.getResult());
+		log.info("Google Place Details API 완료 - placeId: {}, name: {}", placeId, result.getName());
+		return result;
 	}
 
 	/**
-	 * 구글 Place Details API 호출
+	 * 구글 Place Details API를 직접 호출하여 원시 응답 데이터를 가져옵니다.
+	 *
+	 * @param placeId 조회할 장소의 고유 ID
+	 * @return 구글 API 원시 응답 데이터
 	 */
-	private GooglePlaceDetailResponse callPlaceDetailsApi(String placeId) {
+	private GooglePlaceDetailResponseDto callPlaceDetailsApi(String placeId) {
 		// Place Details API 호출
 
-		GooglePlaceDetailResponse response = googleWebClient.get()
+		GooglePlaceDetailResponseDto response = googleWebClient.get()
 			.uri(uriBuilder -> {
 				java.net.URI finalUri = uriBuilder
 					.path(PLACE_DETAILS_ENDPOINT)
@@ -332,19 +370,22 @@ public class GooglePlaceService implements PlaceSearchService {
 				return finalUri;
 			})
 			.retrieve()
-			.bodyToMono(GooglePlaceDetailResponse.class)
+			.bodyToMono(GooglePlaceDetailResponseDto.class)
 			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
 			.block();
-
 
 		return response;
 	}
 
 	/**
-	 * 구글 Text Search API 호출
+	 * 구글 Text Search API를 호출하여 검색어와 위치 조건에 맞는 장소 목록을 가져옵니다.
+	 * 사용자 위치가 제공된 경우 거리 기반 우선순위로 정렬됩니다.
+	 *
+	 * @param request 검색 요청 정보 (검색어, 사용자 위치, 반경 등)
+	 * @return 구글 API 원시 검색 결과 데이터
+	 * @throws CustomException API 호출 실패 또는 네트워크 오류 시
 	 */
-	// query = "광화문" & key = "
-	private GooglePlaceResponse callTextSearchApi(PlaceSearchRequest request) {
+	private GooglePlaceResponseDto callTextSearchApi(PlaceSearchRequestDto request) {
 		// Text Search API 호출
 
 		return googleWebClient.get()
@@ -380,7 +421,7 @@ public class GooglePlaceService implements PlaceSearchService {
 				return uriBuilder.build();
 			})
 			.retrieve()
-			.bodyToMono(GooglePlaceResponse.class)
+			.bodyToMono(GooglePlaceResponseDto.class)
 			.timeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
 			.doOnError(error -> {
 				log.error("구글 API 호출 실패", error);
@@ -397,10 +438,15 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * GooglePlaceResponse를 PlaceDetailResponse 목록으로 변환
-	 * 거리 계산은 PlaceService에서 별도로 처리됩니다.
+	 * 구글 Text Search API 응답을 애플리케이션 표준 형식으로 변환합니다.
+	 * 검색 결과 목록을 PlaceDetailResponse 목록으로 변환하여 일관된 데이터 구조를 제공합니다.
+	 *
+	 * @param googleResponse 구글 API 원시 검색 응답
+	 * @param userLat 사용자 위치 위도 (거리 계산용, null 가능)
+	 * @param userLon 사용자 위치 경도 (거리 계산용, null 가능)
+	 * @return 변환된 장소 상세 정보 목록
 	 */
-	private List<PlaceDetailResponse> convertToPlaceDetailResponses(GooglePlaceResponse googleResponse,
+	private List<PlaceDetailResponseDto> convertToPlaceDetailResponses(GooglePlaceResponseDto googleResponse,
 		Double userLat, Double userLon) {
 
 		if (googleResponse.getResults() == null) {
@@ -415,13 +461,18 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * 개별 GooglePlaceResult를 PlaceDetailResponse로 변환
-	 * 거리 계산은 PlaceService에서 별도로 처리됩니다.
+	 * 구글 검색 결과의 개별 장소를 애플리케이션 표준 형식으로 변환합니다.
+	 * Text Search API 응답의 각 장소를 PlaceDetailResponse로 변환합니다.
+	 *
+	 * @param result 구글 API 개별 검색 결과
+	 * @param userLat 사용자 위치 위도 (거리 계산용, null 가능)
+	 * @param userLon 사용자 위치 경도 (거리 계산용, null 가능)
+	 * @return 변환된 장소 상세 정보
 	 */
-	private PlaceDetailResponse convertToPlaceDetailResponse(
-		GooglePlaceResponse.PlaceResult result, Double userLat, Double userLon) {
+	private PlaceDetailResponseDto convertToPlaceDetailResponse(
+		GooglePlaceResponseDto.PlaceResult result, Double userLat, Double userLon) {
 
-		PlaceDetailResponse.PlaceDetailResponseBuilder builder = PlaceDetailResponse.builder()
+		PlaceDetailResponseDto.PlaceDetailResponseDtoBuilder builder = PlaceDetailResponseDto.builder()
 			.placeId(result.getPlaceId())
 			.name(result.getName())
 			.category(extractMainCategory(result.getTypes()))
@@ -440,7 +491,7 @@ public class GooglePlaceService implements PlaceSearchService {
 		// 거리 계산은 PlaceService에서 처리
 
 		// 지역 정보 설정 (구글 formatted_address에서 추출)
-		PlaceDetailResponse.Region region = extractRegionFromAddress(result.getFormattedAddress());
+		PlaceDetailResponseDto.Region region = extractRegionFromAddress(result.getFormattedAddress());
 		builder.region(region);
 
 		// 지역 요약 생성
@@ -455,9 +506,12 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * Geometry에서 위도 추출
+	 * 구글 API 응답의 geometry 객체에서 위도 정보를 안전하게 추출합니다.
+	 *
+	 * @param result 구글 API 검색 결과
+	 * @return 위도 값, geometry 정보가 없는 경우 null
 	 */
-	private Double getLatitudeFromGeometry(GooglePlaceResponse.PlaceResult result) {
+	private Double getLatitudeFromGeometry(GooglePlaceResponseDto.PlaceResult result) {
 		if (result.getGeometry() != null && result.getGeometry().getLocation() != null) {
 			return result.getGeometry().getLocation().getLat();
 		}
@@ -465,9 +519,12 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * Geometry에서 경도 추출
+	 * 구글 API 응답의 geometry 객체에서 경도 정보를 안전하게 추출합니다.
+	 *
+	 * @param result 구글 API 검색 결과
+	 * @return 경도 값, geometry 정보가 없는 경우 null
 	 */
-	private Double getLongitudeFromGeometry(GooglePlaceResponse.PlaceResult result) {
+	private Double getLongitudeFromGeometry(GooglePlaceResponseDto.PlaceResult result) {
 		if (result.getGeometry() != null && result.getGeometry().getLocation() != null) {
 			return result.getGeometry().getLocation().getLng();
 		}
@@ -481,7 +538,7 @@ public class GooglePlaceService implements PlaceSearchService {
 	 * - "경기도 성남시 분당구 정자동 178-1" → depth1: 경기도, depth2: 성남시, depth3: 분당구
 	 * - "부산광역시 해운대구 우동 1394" → depth1: 부산광역시, depth2: 해운대구, depth3: 우동
 	 */
-	private PlaceDetailResponse.Region extractRegionFromAddress(String formattedAddress) {
+	private PlaceDetailResponseDto.Region extractRegionFromAddress(String formattedAddress) {
 		if (formattedAddress == null || formattedAddress.trim().isEmpty()) {
 			return createDefaultRegion();
 		}
@@ -517,14 +574,17 @@ public class GooglePlaceService implements PlaceSearchService {
 
 		// 주소 파싱 완료
 
-		return PlaceDetailResponse.Region.builder()
+		return PlaceDetailResponseDto.Region.builder()
 			.depth1(depth1)
 			.depth2(depth2)
 			.build();
 	}
 
 	/**
-	 * 시/도 판별
+	 * 주어진 텍스트가 시/도 단위 행정구역인지 판별합니다.
+	 *
+	 * @param text 판별할 텍스트
+	 * @return 시/도 단위인 경우 true, 아닌 경우 false
 	 */
 	private boolean isProvince(String text) {
 		return text.endsWith("특별시") || text.endsWith("광역시") ||
@@ -532,14 +592,21 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * 구/군/시 판별
+	 * 주어진 텍스트가 구/군/시 단위 행정구역인지 판별합니다.
+	 *
+	 * @param text 판별할 텍스트
+	 * @return 구/군/시 단위인 경우 true, 아닌 경우 false
 	 */
 	private boolean isDistrict(String text) {
 		return text.endsWith("구") || text.endsWith("군") || text.endsWith("시");
 	}
 
 	/**
-	 * 동/읍/면 판별
+	 * 주어진 텍스트가 동/읍/면 단위 행정구역인지 판별합니다.
+	 * 번지나 도로명은 제외하고 실제 행정구역만 구분합니다.
+	 *
+	 * @param text 판별할 텍스트
+	 * @return 동/읍/면 단위인 경우 true, 아닌 경우 false
 	 */
 	private boolean isSubDistrict(String text) {
 		// 숫자로 시작하는 것은 번지이므로 제외
@@ -556,21 +623,34 @@ public class GooglePlaceService implements PlaceSearchService {
 	}
 
 	/**
-	 * 기본 지역 정보 생성
+	 * 지역 정보를 추출할 수 없는 경우 사용할 기본 지역 객체를 생성합니다.
+	 *
+	 * @return 빈 지역 정보 객체
 	 */
-	private PlaceDetailResponse.Region createDefaultRegion() {
-		return PlaceDetailResponse.Region.builder()
+	private PlaceDetailResponseDto.Region createDefaultRegion() {
+		return PlaceDetailResponseDto.Region.builder()
 			.depth1(null)
 			.depth2(null)
 			.build();
 	}
 
-	// 유틸리티 메서드들
-	private Double getUserLatitude(PlaceSearchRequest request) {
+	/**
+	 * 검색 요청에서 사용자 위도 정보를 안전하게 추출합니다.
+	 *
+	 * @param request 검색 요청 객체
+	 * @return 사용자 위도, 위치 정보가 없는 경우 null
+	 */
+	private Double getUserLatitude(PlaceSearchRequestDto request) {
 		return (request.getUserLocation() != null) ? request.getUserLocation().getLatitude() : null;
 	}
 
-	private Double getUserLongitude(PlaceSearchRequest request) {
+	/**
+	 * 검색 요청에서 사용자 경도 정보를 안전하게 추출합니다.
+	 *
+	 * @param request 검색 요청 객체
+	 * @return 사용자 경도, 위치 정보가 없는 경우 null
+	 */
+	private Double getUserLongitude(PlaceSearchRequestDto request) {
 		return (request.getUserLocation() != null) ? request.getUserLocation().getLongitude() : null;
 	}
 }

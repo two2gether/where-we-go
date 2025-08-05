@@ -5,7 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
@@ -20,6 +20,10 @@ import com.example.wherewego.global.response.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 댓글 관리 서비스
+ * 코스에 대한 댓글의 생성, 수정, 삭제, 조회 기능을 제공합니다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -29,18 +33,27 @@ public class CommentService {
 	private final UserRepository userRepository;
 	private final CourseRepository courseRepository;
 
-	// 코스 댓글 생성
+	/**
+	 * 코스에 새로운 댓글을 생성합니다.
+	 * 비공개 코스인 경우 작성자만 댓글을 작성할 수 있습니다.
+	 *
+	 * @param courseId 댓글을 작성할 코스 ID
+	 * @param userId 댓글 작성자 ID
+	 * @param requestDto 댓글 내용을 담은 요청 DTO
+	 * @return 생성된 댓글 정보
+	 * @throws CustomException 사용자/코스를 찾을 수 없거나 비공개 코스에 접근 권한이 없는 경우
+	 */
 	@Transactional
 	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
 		log.debug("댓글 생성 요청 - courseId: {}, userId: {}, content: {}", courseId, userId, requestDto.getContent());
 
-		User user = userRepository.findById(userId)
+		User user = userRepository.findByIdAndIsDeletedFalse(userId)
 			.orElseThrow(() -> {
 				log.warn("댓글 생성 실패 - 사용자 없음: {}", userId);
 				return new CustomException(ErrorCode.USER_NOT_FOUND);
 			});
 
-		Course course = courseRepository.findById(courseId)
+		Course course = courseRepository.findByIdWithThemes(courseId)
 			.orElseThrow(() -> {
 				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
 				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
@@ -64,7 +77,14 @@ public class CommentService {
 		return toDto(comment);
 	}
 
-	// 코스 댓글 삭제
+	/**
+	 * 댓글을 삭제합니다.
+	 * 댓글 작성자만 삭제할 수 있습니다.
+	 *
+	 * @param commentId 삭제할 댓글 ID
+	 * @param userId 삭제를 요청한 사용자 ID
+	 * @throws CustomException 댓글을 찾을 수 없거나 삭제 권한이 없는 경우
+	 */
 	@Transactional
 	public void deleteComment(Long commentId, Long userId) {
 		log.debug("댓글 삭제 요청 - commentId: {}, userId: {}", commentId, userId);
@@ -85,7 +105,16 @@ public class CommentService {
 		log.debug("댓글 삭제 성공 - commentId: {}", commentId);
 	}
 
-	// 코스 댓글 수정
+	/**
+	 * 댓글 내용을 수정합니다.
+	 * 댓글 작성자만 수정할 수 있습니다.
+	 *
+	 * @param commentId 수정할 댓글 ID
+	 * @param userId 수정을 요청한 사용자 ID
+	 * @param requestDto 수정할 댓글 내용을 담은 요청 DTO
+	 * @return 수정된 댓글 정보
+	 * @throws CustomException 댓글을 찾을 수 없거나 수정 권한이 없는 경우
+	 */
 	@Transactional
 	public CommentResponseDto updateComment(Long commentId, Long userId, CommentRequestDto requestDto) {
 		log.debug("댓글 수정 요청 - commentId: {}, userId: {}, newContent: {}", commentId, userId, requestDto.getContent());
@@ -108,8 +137,15 @@ public class CommentService {
 		return toDto(comment);
 	}
 
-	// 코스 댓글 목록 조회
-	@Transactional(readOnly = true)  //DB 변경이 없는 읽기 작업
+	/**
+	 * 특정 코스의 댓글 목록을 페이징하여 조회합니다.
+	 * 최신 댓글 순으로 정렬됩니다.
+	 *
+	 * @param courseId 댓글을 조회할 코스 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @return 페이징된 댓글 목록
+	 */
+	@Transactional(readOnly = true)
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 
 		//JPA Repository를 통해 댓글 목록을 조회
@@ -123,17 +159,37 @@ public class CommentService {
 		return PagedResponse.from(dtoPage);
 	}
 
-	// 사용자 조회 메서드
+	/**
+	 * 특정 사용자가 작성한 댓글 목록을 페이징하여 조회합니다.
+	 * 최신 댓글 순으로 정렬됩니다.
+	 *
+	 * @param userId 댓글 작성자 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @return 페이징된 댓글 목록
+	 */
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
 		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
 		Page<CommentResponseDto> dtoPage = page.map(this::toDto);
 		return PagedResponse.from(dtoPage);
 	}
 
+	/**
+	 * Comment 엔티티를 CommentResponseDto로 변환합니다.
+	 *
+	 * @param comment 변환할 Comment 엔티티
+	 * @return 변환된 CommentResponseDto
+	 */
 	private CommentResponseDto toDto(Comment comment) {
 		return CommentResponseDto.of(comment);
 	}
 
+	/**
+	 * 사용자가 비공개 코스의 소유자가 아닌지 확인합니다.
+	 *
+	 * @param userId 확인할 사용자 ID
+	 * @param course 확인할 코스
+	 * @return 비공개 코스이면서 소유자가 아닌 경우 true
+	 */
 	private boolean isNotCourseOwner(Long userId, Course course) {
 		return !course.getIsPublic() && !course.getUser().getId().equals(userId);
 	}
