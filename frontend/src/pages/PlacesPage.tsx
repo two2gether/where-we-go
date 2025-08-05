@@ -7,6 +7,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 import { apiRequest } from '../api/axios';
 import type { Place } from '../api/types';
+import { KOREA_REGIONS } from '../constants/regions';
 
 
 export const PlacesPage: React.FC = () => {
@@ -50,6 +51,33 @@ export const PlacesPage: React.FC = () => {
 
   // React Query 훅 사용
   const { data: places, isLoading, error, refetch } = usePlaces(searchParams);
+
+  // 검색 결과에서 동적으로 지역 목록 생성
+  const availableRegions = useMemo(() => {
+    const regions = [{ value: '', label: '전체' }];
+    
+    if (places && places.length > 0) {
+      const regionSet = new Set<string>();
+      places.forEach(place => {
+        if (place.regionSummary) {
+          // 지역 문자열을 파싱해서 주요 지역만 추출
+          const mainRegion = place.regionSummary.split(' ')[0];
+          if (mainRegion && mainRegion !== '전체') {
+            regionSet.add(mainRegion);
+          }
+        }
+      });
+      
+      // 정렬해서 지역 옵션 생성
+      Array.from(regionSet)
+        .sort()
+        .forEach(region => {
+          regions.push({ value: region, label: region });
+        });
+    }
+    
+    return regions;
+  }, [places]);
 
   // 초기 로드 완료 시 플래그 업데이트
   useEffect(() => {
@@ -353,15 +381,7 @@ export const PlacesPage: React.FC = () => {
           {
             label: '지역',
             value: selectedRegion,
-            options: [
-              { value: '', label: '전체' },
-              { value: '서울', label: '서울' },
-              { value: '부산', label: '부산' },
-              { value: '제주도', label: '제주도' },
-              { value: '경주', label: '경주' },
-              { value: '강릉', label: '강릉' },
-              { value: '전주', label: '전주' }
-            ],
+            options: availableRegions,
             onChange: setSelectedRegion
           }
         ]}

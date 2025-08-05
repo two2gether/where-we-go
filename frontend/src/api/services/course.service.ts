@@ -9,40 +9,21 @@ import type {
 } from '../types';
 
 export const courseService = {
-  // 코스 목록 조회 (검색 포함) - GET 요청 with Request Body (백엔드 설계 이슈)
+  // 코스 목록 조회 - GET 요청
   getCourses: (params: CourseSearchRequest = {}): Promise<PageResponse<Course>> => {
-    // 백엔드 요구사항에 맞게 요청 데이터 변환
-    let regionValue = params.region || '전체';
-    
-    // DB에 저장된 region 값과 매칭을 위한 변환
-    if (regionValue === '서울') {
-      // DB의 "경기, 서울"과 매칭하기 위해 정확한 값 사용
-      regionValue = '경기, 서울';
-    }
-    
-    const requestBody: any = {};
-    
-    // "전체"가 아닌 경우에만 region 필터 추가
-    if (regionValue !== '전체') {
-      requestBody.region = regionValue;
-    }
-
-    // themes가 있을 때만 추가 (null/undefined 방지)
-    if (params.theme) {
-      requestBody.themes = [params.theme];
-    }
-
-    // keyword가 있을 때만 추가
-    if (params.keyword) {
-      requestBody.keyword = params.keyword;
-    }
-
-    // Pageable 파라미터를 쿼리 파라미터로 전달
-    const pageParams = {
+    // 백엔드 API 스펙에 맞게 쿼리 파라미터 구성  
+    const queryParams: any = {
+      region: params.region || '서울', // DB에 서울 지역 코스가 있으므로 기본값을 서울로 설정
       page: params.page || 0,
       size: params.size || 10,
       sort: 'createdAt,desc'
     };
+
+
+    // themes가 있을 때만 추가
+    if (params.theme) {
+      queryParams.themes = params.theme;
+    }
 
     // 인증 상태 확인
     const authState = useAuthStore.getState();
@@ -51,13 +32,12 @@ export const courseService = {
     console.log('  token exists:', !!authState.token);
     console.log('  user:', authState.user?.username || 'no user');
     
-    console.log('getCourses API 호출:', '/courses/list');
-    console.log('  requestBody:', requestBody);
-    console.log('  pageParams:', pageParams);
-    console.log('  원본 params:', params); // 디버깅용
+    console.log('getCourses API 호출:', '/courses');
+    console.log('  queryParams:', queryParams);
+    console.log('  원본 params:', params);
 
-    // POST 요청으로 수정됨
-    return apiRequest.post<any>('/courses/list', requestBody, { params: pageParams })
+    // GET 요청으로 변경
+    return apiRequest.get<any>('/courses', { params: queryParams })
       .then(response => {
         console.log('getCourses 응답:', response); // 디버깅용
         console.log('getCourses 응답 data:', response.data); // 데이터 구조 확인
@@ -66,9 +46,8 @@ export const courseService = {
         // 빈 배열인 경우 디버깅 정보 추가
         if (response.data?.content?.length === 0) {
           console.log('⚠️ 빈 결과 - 요청 파라미터와 DB 데이터 확인 필요');
-          console.log('  DB 코스 region: "경기, 서울"');
-          console.log('  요청한 region:', requestBody.region);
-          console.log('  요청 전체:', requestBody);
+          console.log('  요청한 region:', queryParams.region);
+          console.log('  요청 전체:', queryParams);
         } else if (response.data?.content?.length > 0) {
           console.log('✅ 코스 데이터 발견!');
           console.log('  첫 번째 코스 데이터:', response.data.content[0]);
@@ -131,41 +110,25 @@ export const courseService = {
     apiRequest.delete<void>(`/courses/${id}`)
       .then(response => response.data),
 
-  // 내가 작성한 코스 목록 조회 (임시로 전체 코스 반환 - 백엔드에서 /users/courses 엔드포인트 구현 전까지)
+  // 내가 작성한 코스 목록 조회 (임시로 전체 코스와 동일한 API 사용)
   getMyCourses: (params: Omit<CourseSearchRequest, 'authorId'> = {}): Promise<PageResponse<Course>> => {
-    // 임시로 전체 코스와 동일한 로직 사용 (백엔드에서 사용자별 필터링이 구현되면 수정 예정)
-    let regionValue = params.region || '전체';
-    
-    // DB에 저장된 region 값과 매칭을 위한 변환
-    if (regionValue === '서울') {
-      regionValue = '경기, 서울';
-    }
-    
-    const requestBody: any = {
-      region: regionValue  // 백엔드 @NotBlank 요구사항으로 항상 포함
-    };
-
-    // themes가 있을 때만 추가 (null/undefined 방지)
-    if (params.theme) {
-      requestBody.themes = [params.theme];
-    }
-
-    // keyword가 있을 때 추가
-    if (params.keyword) {
-      requestBody.keyword = params.keyword;
-    }
-
-    // Pageable 파라미터를 쿼리 파라미터로 전달
-    const pageParams = {
+    // 임시로 전체 코스와 동일한 로직 사용
+    const queryParams: any = {
+      region: params.region || '서울', // 기본값을 서울로 통일
       page: params.page || 0,
       size: params.size || 10,
       sort: 'createdAt,desc'
     };
 
-    console.log('getMyCourses API 호출:', '/courses/list (with myCoursesOnly)', requestBody, pageParams); // 디버깅용
+    // themes가 있을 때만 추가
+    if (params.theme) {
+      queryParams.themes = params.theme;
+    }
 
-    // 기존 getCourses와 동일한 방식 사용 (POST 요청)
-    return apiRequest.post<any>('/courses/list', requestBody, { params: pageParams })
+    console.log('getMyCourses API 호출:', '/courses (임시)', queryParams);
+
+    // getCourses와 동일한 방식 사용 (GET 요청)
+    return apiRequest.get<any>('/courses', { params: queryParams })
       .then(response => {
         if (!response?.data) {
           console.warn('getMyCourses: Invalid response structure', response);

@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-// API Base URL - 환경 변수로 관리
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+// API Base URL - 환경 변수로 관리 (Vite 프록시 사용)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Axios 인스턴스 생성
 export const api: AxiosInstance = axios.create({

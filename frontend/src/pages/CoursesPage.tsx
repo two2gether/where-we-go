@@ -5,6 +5,7 @@ import { useCourses, useMyCourses, useToggleCourseLike } from '../hooks/useCours
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 import type { Course } from '../api/types';
+import { KOREA_REGIONS } from '../constants/regions';
 
 
 export const CoursesPage: React.FC = () => {
@@ -46,6 +47,35 @@ export const CoursesPage: React.FC = () => {
   const isLoading = activeTab === 'all' ? isLoadingAll : isLoadingMy;
   const error = activeTab === 'all' ? errorAll : errorMy;
   const refetch = activeTab === 'all' ? refetchAll : refetchMy;
+
+  // 검색 결과에서 동적으로 지역 목록 생성
+  const availableRegions = useMemo(() => {
+    const regions = [{ value: '', label: '전체' }];
+    
+    if (courses && courses.length > 0) {
+      const regionSet = new Set<string>();
+      courses.forEach(course => {
+        if (course.region) {
+          // 쉼표로 구분된 지역 문자열 파싱
+          const regionParts = course.region.split(',').map(r => r.trim());
+          regionParts.forEach(region => {
+            if (region && region !== '전체') {
+              regionSet.add(region);
+            }
+          });
+        }
+      });
+      
+      // 정렬해서 지역 옵션 생성
+      Array.from(regionSet)
+        .sort()
+        .forEach(region => {
+          regions.push({ value: region, label: region });
+        });
+    }
+    
+    return regions;
+  }, [courses]);
 
   const handleLike = async (courseId: number) => {
     try {
@@ -113,14 +143,7 @@ export const CoursesPage: React.FC = () => {
           {
             label: '지역',
             value: selectedRegion,
-            options: [
-              { value: '', label: '전체' },
-              { value: '제주도', label: '제주도' },
-              { value: '경주', label: '경주' },
-              { value: '부산', label: '부산' },
-              { value: '서울', label: '서울' },
-              { value: '강릉', label: '강릉' }
-            ],
+            options: availableRegions,
             onChange: setSelectedRegion
           },
           {

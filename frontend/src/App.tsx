@@ -3,16 +3,20 @@ import React, { useEffect } from 'react';
 import { AppRouter } from './router/AppRouter';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
+import { initKakaoSDK } from './utils/kakaoInit';
 
 export const App: React.FC = () => {
   const { user, isAuthenticated, loading, setLoading } = useAuthStore();
   const { theme } = useUIStore();
 
-  // Initialize authentication state on app start
+  // Initialize authentication state and Kakao SDK on app start
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         setLoading(true);
+
+        // Initialize Kakao SDK
+        initKakaoSDK();
 
         // Check if user is stored in localStorage and token is valid
         const storedAuth = localStorage.getItem('where-we-go-auth');
