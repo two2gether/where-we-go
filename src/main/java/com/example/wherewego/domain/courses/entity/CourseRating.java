@@ -1,6 +1,6 @@
 package com.example.wherewego.domain.courses.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.entity.BaseEntity;
 import com.example.wherewego.domain.user.entity.User;
 
 import jakarta.persistence.Column;

@@ -21,7 +21,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;

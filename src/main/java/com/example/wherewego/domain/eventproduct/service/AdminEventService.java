@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.events.EventException;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;

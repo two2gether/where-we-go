@@ -1,4 +1,4 @@
-package com.example.wherewego.common.entity;
+package com.example.wherewego.domain.common.entity;
 
 import java.time.LocalDateTime;
 

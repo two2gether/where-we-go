@@ -1,8 +1,16 @@
 package com.example.wherewego.domain.courses.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.entity.BaseEntity;
 import com.example.wherewego.domain.user.entity.User;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -16,29 +24,29 @@ import lombok.NoArgsConstructor;
 @Table(name = "course_bookmarks")
 public class CourseBookmark extends BaseEntity {
 
-    /**
-     * 코스 북마크 고유 ID
-     */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	/**
+	 * 코스 북마크 고유 ID
+	 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    /**
-     * 북마크를 한 사용자
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+	/**
+	 * 북마크를 한 사용자
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = false)
+	private User user;
 
-    /**
-     * 북마크된 코스
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+	/**
+	 * 북마크된 코스
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "course_id", nullable = false)
+	private Course course;
 
-    public CourseBookmark(User user, Course course) {
-        this.user = user;
-        this.course = course;
-    }
+	public CourseBookmark(User user, Course course) {
+		this.user = user;
+		this.course = course;
+	}
 }

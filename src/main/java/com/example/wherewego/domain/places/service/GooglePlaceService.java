@@ -12,7 +12,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.GooglePlaceResponseDto;

@@ -10,7 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewCreateRequestDto;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewUpdateRequestDto;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewCreateResponseDto;
@@ -76,7 +76,8 @@ public class PlaceReviewService {
 	 * 리뷰 생성 트랜잭션 처리
 	 */
 	@Transactional
-	protected PlaceReviewCreateResponseDto createReviewTransaction(String placeId, PlaceReviewCreateRequestDto requestDto,
+	protected PlaceReviewCreateResponseDto createReviewTransaction(String placeId,
+		PlaceReviewCreateRequestDto requestDto,
 		Long userId) {
 		// 1. 중복 리뷰 검증
 		if (placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)) {

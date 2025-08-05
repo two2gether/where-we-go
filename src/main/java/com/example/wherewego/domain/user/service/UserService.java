@@ -7,8 +7,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.UserResponseDto;

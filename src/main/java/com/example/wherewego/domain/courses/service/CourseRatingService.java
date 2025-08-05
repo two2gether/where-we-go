@@ -3,7 +3,7 @@ package com.example.wherewego.domain.courses.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CourseRatingRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseRatingResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
