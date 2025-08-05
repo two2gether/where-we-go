@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
@@ -56,6 +57,7 @@ public class EventService {
 	 * @return 이벤트 상품 상세 정보
 	 * @throws CustomException 상품을 찾을 수 없는 경우
 	 */
+	@Transactional
 	public EventDetailResponseDto findEventById(Long productId) {
 		// 1. 상품 조회
 		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
