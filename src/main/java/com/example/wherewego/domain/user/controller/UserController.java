@@ -23,8 +23,10 @@ import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListD
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
+import com.example.wherewego.domain.places.service.PlaceReviewService;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
@@ -53,6 +55,7 @@ public class UserController {
 	private final CourseService courseService;
 	private final CourseBookmarkService courseBookmarkService;
 	private final PlaceBookmarkService placeBookmarkService;
+	private final PlaceReviewService placeReviewService;
 
 	/**
 	 * 회원 탈퇴 API
@@ -176,6 +179,31 @@ public class UserController {
 			userId, page, size, userLatitude, userLongitude);
 
 		return ApiResponse.ok("내 북마크 목록 조회 성공", response);
+	}
+
+	/**
+	 * 내가 작성한 모든 리뷰 목록 조회 API
+	 *
+	 * GET /api/users/me/reviews
+	 *
+	 * 인증된 사용자가 작성한 모든 장소 리뷰를 페이지 단위로 조회합니다.
+	 * 리뷰는 작성일 내림차순으로 정렬되며, 각 리뷰에는 장소 정보도 함께 제공됩니다.
+	 *
+	 * @param page 페이지 번호 (기본값: 0)
+	 * @param size 페이지 크기 (기본값: 10)
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 페이징된 내 리뷰 목록
+	 */
+	@GetMapping("/mypage/reviews")
+	public ApiResponse<PagedResponse<PlaceReviewResponseDto>> getMyReviews(
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size,
+		@AuthenticationPrincipal CustomUserDetail userDetail) {
+
+		PagedResponse<PlaceReviewResponseDto> response = placeReviewService.getMyReviews(
+			userDetail.getUser().getId(), page, size);
+
+		return ApiResponse.ok("내 리뷰 목록을 성공적으로 조회했습니다.", response);
 	}
 
 	/**

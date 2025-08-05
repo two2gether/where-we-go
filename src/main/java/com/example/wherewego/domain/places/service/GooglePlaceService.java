@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -52,13 +53,16 @@ public class GooglePlaceService implements PlaceSearchService {
 	/**
 	 * 구글 Places API를 사용하여 장소를 검색합니다.
 	 * Text Search API와 Place Details API를 조합하여 상세 정보를 제공합니다.
+	 * 검색 결과는 캐싱되어 동일한 검색 조건에 대해 빠른 응답을 제공합니다.
 	 *
 	 * @param request 장소 검색 요청 정보 (검색어, 위치, 페이지 등)
 	 * @return 검색된 장소 목록 (PlaceDetailResponse 형태로 변환)
 	 * @throws CustomException 구글 API 호출 실패 시
 	 */
 	@Override
+	@Cacheable(value = "google-place-search", key = "@cacheKeyUtil.generateGoogleSearchKey(#request)")
 	public List<PlaceDetailResponseDto> searchPlaces(PlaceSearchRequestDto request) {
+		log.info("Google Places API 검색 요청 - 쿼리: {}", request.getQuery());
 
 		// 구글 Text Search API 호출
 		GooglePlaceResponseDto googleResponse = callTextSearchApi(request);
@@ -74,6 +78,7 @@ public class GooglePlaceService implements PlaceSearchService {
 
 		List<PlaceDetailResponseDto> results = convertToPlaceDetailResponses(googleResponse, userLat, userLon);
 
+		log.info("Google Places API 검색 완료 - 결과 수: {}", results.size());
 		return results;
 	}
 
@@ -314,7 +319,9 @@ public class GooglePlaceService implements PlaceSearchService {
 	 * @throws CustomException 구글 API 호출 실패 또는 장소를 찾을 수 없는 경우
 	 */
 	@Override
+	@Cacheable(value = "google-place-details", key = "@cacheKeyUtil.generateGooglePlaceDetailKey(#placeId)")
 	public PlaceDetailResponseDto getPlaceDetail(String placeId) {
+		log.info("Google Place Details API 요청 - placeId: {}", placeId);
 
 		GooglePlaceDetailResponseDto detailResponse;
 		try {
@@ -336,7 +343,9 @@ public class GooglePlaceService implements PlaceSearchService {
 		}
 
 		// Google API 응답을 PlaceDetailResponse로 변환
-		return convertToPlaceDetailResponse(detailResponse.getResult());
+		PlaceDetailResponseDto result = convertToPlaceDetailResponse(detailResponse.getResult());
+		log.info("Google Place Details API 완료 - placeId: {}, name: {}", placeId, result.getName());
+		return result;
 	}
 
 	/**

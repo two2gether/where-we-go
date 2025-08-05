@@ -65,7 +65,7 @@ public class PlaceReview extends BaseEntity {
 	/**
 	 * 카카오 API 장소 ID
 	 */
-	@Column(name = "place_id", nullable = false, length = 20)
+	@Column(name = "place_id", nullable = false, length = 30)
 	private String placeId;
 
 	/**
