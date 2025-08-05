@@ -3,6 +3,8 @@ package com.example.wherewego.global.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
@@ -13,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Configuration
 public class WebClientConfig {
+
+	@Value("${toss.secret-key}")
+	private String tossSecretKey;
 
 	@Value("${google.api.key}")
 	private String googleApiKey;
@@ -44,6 +49,14 @@ public class WebClientConfig {
 			.codecs(configurer -> configurer
 				.defaultCodecs()
 				.maxInMemorySize(2 * 1024 * 1024))
+			.build();
+	}
+
+	@Bean(name = "tossWebClient")
+	public WebClient tossWebClient() {
+		return WebClient.builder()
+			.baseUrl("https://pay.toss.im")
+			.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
 			.build();
 	}
 }
