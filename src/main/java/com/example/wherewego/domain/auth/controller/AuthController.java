@@ -1,20 +1,31 @@
 package com.example.wherewego.domain.auth.controller;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.auth.dto.request.GoogleUserInfo;
+import com.example.wherewego.domain.auth.dto.request.KakaoUserInfo;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
 import com.example.wherewego.domain.auth.dto.request.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
+import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
 import com.example.wherewego.domain.auth.service.AuthService;
+import com.example.wherewego.domain.auth.service.GoogleOAuthService;
+import com.example.wherewego.domain.auth.service.KakaoOAuthService;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
+import com.example.wherewego.domain.user.entity.User;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.response.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +44,10 @@ public class AuthController {
 
 	private final AuthService authService;
 	private final TokenBlacklistService tokenBlacklistService;
+	private final GoogleOAuthService googleOAuthService;
+	private final UserService userService;
+	private final JwtUtil jwtUtil;
+	private final KakaoOAuthService kakaoOAuthService;
 
 	/**
 	 * 새로운 사용자 회원가입을 처리합니다.
@@ -87,4 +102,43 @@ public class AuthController {
 
 		return ApiResponse.noContent("로그아웃 성공");
 	}
+
+	@GetMapping("/googlelogin")
+	public ApiResponse<LoginResponseDto> googleLogin(@RequestParam String code) {
+		// 1 . 구글 액세스 토큰 요청
+		String accessToken = googleOAuthService.getAccessToken(code);
+
+		// 2. 구글 사용자 정보 가져오기
+		GoogleUserInfo userInfo = googleOAuthService.getUserInfo(accessToken);
+
+		// 3. 회원 조회 또는 신규 회원 생성
+		User user = userService.findOrCreateUser(userInfo);
+
+		// 4. JWT 토큰 생성
+		String jwt = jwtUtil.generateToken(user.getEmail());
+
+		// 5. ApiResponse로 반환
+		return ApiResponse.ok("로그인 성공", new LoginResponseDto(jwt));
+
+	}
+
+	@GetMapping("/kakaologin")
+	public ApiResponse<LoginResponseDto> kakaoLogin(@RequestParam String code) {
+		// 1. 카카오 액세스 토큰 요청
+		String accessToken = kakaoOAuthService.getAccessToken(code);
+
+		// 2. 카카오 사용자 정보 가져오기
+		Map<String, Object> userInfoMap = kakaoOAuthService.getUserInfo(accessToken);
+		KakaoUserInfo kakaoUserInfo = new KakaoUserInfo(userInfoMap);
+
+		// 3. 회원 조회 또는 신규 회원 생성
+		User user = userService.findOrCreateUser(kakaoUserInfo);
+
+		// 4. JWT 토큰 생성
+		String jwt = jwtUtil.generateToken(user.getEmail());
+
+		// 5. ApiResponse로 반환
+		return ApiResponse.ok("로그인 성공", new LoginResponseDto(jwt));
+	}
+
 }
