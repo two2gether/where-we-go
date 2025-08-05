@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
@@ -41,7 +41,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		""")
 	Page<Course> findByRegionAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
-	
+
 	// 성능 최적화: 정확한 지역 매칭 (인덱스 활용 가능)
 	@Query("""
 		    SELECT c FROM Course c
@@ -53,7 +53,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		""")
 	Page<Course> findByExactRegionAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
-		
+
 	// 성능 최적화: 지역 시작 문자로 검색 (인덱스 활용 가능)
 	@Query("""
 		    SELECT c FROM Course c
@@ -116,5 +116,16 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		@Param("now") LocalDateTime now,
 		Pageable pageable
 	);
+
+	// 내가 만든 코스 목록 조회
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.user.id = :userId
+		      AND c.isDeleted = false
+		""")
+	Page<Course> findByUserIdAndIsDeletedFalse(@Param("userId") Long userId, Pageable pageable);
 
 }

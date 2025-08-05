@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.places.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.exception.CustomException;
 

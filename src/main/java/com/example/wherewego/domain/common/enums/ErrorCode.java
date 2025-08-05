@@ -1,4 +1,4 @@
-package com.example.wherewego.common.enums;
+package com.example.wherewego.domain.common.enums;
 
 import org.springframework.http.HttpStatus;
 

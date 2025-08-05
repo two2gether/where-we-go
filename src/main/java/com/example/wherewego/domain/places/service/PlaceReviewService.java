@@ -2,14 +2,15 @@ package com.example.wherewego.domain.places.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.cache.annotation.CacheEvict;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewCreateRequestDto;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewUpdateRequestDto;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewCreateResponseDto;
@@ -144,6 +145,7 @@ public class PlaceReviewService {
 	 * @throws CustomException 리뷰를 찾을 수 없거나 권한이 없는 경우
 	 */
 	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public PlaceReviewResponseDto updateMyReview(String placeId, PlaceReviewUpdateRequestDto requestDto, Long userId) {
 		log.info("리뷰 수정 요청 - placeId: {}, userId: {}", placeId, userId);
 
@@ -168,6 +170,7 @@ public class PlaceReviewService {
 	 * @throws CustomException 리뷰를 찾을 수 없거나 권한이 없는 경우
 	 */
 	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public void deleteMyReview(String placeId, Long userId) {
 		log.info("리뷰 삭제 요청 - placeId: {}, userId: {}", placeId, userId);
 

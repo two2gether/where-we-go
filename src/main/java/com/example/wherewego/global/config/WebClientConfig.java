@@ -5,23 +5,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.global.exception.CustomException;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
 public class WebClientConfig {
 
-
 	@Value("${google.api.key}")
 	private String googleApiKey;
-
 
 	/**
 	 * 구글 Maps Places API 호출을 위한 WebClient Bean을 생성합니다.
 	 * 구글 API 키 검증과 기본 설정을 포함합니다.
-	 * 
+	 *
 	 * @return 구글 API 전용 WebClient 인스턴스
 	 * @throws CustomException 구글 API 키가 설정되지 않은 경우
 	 */
