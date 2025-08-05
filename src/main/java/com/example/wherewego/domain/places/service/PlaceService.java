@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +18,8 @@ import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.global.util.CacheKeyUtil;
+
+import org.springframework.cache.annotation.Cacheable;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -133,7 +134,6 @@ public class PlaceService {
 	 * @param userId 사용자 ID (null 가능)
 	 * @return 통계 정보가 포함된 장소 상세 정보
 	 */
-	@Cacheable(value = "place-details", key = "@cacheKeyUtil.generatePlaceDetailKey(#placeId, #userId)")
 	public PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId) {
 		// 외부 API에서 기본 장소 정보 조회
 		PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(placeId);
@@ -209,7 +209,6 @@ public class PlaceService {
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 ID를 키로 하는 통계 정보 맵
 	 */
-	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsMapKey(#placeIds, #userId)")
 	public Map<String, PlaceStatsDto> getPlaceStatsMap(List<String> placeIds, Long userId) {
 		if (placeIds == null || placeIds.isEmpty()) {
 			return Map.of();

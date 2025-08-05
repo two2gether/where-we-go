@@ -1,9 +1,18 @@
 package com.example.wherewego.domain.courses.service;
 
+import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.dto.response.CourseLikeListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
+import com.example.wherewego.domain.courses.entity.PlacesOrder;
+import com.example.wherewego.domain.courses.mapper.CourseMapper;
+import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.places.service.PlaceService;
+import com.example.wherewego.global.response.PagedResponse;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.response.CourseLikeResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseLike;
@@ -13,6 +22,11 @@ import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 코스 좋아요 관리 서비스
@@ -25,11 +39,13 @@ public class CourseLikeService {
 	private final CourseLikeRepository likeRepository;
 	private final UserService userService;
 	private final CourseService courseService;
+	private final PlaceRepository placeRepository;
+	private final PlaceService placeService;
 
 	/**
 	 * 코스에 좋아요를 추가합니다.
 	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
-	 *
+	 * 
 	 * @param userId 좋아요를 추가할 사용자 ID
 	 * @param courseId 좋아요를 추가할 코스 ID
 	 * @return 생성된 좋아요 정보
@@ -59,7 +75,7 @@ public class CourseLikeService {
 	/**
 	 * 코스에서 좋아요를 삭제합니다.
 	 * 좋아요를 완전히 삭제하고 코스의 좋아요 수를 감소시킵니다.
-	 *
+	 * 
 	 * @param userId 좋아요를 삭제할 사용자 ID
 	 * @param courseId 좋아요를 삭제할 코스 ID
 	 * @throws CustomException 좋아요가 존재하지 않는 경우
@@ -67,7 +83,6 @@ public class CourseLikeService {
 	@Transactional
 	public void deleteCourseLike(Long userId, Long courseId) {
 		// 좋아요 존재 검사
-
 		CourseLike courseLike = likeRepository.findByUserIdAndCourseId(userId, courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.LIKE_NOT_FOUND));
 		// hard delete
@@ -77,4 +92,44 @@ public class CourseLikeService {
 		course.decrementLikeCount();
 	}
 
+	/**
+	 *
+	 *
+	 *
+	 *
+	 */
+	@Transactional(readOnly = true)
+    public PagedResponse<CourseLikeListResponseDto> getCourseLikeList(Long userId, int page, int size) {
+
+		//Page<CourseLike> ->  List<CoureseLike> -> List<Dto>  -> PageResponse<Dto>
+		// 해당 유저의 좋아요 목록 가져오기
+		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+		Page<CourseLike> pagedLikeList = likeRepository.findAllByUserId(userId, pageable);
+
+		if(pagedLikeList.isEmpty()){
+			return null;
+		}
+
+		//place가져오기
+		List<Long> courseIds = pagedLikeList.getContent().stream()
+				.map(CourseLike::getId)
+				.toList();
+
+		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+
+		Map<Long, List<PlacesOrder>> mappedPlaceOrders = allPlaceOrders.stream()
+				.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
+
+		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream()
+				.map(courseLike -> {
+					Course course = courseLike.getCourse();
+					List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(), new ArrayList<>());
+					List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
+					List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
+					return CourseMapper.toCourseLikeDto(course, courseLike, places);
+				})
+				.toList();
+
+		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalPages()));
+	}
 }

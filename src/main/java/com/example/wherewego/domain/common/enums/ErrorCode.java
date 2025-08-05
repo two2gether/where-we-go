@@ -34,6 +34,9 @@ public enum ErrorCode {
 	EVENT_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
 	UNAUTHORIZED_EVENT_PRODUCT_ACCESS(HttpStatus.FORBIDDEN, "해당 상품에 대한 권한이 없습니다."),
 
+	// 토스 결제 관련 에러 정의
+	TOSS_PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "토스 결제 요청에 실패했습니다."),
+
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 
@@ -45,9 +48,9 @@ public enum ErrorCode {
 	PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 정보를 찾을 수 없습니다."),
 	PLACE_API_ERROR(HttpStatus.BAD_GATEWAY, "장소 정보 조회에 실패했습니다."),
 
-    // 리뷰 관련 에러 정의
-    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 리뷰를 작성한 장소입니다."),
-    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "작성한 리뷰가 없습니다."),
+	// 리뷰 관련 에러 정의
+	REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 리뷰를 작성한 장소입니다."),
+	REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "작성한 리뷰가 없습니다."),
 
 	// 평점 관련 에러 정의
 	RATING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 평점을 등록한 코스입니다."),
