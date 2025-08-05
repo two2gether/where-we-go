@@ -61,7 +61,11 @@ public enum ErrorCode {
 
 	// 설정 및 구성 관련 에러 정의
 	MISSING_API_KEY(HttpStatus.INTERNAL_SERVER_ERROR, "필수 API 키가 설정되지 않았습니다."),
-	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다.");
+	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다."),
+
+	// 구글 로그인 관련 에러 정의
+	GOOGLE_ACCESS_TOKEN_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 액세스 토큰 요청 실패"),
+	GOOGLE_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 사용자 정보 요청 실패");
 
 	private final HttpStatus status;
 	private final String message;
