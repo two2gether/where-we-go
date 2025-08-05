@@ -2,7 +2,7 @@ package com.example.wherewego.domain.courses.dto.request;
 
 import java.util.List;
 
-import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;

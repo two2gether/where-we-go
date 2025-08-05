@@ -8,14 +8,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 이벤트 상품 수정 응답 DTO
- * 기존 이벤트 상품이 수정되었을 때 반환하는 응답 데이터 클래스입니다.
+ * 이벤트 상품 상세 정보 응답 DTO
+ * 특정 이벤트 상품의 상세 정보를 조회할 때 반환하는 응답 데이터 클래스입니다.
  */
 @Getter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class EventUpdateResponseDto {
+@AllArgsConstructor
+public class EventDetailResponseDto {
 	/**
 	 * 수정된 상품의 고유 식별자
 	 */
@@ -39,15 +39,15 @@ public class EventUpdateResponseDto {
 	/**
 	 * 상품 가격(원)
 	 */
-	private Integer price;
+	private int price;
 
 	/**
 	 * 상품 재고 수
 	 */
-	private Integer stock;
+	private int stock;
 
 	/**
-	 * 이벤트 상품 수정 일시
+	 * 이벤트 상품 생성 일시
 	 */
-	private LocalDateTime updatedAt;
+	private LocalDateTime createdAt;
 }

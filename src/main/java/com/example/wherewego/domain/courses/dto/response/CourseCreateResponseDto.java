@@ -3,7 +3,7 @@ package com.example.wherewego.domain.courses.dto.response;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.example.wherewego.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.enums.CourseTheme;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

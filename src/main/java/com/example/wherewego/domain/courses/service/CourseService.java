@@ -12,13 +12,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.common.enums.CourseTheme;
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.CourseTheme;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.request.CourseUpdateRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
@@ -121,16 +120,6 @@ public class CourseService {
 			// 테마가 없을 경우: 스마트 검색 전략 적용
 			coursePage = searchCoursesByOptimizedRegion(region, pageable);
 		}
-
-		// 3. 페이징 처리
-		// int offset = (int)pageable.getOffset(); // 시작 인덱스
-		// int limit = pageable.getPageSize(); // 가져올 개수
-		// int total = courseList.size(); // 전체 개수
-		//
-		// List<Course> paged = courseList.stream()
-		// 	.skip(offset)
-		// 	.limit(limit)
-		// 	.toList();
 
 		// 4. N+1 쿼리 문제 해결: 모든 코스의 장소들을 한 번에 조회
 		List<Long> courseIds = coursePage.getContent().stream()
@@ -388,4 +377,48 @@ public class CourseService {
 		// 6. 커스텀 페이지네이션 응답 DTO로 변환 후 반환
 		return PagedResponse.from(dtoPage);
 	}
+
+	/**
+	 * 내가 만든 코스 목록 조회
+	 *
+	 * 사용자가 직접 생성한 코스 목록을 페이징하여 조회합니다.
+	 * 각 코스에 포함된 장소 정보도 함께 반환합니다.
+	 *
+	 * @param userId 조회할 사용자 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @return 내가 생성한 코스 목록과 페이지네이션 정보
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Pageable pageable) {
+		// 1. 내가 만든 코스 목록 페이징 조회
+		Page<Course> coursePage = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
+
+		// 2. 코스 ID 목록 추출
+		List<Long> courseIds = coursePage.getContent().stream()
+			.map(Course::getId)
+			.toList();
+
+		// 3. 장소 순서 정보 일괄 조회
+		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+
+		// 4. courseId → placeOrders 그룹핑
+		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
+			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
+
+		// 5. 각 Course → CourseListResponseDto로 변환 (장소 포함)
+		List<CourseListResponseDto> dtoList = coursePage.getContent().stream()
+			.map(course -> {
+				List<PlacesOrder> orders = placeOrdersByCourse.getOrDefault(course.getId(), new ArrayList<>());
+				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
+				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
+
+				return CourseMapper.toListWithPlaces(course, places);
+			})
+			.toList();
+
+		// 6. 최종 페이지 생성 및 반환
+		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
+		return PagedResponse.from(dtoPage);
+	}
+
 }

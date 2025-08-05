@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.service;
+package com.example.wherewego.domain.course.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -19,13 +19,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
+import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;

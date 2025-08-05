@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.places.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.exception.CustomException;
 
@@ -65,7 +65,7 @@ public class PlaceReview extends BaseEntity {
 	/**
 	 * 카카오 API 장소 ID
 	 */
-	@Column(name = "place_id", nullable = false, length = 20)
+	@Column(name = "place_id", nullable = false, length = 30)
 	private String placeId;
 
 	/**

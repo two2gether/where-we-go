@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.order.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.common.enums.OrderStatus;
+import com.example.wherewego.domain.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.user.entity.User;
 

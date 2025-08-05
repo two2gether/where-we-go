@@ -2,8 +2,8 @@ package com.example.wherewego.domain.payment.entity;
 
 import java.time.LocalDateTime;
 
-import com.example.wherewego.common.entity.BaseEntity;
-import com.example.wherewego.common.enums.PaymentStatus;
+import com.example.wherewego.domain.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.order.entity.Order;
 
 import jakarta.persistence.Column;
