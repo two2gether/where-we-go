@@ -38,11 +38,6 @@ public interface PlaceBookmarkRepository extends JpaRepository<PlaceBookmark, Lo
 	 */
 	long countByPlaceId(String placeId);
 
-	/**
-	 * 특정 사용자의 북마크한 장소 ID 목록 조회 (IN 쿼리용)
-	 */
-	@Query("SELECT pb.placeId FROM PlaceBookmark pb WHERE pb.user.id = :userId")
-	List<String> findPlaceIdsByUserId(@Param("userId") Long userId);
 
 	/**
 	 * 여러 장소에 대한 특정 사용자의 북마크 상태 조회 (배치 처리용)
@@ -50,9 +45,15 @@ public interface PlaceBookmarkRepository extends JpaRepository<PlaceBookmark, Lo
 	@Query("SELECT pb.placeId FROM PlaceBookmark pb WHERE pb.user.id = :userId AND pb.placeId IN :placeIds")
 	List<String> findBookmarkedPlaceIds(@Param("userId") Long userId, @Param("placeIds") List<String> placeIds);
 
+
+	// ====================== 배치 쿼리 최적화 메서드 ======================
+
 	/**
-	 * 특정 장소를 북마크한 사용자 수 조회
+	 * 여러 장소의 북마크 개수를 일괄 조회 (N+1 문제 해결)
+	 * 
+	 * @param placeIds 조회할 장소 ID 목록
+	 * @return 장소 ID를 키로 하는 북마크 개수 맵
 	 */
-	@Query("SELECT COUNT(DISTINCT pb.user.id) FROM PlaceBookmark pb WHERE pb.placeId = :placeId")
-	long countDistinctUsersByPlaceId(@Param("placeId") String placeId);
+	@Query("SELECT pb.placeId, COUNT(pb) FROM PlaceBookmark pb WHERE pb.placeId IN :placeIds GROUP BY pb.placeId")
+	List<Object[]> getBookmarkCountsByPlaceIds(@Param("placeIds") List<String> placeIds);
 }

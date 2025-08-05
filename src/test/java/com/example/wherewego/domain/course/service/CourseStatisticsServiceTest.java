@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.exception.CustomException;

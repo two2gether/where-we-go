@@ -7,7 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.example.wherewego.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;

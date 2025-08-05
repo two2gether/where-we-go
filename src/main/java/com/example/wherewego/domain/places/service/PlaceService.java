@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
+import com.example.wherewego.global.util.CacheKeyUtil;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -125,11 +127,13 @@ public class PlaceService {
 
 	/**
 	 * 통계 정보가 포함된 장소 상세 조회
+	 * 장소 상세 정보와 통계 정보를 캐싱하여 성능을 최적화합니다.
 	 *
 	 * @param placeId 장소 ID
 	 * @param userId 사용자 ID (null 가능)
 	 * @return 통계 정보가 포함된 장소 상세 정보
 	 */
+	@Cacheable(value = "place-details", key = "@cacheKeyUtil.generatePlaceDetailKey(#placeId, #userId)")
 	public PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId) {
 		// 외부 API에서 기본 장소 정보 조회
 		PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(placeId);
@@ -153,11 +157,13 @@ public class PlaceService {
 	/**
 	 * 특정 장소의 통계 정보를 조회하며, 사용자별 북마크 및 리뷰 상태를 포함합니다.
 	 * 리뷰 수, 평균 평점, 북마크 수 등의 통계와 개인화된 정보를 제공합니다.
+	 * 통계 정보를 캐싱하여 데이터베이스 부하를 줄입니다.
 	 *
 	 * @param placeId 통계를 조회할 장소 ID
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 통계 및 사용자별 상태 정보
 	 */
+	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
 	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
 		// 장소 통계 조회
 
@@ -196,44 +202,69 @@ public class PlaceService {
 
 	/**
 	 * 여러 장소의 통계 정보를 일괄 조회하여 Map 형태로 반환합니다.
-	 * 각 장소별로 통계를 개별 조회하며, 사용자별 개인화 정보를 포함합니다.
+	 * 배치 쿼리를 사용하여 N+1 문제를 해결하고 성능을 대폭 향상시킵니다.
+	 * 일괄 조회 결과를 캐싱하여 반복 요청 시 성능을 최적화합니다.
 	 *
 	 * @param placeIds 통계를 조회할 장소 ID 목록
 	 * @param userId 사용자 ID (개인화 정보용, null 가능)
 	 * @return 장소 ID를 키로 하는 통계 정보 맵
 	 */
+	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsMapKey(#placeIds, #userId)")
 	public Map<String, PlaceStatsDto> getPlaceStatsMap(List<String> placeIds, Long userId) {
-		// 여러 장소 통계 조회
-
-		// 사용자별 북마크 상태
-		List<String> bookmarkedPlaceIds = List.of();
-		if (userId != null) {
-			bookmarkedPlaceIds = placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds);
+		if (placeIds == null || placeIds.isEmpty()) {
+			return Map.of();
 		}
-		final List<String> userBookmarks = bookmarkedPlaceIds;
 
+		// 🚀 배치 쿼리로 N+1 문제 해결 (기존: N개 쿼리 → 최적화: 3개 쿼리)
+		
+		// 1. 리뷰 통계 배치 조회
+		Map<String, Long> reviewCountMap = placeReviewRepository.getReviewCountsByPlaceIds(placeIds)
+			.stream()
+			.collect(Collectors.toMap(
+				arr -> (String) arr[0],
+				arr -> (Long) arr[1]
+			));
+
+		// 2. 평점 통계 배치 조회
+		Map<String, Double> averageRatingMap = placeReviewRepository.getAverageRatingsByPlaceIds(placeIds)
+			.stream()
+			.collect(Collectors.toMap(
+				arr -> (String) arr[0],
+				arr -> (Double) arr[1]
+			));
+
+		// 3. 북마크 통계 배치 조회
+		Map<String, Long> bookmarkCountMap = placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds)
+			.stream()
+			.collect(Collectors.toMap(
+				arr -> (String) arr[0],
+				arr -> (Long) arr[1]
+			));
+
+		// 4. 사용자별 개인화 정보 배치 조회
+		List<String> userBookmarkedPlaces = List.of();
+		List<String> userReviewedPlaces = List.of();
+		
+		if (userId != null) {
+			userBookmarkedPlaces = placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds);
+			userReviewedPlaces = placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds);
+		}
+		
+		final List<String> bookmarkedPlaces = userBookmarkedPlaces;
+		final List<String> reviewedPlaces = userReviewedPlaces;
+
+		// 5. 결과 조합 (메모리 기반 처리, DB 호출 없음)
 		return placeIds.stream()
 			.collect(Collectors.toMap(
 				placeId -> placeId,
-				placeId -> {
-					// 각 장소별로 개별 조회 (향후 최적화 가능)
-					Long reviewCount = placeReviewRepository.countByPlaceId(placeId);
-					Double averageRating = placeReviewRepository.getAverageRatingByPlaceId(placeId);
-					Long bookmarkCount = placeBookmarkRepository.countByPlaceId(placeId);
-
-					Boolean isBookmarked = userId != null ? userBookmarks.contains(placeId) : null;
-					Boolean hasUserReview = userId != null ?
-						placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId) : null;
-
-					return PlaceStatsDto.builder()
-						.placeId(placeId)
-						.reviewCount(reviewCount)
-						.averageRating(formatRating(averageRating))
-						.bookmarkCount(bookmarkCount)
-						.isBookmarked(isBookmarked)
-						.hasUserReview(hasUserReview)
-						.build();
-				}
+				placeId -> PlaceStatsDto.builder()
+					.placeId(placeId)
+					.reviewCount(reviewCountMap.getOrDefault(placeId, 0L))
+					.averageRating(formatRating(averageRatingMap.get(placeId)))
+					.bookmarkCount(bookmarkCountMap.getOrDefault(placeId, 0L))
+					.isBookmarked(userId != null ? bookmarkedPlaces.contains(placeId) : null)
+					.hasUserReview(userId != null ? reviewedPlaces.contains(placeId) : null)
+					.build()
 			));
 	}
 

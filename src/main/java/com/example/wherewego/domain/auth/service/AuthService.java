@@ -8,12 +8,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.wherewego.common.enums.ErrorCode;
 import com.example.wherewego.domain.auth.Provider;
+import com.example.wherewego.domain.auth.UserRole;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
 import com.example.wherewego.domain.auth.dto.request.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
 import com.example.wherewego.domain.auth.security.JwtUtil;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
@@ -55,6 +56,7 @@ public class AuthService {
 			.nickname(request.getNickname())
 			.profileImage(request.getProfileImage())
 			.provider(Provider.LOCAL)
+			.role(UserRole.USER) // 관리자 계정 직접 추가할때 -> UserRole.ADMIN
 			.build();
 
 		User saved = userRepository.save(user);

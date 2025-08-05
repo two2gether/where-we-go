@@ -1,6 +1,6 @@
 package com.example.wherewego.domain.eventproduct.entity;
 
-import com.example.wherewego.common.entity.BaseEntity;
+import com.example.wherewego.domain.common.entity.BaseEntity;
 import com.example.wherewego.domain.user.entity.User;
 
 import jakarta.persistence.Column;
@@ -100,6 +100,7 @@ public class EventProduct extends BaseEntity {
 		return this;
 	}
 
+<<<<<<< HEAD
 	/**
 	 * 조회수 증가
 	 */
@@ -107,3 +108,6 @@ public class EventProduct extends BaseEntity {
 		this.viewCount++;
 	}
 }
+=======
+}
+>>>>>>> d28442a29debf80c4cfaabb03ababdb91084264b
