@@ -36,7 +36,7 @@ public class GooglePlaceService implements PlaceSearchService {
 	private static final String PLACE_DETAILS_ENDPOINT = "/details/json";
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
 
-	private final WebClient googleWebClient;
+	private final @Qualifier("googleWebClient") WebClient googleWebClient;
 
 	@Value("${google.api.key}")
 	private String googleApiKey;
