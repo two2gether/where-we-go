@@ -44,17 +44,14 @@ public class CacheConfig {
 
         return RedisCacheManager.builder(redisConnectionFactory)
             .cacheDefaults(defaultConfig)
-            // 개별 캐시별 최적화된 TTL 설정
-            .withCacheConfiguration("place-details", 
-                defaultConfig.entryTtl(Duration.ofHours(2))) // 장소 상세정보: 2시간
-            .withCacheConfiguration("place-search", 
-                defaultConfig.entryTtl(Duration.ofMinutes(20))) // 검색 결과: 20분 (동기화)
-            .withCacheConfiguration("place-stats", 
-                defaultConfig.entryTtl(Duration.ofMinutes(10))) // 장소 통계: 10분
+            // Google Places API 캐시 설정
             .withCacheConfiguration("google-place-details", 
                 defaultConfig.entryTtl(Duration.ofDays(7))) // Google API 상세정보: 7일 (Google 약관 준수)
             .withCacheConfiguration("google-place-search", 
                 defaultConfig.entryTtl(Duration.ofHours(1))) // Google API 검색: 1시간 (빈번한 변경 고려)
+            // Place 통계 캐시 설정
+            .withCacheConfiguration("place-stats", 
+                defaultConfig.entryTtl(Duration.ofMinutes(10))) // 장소 통계: 10분 (DB 부하 감소)
             .build();
     }
 }
