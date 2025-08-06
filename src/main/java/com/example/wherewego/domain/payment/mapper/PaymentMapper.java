@@ -1,6 +1,6 @@
 package com.example.wherewego.domain.payment.mapper;
 
-import com.example.wherewego.domain.common.enums.OrderStatus;
+import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.entity.Payment;
@@ -37,7 +37,7 @@ public class PaymentMapper {
 			.accountBankName(dto.getAccountBankName())
 			.accountNumber(dto.getAccountNumber())
 
-			.orderStatus(OrderStatus.DONE) // 결제 완료로 고정
+			.paymentStatus(PaymentStatus.DONE) // 결제 완료로 고정
 			.build();
 	}
 }

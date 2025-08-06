@@ -76,7 +76,6 @@ public class Order extends BaseEntity {
 	 */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	// private OrderStatus orderStatus;
 	private OrderStatus status = OrderStatus.PENDING;
 
 	public void markAsPaid() {

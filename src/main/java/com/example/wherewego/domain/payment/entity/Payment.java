@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.payment.entity;
 
 import com.example.wherewego.domain.common.entity.BaseEntity;
-import com.example.wherewego.domain.common.enums.OrderStatus;
+import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.order.entity.Order;
 
 import jakarta.persistence.Column;
@@ -104,7 +104,7 @@ public class Payment extends BaseEntity {
 	 * 결제 상태 (예: PAY_COMPLETE → DONE)
 	 */
 	@Enumerated(EnumType.STRING)
-	private OrderStatus orderStatus;
+	private PaymentStatus paymentStatus;
 
 	/**
 	 * 업데이트 토큰
