@@ -1,7 +1,7 @@
 package com.example.wherewego.domain.user.entity;
 
-import com.example.wherewego.domain.auth.Provider;
-import com.example.wherewego.domain.auth.UserRole;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.common.entity.BaseEntity;
 
 import jakarta.persistence.Column;

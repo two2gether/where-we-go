@@ -8,11 +8,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.wherewego.domain.auth.Provider;
-import com.example.wherewego.domain.auth.UserRole;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
-import com.example.wherewego.domain.auth.dto.request.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
+import com.example.wherewego.domain.auth.dto.response.LoginResponseDto;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;

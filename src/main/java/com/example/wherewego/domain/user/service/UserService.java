@@ -6,10 +6,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wherewego.domain.auth.Provider;
-import com.example.wherewego.domain.auth.UserRole;
-import com.example.wherewego.domain.auth.dto.request.GoogleUserInfo;
-import com.example.wherewego.domain.auth.dto.request.KakaoUserInfo;
+import com.example.wherewego.domain.auth.dto.social.GoogleUserInfo;
+import com.example.wherewego.domain.auth.dto.social.KakaoUserInfo;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
