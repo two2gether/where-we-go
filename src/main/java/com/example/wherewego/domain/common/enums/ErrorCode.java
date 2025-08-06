@@ -76,7 +76,11 @@ public enum ErrorCode {
 
 	// 구글 로그인 관련 에러 정의
 	GOOGLE_ACCESS_TOKEN_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 액세스 토큰 요청 실패"),
-	GOOGLE_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 사용자 정보 요청 실패");
+	GOOGLE_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 사용자 정보 요청 실패"),
+
+	// 카카오 로그인 관련 에러 정의
+	KAKAO_ACCESS_TOKEN_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "카카오 액세스 토큰 요청 실패"),
+	KAKAO_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패");
 
 	private final HttpStatus status;
 	private final String message;
