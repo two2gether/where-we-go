@@ -14,6 +14,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.global.exception.CustomException;
+
 @Service
 public class KakaoOAuthService {
 
@@ -45,7 +48,7 @@ public class KakaoOAuthService {
 		if (response.getStatusCode() == HttpStatus.OK) {
 			return (String)response.getBody().get("access_token");
 		} else {
-			throw new RuntimeException("카카오 토큰 요청 실패");
+			throw new CustomException(ErrorCode.KAKAO_ACCESS_TOKEN_REQUEST_FAILED);
 		}
 	}
 
@@ -63,7 +66,7 @@ public class KakaoOAuthService {
 		if (response.getStatusCode() == HttpStatus.OK) {
 			return response.getBody();
 		} else {
-			throw new RuntimeException("카카오 사용자 정보 요청 실패");
+			throw new CustomException(ErrorCode.KAKAO_USER_INFO_REQUEST_FAILED);
 		}
 	}
 }

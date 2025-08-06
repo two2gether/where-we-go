@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.wherewego.domain.auth.dto.request.GoogleUserInfo;
-import com.example.wherewego.domain.auth.dto.request.KakaoUserInfo;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
-import com.example.wherewego.domain.auth.dto.request.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
+import com.example.wherewego.domain.auth.dto.response.LoginResponseDto;
+import com.example.wherewego.domain.auth.dto.social.GoogleUserInfo;
+import com.example.wherewego.domain.auth.dto.social.KakaoUserInfo;
 import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
 import com.example.wherewego.domain.auth.service.AuthService;
