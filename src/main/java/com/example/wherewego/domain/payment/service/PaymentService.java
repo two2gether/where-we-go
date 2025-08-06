@@ -14,14 +14,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
-import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 import com.example.wherewego.domain.payment.mapper.PaymentMapper;
 import com.example.wherewego.domain.payment.repository.PaymentRepository;
-import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -37,8 +35,6 @@ public class PaymentService {
 	private final @Qualifier("tossWebClient") WebClient tossWebClient;
 	private final PaymentRepository paymentRepository;
 	private final OrderRepository orderRepository;
-	private final OrderService orderService;
-	private final UserRepository userRepository;
 
 	@Value("${toss.secret.key}")
 	private String tossSecretKey;
@@ -53,12 +49,10 @@ public class PaymentService {
 	public PaymentService(
 		@Qualifier("tossWebClient") WebClient tossWebClient,
 		PaymentRepository paymentRepository,
-		OrderRepository orderRepository, OrderService orderService, UserRepository userRepository) {
+		OrderRepository orderRepository) {
 		this.tossWebClient = tossWebClient;
 		this.paymentRepository = paymentRepository;
 		this.orderRepository = orderRepository;
-		this.orderService = orderService;
-		this.userRepository = userRepository;
 	}
 
 	/**
