@@ -4,8 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -41,7 +39,7 @@ public class SecurityConfig {
 		return http
 			.securityMatcher(
 				"/health", "/actuator/health",
-				"/api/auth/**"
+				"/api/auth/**", "/error"
 			)
 			.authorizeHttpRequests(auth -> auth
 				.anyRequest().permitAll()
@@ -66,6 +64,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
+				
+				
 				// 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 			)
@@ -82,12 +82,6 @@ public class SecurityConfig {
 		return new JwtAuthenticationFilter(jwtUtil, userDetailsService, tokenBlacklistService);
 	}
 
-	@Bean
-	public AuthenticationManager authenticationManager(
-		AuthenticationConfiguration authConfig
-	) throws Exception {
-		return authConfig.getAuthenticationManager();
-	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
