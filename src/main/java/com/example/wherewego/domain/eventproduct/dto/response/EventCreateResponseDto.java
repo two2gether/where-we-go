@@ -20,6 +20,7 @@ public class EventCreateResponseDto {
 	 * 생성된 상품의 고유 식별자
 	 */
 	private Long productId;
+
 	/**
 	 * 상품 생성 일시
 	 */
