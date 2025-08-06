@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.example.wherewego.domain.auth.dto.request.GoogleUserInfo;
+import com.example.wherewego.domain.auth.dto.social.GoogleUserInfo;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.global.exception.CustomException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,13 +51,7 @@ public class GoogleOAuthService {
 
 		HttpEntity<String> request = new HttpEntity<>(body, headers);
 
-		log.info("구글 토큰 요청 URL: {}", tokenRequestUrl);
-		log.info("구글 토큰 요청 바디: {}", body);
-
 		ResponseEntity<String> response = restTemplate.postForEntity(tokenRequestUrl, request, String.class);
-
-		log.info("구글 토큰 응답 상태: {}", response.getStatusCode());
-		log.info("구글 토큰 응답 바디: {}", response.getBody());
 
 		if (response.getStatusCode() == HttpStatus.OK) {
 			try {
@@ -79,23 +73,15 @@ public class GoogleOAuthService {
 
 		HttpEntity<String> entity = new HttpEntity<>(headers);
 
-		log.info("구글 사용자 정보 요청 URL: {}", userInfoUrl);
-		log.info("구글 사용자 정보 요청 액세스 토큰: {}", accessToken);
-
 		ResponseEntity<String> response = restTemplate.exchange(userInfoUrl, HttpMethod.GET, entity, String.class);
-
-		log.info("구글 사용자 정보 응답 상태: {}", response.getStatusCode());
-		log.info("구글 사용자 정보 응답 바디: {}", response.getBody());
 
 		if (response.getStatusCode() == HttpStatus.OK) {
 			try {
 				return objectMapper.readValue(response.getBody(), GoogleUserInfo.class);
 			} catch (Exception e) {
-				log.error("구글 사용자 정보 파싱 실패. 응답 바디: {}", response.getBody(), e);
 				throw new CustomException(ErrorCode.GOOGLE_USER_INFO_REQUEST_FAILED);
 			}
 		} else {
-			log.error("구글 사용자 정보 요청 실패 상태: {}", response.getStatusCode());
 			throw new CustomException(ErrorCode.GOOGLE_USER_INFO_REQUEST_FAILED);
 		}
 	}

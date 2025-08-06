@@ -3,8 +3,8 @@ package com.example.wherewego.global.config;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import com.example.wherewego.domain.auth.Provider;
-import com.example.wherewego.domain.auth.UserRole;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 

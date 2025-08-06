@@ -1,18 +1,13 @@
 package com.example.wherewego.domain.auth.service;
 
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.wherewego.domain.auth.Provider;
-import com.example.wherewego.domain.auth.UserRole;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
-import com.example.wherewego.domain.auth.dto.request.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
+import com.example.wherewego.domain.auth.dto.response.LoginResponseDto;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
@@ -34,7 +29,6 @@ public class AuthService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final UserService userService;
-	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
 
 	/**
@@ -73,21 +67,21 @@ public class AuthService {
 	 * @throws CustomException 잘못된 인증 정보이거나 사용자를 찾을 수 없는 경우
 	 */
 	public LoginResponseDto login(LoginRequestDto request) {
-		try {
-			// Spring Security 인증 (사용자 존재 여부 + 비밀번호 검증)
-			Authentication auth = new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
-			authenticationManager.authenticate(auth);
+		// 사용자 존재 여부 확인
+		User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-			// 인증 성공 시 JWT 토큰 생성
-			String token = jwtUtil.generateToken(request.getEmail());
-
-			return LoginResponseDto.builder()
-				.token(token)
-				.build();
-		} catch (BadCredentialsException | UsernameNotFoundException e) {
-			// Spring Security 예외를 CustomException으로 변환
-			throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+		// 비밀번호 검증
+		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+			throw new CustomException(ErrorCode.INVALID_PASSWORD);
 		}
+
+		// 인증 성공 시 JWT 토큰 생성
+		String token = jwtUtil.generateToken(request.getEmail());
+
+		return LoginResponseDto.builder()
+			.token(token)
+			.build();
 	}
 
 }

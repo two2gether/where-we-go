@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.auth.dto.request;
+package com.example.wherewego.domain.auth.dto.social;
 
 import java.util.Map;
 

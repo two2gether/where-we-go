@@ -27,6 +27,7 @@ public class PaymentController {
 	public ApiResponse<PaymentResponseDto> createPayment(
 		@RequestBody @Valid PaymentRequestDto requestDto
 	) {
+		// Long userId = userDetail.getUser().getId();
 
 		PaymentResponseDto response = paymentService.requestPayment(requestDto);
 

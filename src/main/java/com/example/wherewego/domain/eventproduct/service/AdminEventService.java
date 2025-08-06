@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.events.EventException;
 
+import com.example.wherewego.domain.auth.UserRole;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
@@ -48,9 +49,9 @@ public class AdminEventService {
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 2. 관리자 권한 확인
-		// if(!user.getRole().equals(UserRole.ADMIN)) {
-		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
-		// }
+		if (!user.getRole().equals(UserRole.ADMIN)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
+		}
 
 		// 3. [요청 DTO -> 엔티티 변환] - mapper 사용
 		EventProduct product = EventMapper.toEntity(requestDto, user);
@@ -86,9 +87,9 @@ public class AdminEventService {
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 3. 사용자 권한 체크 - 관리자만 수정 가능.
-		// if (!user.getRole().equals(UserRole.ADMIN)) {
-		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
-		// }
+		if (!user.getRole().equals(UserRole.ADMIN)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
+		}
 
 		//4. 이벤트 상품 업데이트
 		EventProduct updatedProduct = findProduct.updateEventInfoFromRequest(
@@ -125,16 +126,9 @@ public class AdminEventService {
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 3. 사용자 권한 체크 - 관리자만 삭제 가능.
-		// if (!findProduct.getRole().equals(UserRole.ADMIN)) {
-		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
-		// }
-
-		// User admin = userRepository.findById(adminId)
-		// 	.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-		//
-		// if (!admin.getRole().equals(Role.ADMIN)) {
-		// 	throw new CustomException(ErrorCode.UNAUTHORIZED_PRODUCT_DELETE);
-		// }
+		if (!user.getRole().equals(UserRole.ADMIN)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS);
+		}
 
 		// 4. Soft Delete
 		findProduct.softDelete();
