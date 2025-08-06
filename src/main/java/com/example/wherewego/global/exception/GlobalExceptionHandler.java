@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 
 
@@ -63,15 +61,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
     }
 
-    /**
-     * Spring Security - 잘못된 인증 정보 예외 처리
-     * 비밀번호 불일치, 사용자 없음 등의 인증 실패를 처리합니다.
-     */
-    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
-    public ResponseEntity<ApiResponse<Void>> handleAuthenticationFailure(Exception e) {
-        log.error("로그인 실패 - 인증 오류: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("이메일 또는 비밀번호가 올바르지 않습니다."));
-    }
 
 
     /**

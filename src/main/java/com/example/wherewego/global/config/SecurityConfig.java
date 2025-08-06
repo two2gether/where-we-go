@@ -2,9 +2,8 @@ package com.example.wherewego.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,61 +29,52 @@ public class SecurityConfig {
 	private final JwtUtil jwtUtil;
 	private final TokenBlacklistService tokenBlacklistService;
 
+	/**
+	 * 공개 API용 Security Filter Chain (인증 불필요)
+	 * 우선순위가 높아 먼저 매칭됨
+	 */
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http
-			// CSRF 비활성화
+	@Order(1)
+	public SecurityFilterChain publicApiFilterChain(HttpSecurity http) throws Exception {
+		return http
+			.securityMatcher(
+				"/health", "/actuator/health",
+				"/api/auth/**", "/error"
+			)
+			.authorizeHttpRequests(auth -> auth
+				.anyRequest().permitAll()
+			)
 			.csrf(csrf -> csrf.disable())
-
-			// 람다로 바뀐 세션 설정
 			.sessionManagement(session ->
 				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			)
+			.build();
+	}
 
-			// 인가 설정
+	/**
+	 * 인증 필요 API용 Security Filter Chain (일부 Course GET API는 공개)
+	 */
+	@Bean
+	@Order(2)
+	public SecurityFilterChain privateApiFilterChain(HttpSecurity http) throws Exception {
+		return http
 			.authorizeHttpRequests(auth -> auth
-				// 헬스체크 엔드포인트는 모든 사용자 접근 허용
-				.requestMatchers("/health", "/actuator/health").permitAll()
-
-				// 인증 API는 모든 사용자 접근 허용
-				.requestMatchers("/api/auth/**").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/auth/googlelogin").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/auth/kakaologin").permitAll()
-
-				// 공개 API - 인증 없이 접근 가능
+				// 공개 코스 조회 API (JWT Filter 거치지만 permitAll)
 				.requestMatchers(HttpMethod.GET, "/api/courses").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
-
-				// 장소 관련 API - 인증 필요
-				.requestMatchers("/api/places/**").authenticated()
-
-				// 코스 생성/수정/삭제 - 인증 필요
-				.requestMatchers(HttpMethod.POST, "/api/courses").authenticated()
-				.requestMatchers(HttpMethod.PATCH, "/api/courses/*").authenticated()
-				.requestMatchers(HttpMethod.DELETE, "/api/courses/*").authenticated()
-
-				// 댓글 생성/수정/삭제 - 인증 필요
-				.requestMatchers(HttpMethod.POST, "/api/courses/*/comments").authenticated()
-				.requestMatchers(HttpMethod.PATCH, "/api/courses/*/comments/*").authenticated()
-				.requestMatchers(HttpMethod.DELETE, "/api/courses/*/comments/*").authenticated()
-
-				// 좋아요/북마크/평점 - 인증 필요
-				.requestMatchers("/api/courses/*/like").authenticated()
-				.requestMatchers("/api/courses/*/bookmark").authenticated()
-				.requestMatchers("/api/courses/*/rating").authenticated()
-
-				// 사용자 관련 API - 인증 필요
-				.requestMatchers("/api/users/**").authenticated()
-
-				// 기타 모든 요청은 인증 필요
+				
+				
+				// 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 			)
-			.addFilterBefore(jwtAuthenticationFilter(),
-				UsernamePasswordAuthenticationFilter.class);
-
-		return http.build();
+			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+			.csrf(csrf -> csrf.disable())
+			.sessionManagement(session ->
+				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+			)
+			.build();
 	}
 
 	@Bean
@@ -92,12 +82,6 @@ public class SecurityConfig {
 		return new JwtAuthenticationFilter(jwtUtil, userDetailsService, tokenBlacklistService);
 	}
 
-	@Bean
-	public AuthenticationManager authenticationManager(
-		AuthenticationConfiguration authConfig
-	) throws Exception {
-		return authConfig.getAuthenticationManager();
-	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
