@@ -289,7 +289,7 @@ public class UserController {
 		if (response == null) {
 			return ApiResponse.ok("좋아요한 코스가 없습니다.", null);
 		}
-		return ApiResponse.ok("내가 누른 좋아요 목록이 조회되었습니다.", response);
+		return ApiResponse.ok("내가 좋아요한 코스 목록 조회 성공", response);
 	}
 
 }

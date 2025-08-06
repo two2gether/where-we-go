@@ -121,7 +121,7 @@ public class CourseMapper {
 				.id(like.getId())
 				.userId(like.getUser().getId())
 				.courseListDto(
-						CourseListResponseDto.builder()
+						CourseLikeListResponseDto.CourseListResponseDto.builder()
 								.courseId(course.getId())
 								.nickname(course.getUser().getNickname())
 								.title(course.getTitle())
@@ -132,7 +132,6 @@ public class CourseMapper {
 								.likeCount(course.getLikeCount())
 								.averageRating(course.getAverageRating())
 								.isPublic(course.getIsPublic())
-								.createdAt(course.getCreatedAt())
 								.build()
 				)
 				.build();
