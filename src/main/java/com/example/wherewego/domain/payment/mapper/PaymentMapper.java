@@ -1,10 +1,8 @@
 package com.example.wherewego.domain.payment.mapper;
 
 import com.example.wherewego.domain.common.enums.OrderStatus;
-import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
-import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 
 public class PaymentMapper {
@@ -40,13 +38,6 @@ public class PaymentMapper {
 			.accountNumber(dto.getAccountNumber())
 
 			.orderStatus(OrderStatus.DONE) // 결제 완료로 고정
-			.build();
-	}
-
-	public static OrderCreateRequestDto toOrderCreateRequestDto(PaymentRequestDto dto) {
-		return OrderCreateRequestDto.builder()
-			.productId(dto.getProductId())
-			.quantity(dto.getAmount())
 			.build();
 	}
 }

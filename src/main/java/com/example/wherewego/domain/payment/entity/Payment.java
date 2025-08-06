@@ -105,4 +105,11 @@ public class Payment extends BaseEntity {
 	 */
 	@Enumerated(EnumType.STRING)
 	private OrderStatus orderStatus;
+
+	/**
+	 * 업데이트 토큰
+	 */
+	public void updatePayToken(String payToken) {
+		this.payToken = payToken;
+	}
 }

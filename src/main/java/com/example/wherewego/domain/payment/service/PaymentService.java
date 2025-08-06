@@ -21,6 +21,7 @@ import com.example.wherewego.domain.payment.dto.response.PaymentResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 import com.example.wherewego.domain.payment.mapper.PaymentMapper;
 import com.example.wherewego.domain.payment.repository.PaymentRepository;
+import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class PaymentService {
 	private final PaymentRepository paymentRepository;
 	private final OrderRepository orderRepository;
 	private final OrderService orderService;
+	private final UserRepository userRepository;
 
 	@Value("${toss.secret.key}")
 	private String tossSecretKey;
@@ -51,11 +53,12 @@ public class PaymentService {
 	public PaymentService(
 		@Qualifier("tossWebClient") WebClient tossWebClient,
 		PaymentRepository paymentRepository,
-		OrderRepository orderRepository, OrderService orderService) {
+		OrderRepository orderRepository, OrderService orderService, UserRepository userRepository) {
 		this.tossWebClient = tossWebClient;
 		this.paymentRepository = paymentRepository;
 		this.orderRepository = orderRepository;
 		this.orderService = orderService;
+		this.userRepository = userRepository;
 	}
 
 	/**
@@ -66,6 +69,17 @@ public class PaymentService {
 	 * @throws CustomException 결제 실패 시 예외 발생
 	 */
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto) {
+		// 1. orderNo 저장 (결제 전 DB 등록)사용자 조회
+		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+		Payment payment = Payment.builder()
+			.order(order)
+			.orderNo(requestDto.getOrderNo())
+			.amount(requestDto.getAmount())
+			.build();
+		paymentRepository.save(payment); // ✅ DB에 저장
+
 		// 1. Basic 인증 헤더 생성 (API 키 base64 인코딩)
 		String encodedAuth = Base64.getEncoder()
 			.encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
@@ -94,6 +108,10 @@ public class PaymentService {
 			throw new CustomException(ErrorCode.TOSS_PAYMENT_FAILED);
 		}
 
+		// 3. 결제 토큰 저장 (응답 성공 시)
+		payment.updatePayToken(responseDto.getPayToken());
+		paymentRepository.save(payment); // ✅ 다시 저장
+
 		// 4. 성공 응답인 경우 응답 DTO 리턴 (checkoutPage, payToken 포함)
 		return responseDto;
 	}
@@ -107,6 +125,12 @@ public class PaymentService {
 	 * @throws CustomException 주문 내역을 찾을 수 없는 경우.
 	 */
 	public void processPaymentApproval(CallbackRequestDto requestDto) {
+		// 중복 결제 저장 방지
+		if (paymentRepository.existsByOrderNo(requestDto.getOrderNo())) {
+			log.warn("이미 저장된 결제 정보입니다. orderNo: {}", requestDto.getOrderNo());
+			return; // 또는 예외 throw
+		}
+
 		// 1. 주문 조회
 		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
