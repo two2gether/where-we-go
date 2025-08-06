@@ -25,15 +25,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 		FilterChain filterChain) throws ServletException, IOException {
-		
-		// 인증이 필요 없는 경로는 JWT 검사 건너뛰기
-		String path = request.getRequestURI();
-		if (path.startsWith("/api/auth/") || 
-			path.equals("/health") || 
-			path.equals("/actuator/health")) {
-			filterChain.doFilter(request, response);
-			return;
-		}
 		String header = request.getHeader("Authorization");
 		if (header != null && header.startsWith("Bearer ")) {
 			String token = header.substring(7);
