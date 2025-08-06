@@ -3,11 +3,11 @@ package com.example.wherewego.domain.courses.dto.request;
 import com.example.wherewego.domain.common.enums.NotificationType;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor
+@AllArgsConstructor
 public class NotificationRequestDto {
 
 	@NotNull
@@ -19,6 +19,4 @@ public class NotificationRequestDto {
 	@NotNull
 	private NotificationType type;
 
-	@NotNull
-	private String message;
 }

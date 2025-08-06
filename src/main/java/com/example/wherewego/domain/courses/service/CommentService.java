@@ -32,6 +32,7 @@ public class CommentService {
 	private final CommentRepository commentRepository;
 	private final UserRepository userRepository;
 	private final CourseRepository courseRepository;
+	private final NotificationService notificationService;
 
 	/**
 	 * 코스에 새로운 댓글을 생성합니다.
@@ -72,7 +73,9 @@ public class CommentService {
 			.build();
 
 		commentRepository.save(comment);
-		log.debug("댓글 생성 성공 - commentId: {}", comment.getId());
+
+		//알림 생성
+		notificationService.triggerCommentNotification(user, course);
 
 		return toDto(comment);
 	}
