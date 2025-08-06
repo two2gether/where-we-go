@@ -66,6 +66,10 @@ public enum ErrorCode {
 	UNAUTHORIZED_COMMENT_ACCESS(HttpStatus.FORBIDDEN, "해당 댓글에 대한 권한이 없습니다."),
 	CANNOT_COMMENT_ON_PRIVATE_COURSE(HttpStatus.FORBIDDEN, "비공개 코스에는 댓글을 작성할 수 없습니다."),
 
+	// 알림 관련 에러 정의
+	NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
+	UNAUTHORIZED_NOTIFICATION_ACCESS(HttpStatus.FORBIDDEN, "해당 알림에 대한 권한이 없습니다."),
+
 	// 설정 및 구성 관련 에러 정의
 	MISSING_API_KEY(HttpStatus.INTERNAL_SERVER_ERROR, "필수 API 키가 설정되지 않았습니다."),
 	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다."),
