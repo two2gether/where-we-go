@@ -2,6 +2,8 @@ package com.example.wherewego.domain.eventproduct.mapper;
 
 import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
 import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.user.entity.User;
@@ -37,6 +39,31 @@ public class EventMapper {
 			.price(eventProduct.getPrice())
 			.stock(eventProduct.getStock())
 			.updatedAt(eventProduct.getUpdatedAt())
+			.build();
+	}
+
+	// List Response DTO
+	public static EventListResponseDto toListDto(EventProduct eventProduct) {
+		return EventListResponseDto.builder()
+			.productId(eventProduct.getId())
+			.productName(eventProduct.getProductName())
+			.productImage(eventProduct.getProductImage())
+			.price(eventProduct.getPrice())
+			.stock(eventProduct.getStock())
+			.createdAt(eventProduct.getCreatedAt())
+			.build();
+	}
+
+	// 상품 상세 조회 응답 DTO로 변환
+	public static EventDetailResponseDto toDetailDto(EventProduct eventProduct) {
+		return EventDetailResponseDto.builder()
+			.productId(eventProduct.getId())
+			.productName(eventProduct.getProductName())
+			.productImage(eventProduct.getProductImage())
+			.description(eventProduct.getDescription())
+			.price(eventProduct.getPrice())
+			.stock(eventProduct.getStock())
+			.createdAt(eventProduct.getCreatedAt())
 			.build();
 	}
 }

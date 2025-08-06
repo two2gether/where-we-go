@@ -34,6 +34,9 @@ public enum ErrorCode {
 	EVENT_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
 	UNAUTHORIZED_EVENT_PRODUCT_ACCESS(HttpStatus.FORBIDDEN, "해당 상품에 대한 권한이 없습니다."),
 
+	// 토스 결제 관련 에러 정의
+	TOSS_PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "토스 결제 요청에 실패했습니다."),
+
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 
@@ -69,7 +72,11 @@ public enum ErrorCode {
 
 	// 설정 및 구성 관련 에러 정의
 	MISSING_API_KEY(HttpStatus.INTERNAL_SERVER_ERROR, "필수 API 키가 설정되지 않았습니다."),
-	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다.");
+	GOOGLE_API_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "구글 Maps API 키가 필요합니다."),
+
+	// 구글 로그인 관련 에러 정의
+	GOOGLE_ACCESS_TOKEN_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 액세스 토큰 요청 실패"),
+	GOOGLE_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "구글 사용자 정보 요청 실패");
 
 	private final HttpStatus status;
 	private final String message;
