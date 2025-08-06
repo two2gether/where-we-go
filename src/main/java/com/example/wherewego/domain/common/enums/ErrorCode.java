@@ -37,6 +37,9 @@ public enum ErrorCode {
 	// 토스 결제 관련 에러 정의
 	TOSS_PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "토스 결제 요청에 실패했습니다."),
 
+	// 주문 관련 에러 정의
+	ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문이 존재하지 않습니다."),
+
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
 

@@ -40,6 +40,12 @@ public class Order extends BaseEntity {
 	private Long id;
 
 	/**
+	 * 주문 번호
+	 */
+	@Column(name = "order_no", nullable = false, unique = true)
+	private String orderNo;
+
+	/**
 	 * 주문한 사용자
 	 */
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -70,5 +76,10 @@ public class Order extends BaseEntity {
 	 */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private OrderStatus orderStatus;
+	// private OrderStatus orderStatus;
+	private OrderStatus status = OrderStatus.PENDING;
+
+	public void markAsPaid() {
+		this.status = OrderStatus.DONE;
+	}
 }

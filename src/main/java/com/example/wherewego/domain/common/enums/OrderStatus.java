@@ -11,5 +11,5 @@ public enum OrderStatus {
 	DONE("결제 성공"),
 	FAILED("결제 실패");
 
-	private final String OrderStatusName;
+	private final String orderStatusName;
 }
