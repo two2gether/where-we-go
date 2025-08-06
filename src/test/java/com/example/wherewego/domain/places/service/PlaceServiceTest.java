@@ -49,12 +49,17 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("로그인 사용자의 장소 통계를 정상적으로 조회한다")
 		void shouldGetPlaceStatsWithUser() {
-			// given
-			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
-			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
-			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(5L);
-			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(true);
-			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 10L}));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.5}));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 5L}));
+			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, List.of(placeId)))
+				.willReturn(List.of(placeId));
+			given(placeReviewRepository.findPlaceIdsWithUserReviews(userId, List.of(placeId)))
+				.willReturn(List.of());
 
 			// when
 			PlaceStatsDto result = placeService.getPlaceStats(placeId, userId);
@@ -72,10 +77,13 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("게스트 사용자의 장소 통계를 정상적으로 조회한다")
 		void shouldGetPlaceStatsForGuest() {
-			// given
-			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(10L);
-			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.5);
-			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(5L);
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 10L}));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.5}));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 5L}));
 
 			// when
 			PlaceStatsDto result = placeService.getPlaceStats(placeId);
@@ -93,10 +101,13 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("평점이 null인 경우 0.0으로 반환한다")
 		void shouldReturnZeroWhenRatingIsNull() {
-			// given
-			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(0L);
-			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(null);
-			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(0L);
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, null}));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
 
 			// when
 			PlaceStatsDto result = placeService.getPlaceStats(placeId);
@@ -108,10 +119,13 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("평점이 소수점 2자리로 포맷팅된다")
 		void shouldFormatRatingToTwoDecimals() {
-			// given
-			given(placeReviewRepository.countByPlaceId(placeId)).willReturn(3L);
-			given(placeReviewRepository.getAverageRatingByPlaceId(placeId)).willReturn(4.666666);
-			given(placeBookmarkRepository.countByPlaceId(placeId)).willReturn(0L);
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 3L}));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.666666}));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(List.of(placeId)))
+				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
 
 			// when
 			PlaceStatsDto result = placeService.getPlaceStats(placeId);
@@ -131,27 +145,29 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("로그인 사용자의 여러 장소 통계를 정상적으로 조회한다")
 		void shouldGetPlaceStatsMapWithUser() {
-			// given
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 5L},
+					new Object[]{"place2", 8L},
+					new Object[]{"place3", 0L}
+				));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 4.2},
+					new Object[]{"place2", 3.8},
+					new Object[]{"place3", null}
+				));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 3L},
+					new Object[]{"place2", 10L},
+					new Object[]{"place3", 1L}
+				));
 			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds))
 				.willReturn(Arrays.asList("place1", "place3"));
-
-			// place1 설정
-			given(placeReviewRepository.countByPlaceId("place1")).willReturn(5L);
-			given(placeReviewRepository.getAverageRatingByPlaceId("place1")).willReturn(4.2);
-			given(placeBookmarkRepository.countByPlaceId("place1")).willReturn(3L);
-			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place1")).willReturn(true);
-
-			// place2 설정
-			given(placeReviewRepository.countByPlaceId("place2")).willReturn(8L);
-			given(placeReviewRepository.getAverageRatingByPlaceId("place2")).willReturn(3.8);
-			given(placeBookmarkRepository.countByPlaceId("place2")).willReturn(10L);
-			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place2")).willReturn(false);
-
-			// place3 설정
-			given(placeReviewRepository.countByPlaceId("place3")).willReturn(0L);
-			given(placeReviewRepository.getAverageRatingByPlaceId("place3")).willReturn(null);
-			given(placeBookmarkRepository.countByPlaceId("place3")).willReturn(1L);
-			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, "place3")).willReturn(false);
+			given(placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds))
+				.willReturn(Arrays.asList("place1"));
 
 			// when
 			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds, userId);
@@ -184,10 +200,25 @@ class PlaceServiceTest {
 		@Test
 		@DisplayName("게스트 사용자의 여러 장소 통계를 정상적으로 조회한다")
 		void shouldGetPlaceStatsMapForGuest() {
-			// given
-			given(placeReviewRepository.countByPlaceId(any())).willReturn(5L);
-			given(placeReviewRepository.getAverageRatingByPlaceId(any())).willReturn(4.0);
-			given(placeBookmarkRepository.countByPlaceId(any())).willReturn(2L);
+			// given - 배치 쿼리 메서드 mocking
+			given(placeReviewRepository.getReviewCountsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 5L},
+					new Object[]{"place2", 5L},
+					new Object[]{"place3", 5L}
+				));
+			given(placeReviewRepository.getAverageRatingsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 4.0},
+					new Object[]{"place2", 4.0},
+					new Object[]{"place3", 4.0}
+				));
+			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds))
+				.willReturn(Arrays.<Object[]>asList(
+					new Object[]{"place1", 2L},
+					new Object[]{"place2", 2L},
+					new Object[]{"place3", 2L}
+				));
 
 			// when
 			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds);
