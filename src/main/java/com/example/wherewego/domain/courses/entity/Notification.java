@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
 @Table(name = "notifications")
 public class Notification extends BaseEntity {
