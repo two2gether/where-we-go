@@ -27,11 +27,6 @@ public class NotificationResponseDto {
 	private Long receiverId;
 
 	/**
-	 * 관련 코스 ID
-	 */
-	private Long courseId;
-
-	/**
 	 * 알림 유형 (LIKE, COMMENT)
 	 */
 	private NotificationType type;
@@ -55,7 +50,6 @@ public class NotificationResponseDto {
 		return new NotificationResponseDto(
 			notification.getId(),
 			notification.getReceiverId(),
-			notification.getCourseId(),
 			notification.getType(),
 			notification.getMessage(),
 			notification.isRead(),

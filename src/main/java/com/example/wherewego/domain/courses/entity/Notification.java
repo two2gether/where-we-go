@@ -37,12 +37,6 @@ public class Notification extends BaseEntity {
 	private Long receiverId;
 
 	/**
-	 * 관련된 코스 id
-	 */
-	@Column(name = "course_id", nullable = false)
-	private Long courseId;
-
-	/**
 	 * 알림 유형 (LIKE, COMMENT)
 	 */
 	@Enumerated(EnumType.STRING)

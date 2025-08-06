@@ -33,7 +33,6 @@ public class NotificationService {
 		// 알림 엔티티 생성
 		Notification notification = Notification.builder()
 			.receiverId(request.getReceiverId())
-			.courseId(request.getCourseId())
 			.type(request.getType())
 			.message(message)
 			.build();
@@ -56,7 +55,7 @@ public class NotificationService {
 	}
 
 	/**
-	 * 댓글 생성 시 알림 발생하는 메서드
+	 * 댓글, 좋아요 생성 시 알림 발생하는 메서드
 	 */
 	public void triggerCommentNotification(User commenter, Course course) {
 		if (commenter.getId().equals(course.getUser().getId()))
