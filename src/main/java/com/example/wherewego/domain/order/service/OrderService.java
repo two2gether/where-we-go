@@ -2,20 +2,25 @@ package com.example.wherewego.domain.order.service;
 
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
+import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
+import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.repository.OrderRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
+import com.example.wherewego.global.response.PagedResponse;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -77,5 +82,22 @@ public class OrderService {
 			.build();
 
 		return orderRepository.save(order);
+	}
+	
+	/**
+	 * 내 주문 목록 조회 (결제 완료된 주문만)
+	 * @param userId 사용자 ID
+	 * @param pageable 페이징 정보
+	 * @return 페이징된 내 주문 목록
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
+		// 결제 완료된 주문만 조회 (N+1 방지를 위한 JOIN FETCH 사용)
+		Page<Order> orders = orderRepository.findCompletedOrdersByUserId(userId, OrderStatus.DONE, pageable);
+		
+		// DTO 변환
+		Page<MyOrderResponseDto> orderDtos = orders.map(OrderMapper::toMyOrderResponseDto);
+		
+		return PagedResponse.from(orderDtos);
 	}
 }
