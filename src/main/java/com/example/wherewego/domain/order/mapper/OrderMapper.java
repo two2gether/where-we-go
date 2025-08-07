@@ -4,6 +4,7 @@ import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
@@ -54,6 +55,30 @@ public class OrderMapper {
 			.totalPrice(order.getTotalPrice())
 			.status(order.getStatus())
 			.orderedAt(order.getCreatedAt())
+			.build();
+	}
+	
+	/**
+	 * 주문 엔티티 → 주문 상세 응답 DTO
+	 * @param order 주문 엔티티
+	 * @return OrderDetailResponseDto
+	 */
+	public static OrderDetailResponseDto toOrderDetailResponseDto(Order order) {
+		return OrderDetailResponseDto.builder()
+			.orderId(order.getId())
+			.orderNo(order.getOrderNo())
+			.product(OrderDetailResponseDto.ProductInfo.builder()
+				.productId(order.getEventProduct().getId())
+				.productName(order.getEventProduct().getProductName())
+				.productImage(order.getEventProduct().getProductImage())
+				.description(order.getEventProduct().getDescription())
+				.price(order.getEventProduct().getPrice())
+				.build())
+			.quantity(order.getQuantity())
+			.totalPrice(order.getTotalPrice())
+			.status(order.getStatus())
+			.orderedAt(order.getCreatedAt())
+			.updatedAt(order.getUpdatedAt())
 			.build();
 	}
 }
