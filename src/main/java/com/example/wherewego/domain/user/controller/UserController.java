@@ -1,26 +1,5 @@
 package com.example.wherewego.domain.user.controller;
 
-import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseLikeListResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
-import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
-import com.example.wherewego.domain.courses.service.CommentService;
-import com.example.wherewego.domain.courses.service.CourseBookmarkService;
-import com.example.wherewego.domain.courses.service.CourseLikeService;
-import com.example.wherewego.domain.courses.service.CourseService;
-import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
-import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
-import com.example.wherewego.domain.places.service.PlaceBookmarkService;
-import com.example.wherewego.domain.places.service.PlaceReviewService;
-import com.example.wherewego.domain.user.dto.MyPageResponseDto;
-import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
-import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
-import com.example.wherewego.domain.user.service.UserService;
-import com.example.wherewego.global.response.ApiResponse;
-import com.example.wherewego.global.response.PagedResponse;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -37,6 +16,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseLikeListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.NotificationResponseDto;
+import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
+import com.example.wherewego.domain.courses.service.CommentService;
+import com.example.wherewego.domain.courses.service.CourseBookmarkService;
+import com.example.wherewego.domain.courses.service.CourseLikeService;
+import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.courses.service.NotificationService;
+import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
+import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
+import com.example.wherewego.domain.places.service.PlaceBookmarkService;
+import com.example.wherewego.domain.places.service.PlaceReviewService;
+import com.example.wherewego.domain.user.dto.MyPageResponseDto;
+import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
+import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
+import com.example.wherewego.domain.user.service.UserService;
+import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.response.PagedResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 사용자 및 마이페이지 관리 REST API 컨트롤러
@@ -58,6 +61,7 @@ public class UserController {
 	private final CourseService courseService;
 	private final CourseBookmarkService courseBookmarkService;
 	private final CourseLikeService courseLikeService;
+	private final NotificationService notificationService;
 
 	/**
 	 * 회원 탈퇴 API
@@ -279,9 +283,9 @@ public class UserController {
 	 */
 	@GetMapping("/mypage/likes")
 	public ApiResponse<PagedResponse<CourseLikeListResponseDto>> getCourseLikeList(
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size,
-			@AuthenticationPrincipal CustomUserDetail userDetail
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getId();
 		PagedResponse<CourseLikeListResponseDto> response = courseLikeService.getCourseLikeList(userId, page, size);
@@ -290,6 +294,20 @@ public class UserController {
 			return ApiResponse.ok("좋아요한 코스가 없습니다.", null);
 		}
 		return ApiResponse.ok("내가 누른 좋아요 목록이 조회되었습니다.", response);
+	}
+
+	/**
+	 * 내 알림 목록 조회
+	 * GET /api/users/mypage/notifications?page=0&size=10&sort=createdAt,desc
+	 */
+	@GetMapping("/mypage/notifications")
+	public ApiResponse<PagedResponse<NotificationResponseDto>> getMyNotifications(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@PageableDefault(size = 10, sort = "createdAt") Pageable pageable
+	) {
+		Long userId = userDetail.getUser().getId();
+		PagedResponse<NotificationResponseDto> response = notificationService.getUserNotifications(userId, pageable);
+		return ApiResponse.ok("알림 목록 조회가 완료되었습니다.", response);
 	}
 
 }
