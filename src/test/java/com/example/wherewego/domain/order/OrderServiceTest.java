@@ -1,7 +1,5 @@
 package com.example.wherewego.domain.order;
 
-// import static org.assertj.core.api.AssertionsForClassTypes.*;
-
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
