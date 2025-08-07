@@ -63,6 +63,7 @@ public enum ErrorCode {
 	// 좋아요 관련 에러 정의
 	LIKE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 좋아요를 누른 코스입니다."),
 	LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "좋아요를 누른 적이 없는 코스입니다."),
+	LIKE_CONFLICT(HttpStatus.CONFLICT, "좋아요 처리 중 충돌이 발생했습니다."),
 
 	// 댓글 관련 에러 정의
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글입니다."),
