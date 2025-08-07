@@ -69,4 +69,17 @@ public class EventService {
 		// 3. [조회된 엔티티 -> 응답 DTO 변환]
 		return EventMapper.toDetailDto(findProduct);
 	}
+	
+	/**
+	 * 상품 존재 여부를 검증합니다. (조회수 증가 없음)
+	 * 주문 생성 등에서 사용하는 내부 메서드입니다.
+	 *
+	 * @param productId 검증할 상품 ID
+	 * @return 검증된 EventProduct 엔티티
+	 * @throws CustomException 상품을 찾을 수 없는 경우
+	 */
+	public EventProduct getEventProductById(Long productId) {
+		return eventRepository.findByIdAndIsDeletedFalse(productId)
+			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+	}
 }
