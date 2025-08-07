@@ -10,5 +10,5 @@ public enum PaymentStatus {
 	DONE("결제 완료"),
 	FAILED("결제 실패");
 
-	private final String PaymentStatusName;
+	private final String paymentStatusName;
 }

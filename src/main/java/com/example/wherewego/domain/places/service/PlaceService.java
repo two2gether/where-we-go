@@ -165,28 +165,10 @@ public class PlaceService {
 	 */
 	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
 	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
-		// 장소 통계 조회
-
-		long reviewCount = placeReviewRepository.countByPlaceId(placeId);
-		Double averageRating = placeReviewRepository.getAverageRatingByPlaceId(placeId);
-		long bookmarkCount = placeBookmarkRepository.countByPlaceId(placeId);
-
-		Boolean isBookmarked = null;
-		Boolean hasUserReview = null;
-
-		if (userId != null) {
-			isBookmarked = placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId);
-			hasUserReview = placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId);
-		}
-
-		return PlaceStatsDto.builder()
-			.placeId(placeId)
-			.reviewCount(reviewCount)
-			.averageRating(formatRating(averageRating))  // 포맷팅 적용
-			.bookmarkCount(bookmarkCount)
-			.isBookmarked(isBookmarked)
-			.hasUserReview(hasUserReview)
-			.build();
+		// 🚀 배치 쿼리 재활용으로 N+1 문제 해결
+		// 단일 장소도 기존 배치 쿼리 메서드를 활용하여 효율성 확보
+		Map<String, PlaceStatsDto> statsMap = getPlaceStatsMap(List.of(placeId), userId);
+		return statsMap.get(placeId);
 	}
 
 	/**
@@ -227,6 +209,7 @@ public class PlaceService {
 		// 2. 평점 통계 배치 조회
 		Map<String, Double> averageRatingMap = placeReviewRepository.getAverageRatingsByPlaceIds(placeIds)
 			.stream()
+			.filter(arr -> arr[1] != null) // null 값 필터링
 			.collect(Collectors.toMap(
 				arr -> (String) arr[0],
 				arr -> (Double) arr[1]
