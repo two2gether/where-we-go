@@ -9,10 +9,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
@@ -51,21 +53,27 @@ public class OrderController {
 	}
 	
 	/**
-	 * 내 주문 목록 조회 (결제 완료된 주문만)
+	 * 내 주문 목록 조회 (상태별 필터링 가능)
 	 * @param userDetail 인증된 사용자 정보
 	 * @param pageable 페이징 정보 (기본 10개, 최대 100개)
+	 * @param status 주문 상태 (선택사항: PENDING, DONE, FAILED 등. null이면 모든 상태)
 	 * @return 페이징된 내 주문 목록
 	 */
 	@GetMapping("/mypage")
 	public ApiResponse<PagedResponse<MyOrderResponseDto>> getMyOrders(
 		@AuthenticationPrincipal CustomUserDetail userDetail,
-		@PageableDefault(size = 10) Pageable pageable
+		@PageableDefault(size = 10) Pageable pageable,
+		@RequestParam(required = false) OrderStatus status
 	) {
 		Long userId = userDetail.getUser().getId();
 		
-		PagedResponse<MyOrderResponseDto> orders = orderService.getMyOrders(userId, pageable);
+		PagedResponse<MyOrderResponseDto> orders = orderService.getMyOrders(userId, pageable, status);
 		
-		return ApiResponse.ok("내 주문 목록을 조회했습니다.", orders);
+		String message = status != null 
+			? String.format("내 주문 목록을 조회했습니다. (상태: %s)", status)
+			: "내 주문 목록을 조회했습니다. (모든 상태)";
+		
+		return ApiResponse.ok(message, orders);
 	}
 	
 	/**

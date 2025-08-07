@@ -84,23 +84,42 @@ public class OrderService {
 	}
 	
 	/**
-	 * 내 주문 목록 조회 (결제 완료된 주문만)
+	 * 내 주문 목록 조회 (상태별 필터링 가능)
+	 * @param userId 사용자 ID
+	 * @param pageable 페이징 정보
+	 * @param status 주문 상태 (null이면 모든 상태)
+	 * @return 페이징된 내 주문 목록
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable, OrderStatus status) {
+		// 1. 사용자 검증
+		userService.getUserById(userId);
+		
+		// 2. 상태별 주문 조회 (N+1 방지를 위한 JOIN FETCH 사용)
+		Page<Order> orders;
+		if (status != null) {
+			// 특정 상태만 조회
+			orders = orderRepository.findOrdersByUserIdAndStatus(userId, status, pageable);
+		} else {
+			// 모든 상태 조회
+			orders = orderRepository.findOrdersByUserId(userId, pageable);
+		}
+		
+		// 3. DTO 변환
+		Page<MyOrderResponseDto> orderDtos = orders.map(OrderMapper::toMyOrderResponseDto);
+		
+		return PagedResponse.from(orderDtos);
+	}
+	
+	/**
+	 * 내 주문 목록 조회 (결제 완료된 주문만) - 하위 호환성을 위한 오버로드
 	 * @param userId 사용자 ID
 	 * @param pageable 페이징 정보
 	 * @return 페이징된 내 주문 목록
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
-		// 1. 사용자 검증
-		userService.getUserById(userId);
-		
-		// 2. 결제 완료된 주문만 조회 (N+1 방지를 위한 JOIN FETCH 사용)
-		Page<Order> orders = orderRepository.findCompletedOrdersByUserId(userId, OrderStatus.DONE, pageable);
-		
-		// 3. DTO 변환
-		Page<MyOrderResponseDto> orderDtos = orders.map(OrderMapper::toMyOrderResponseDto);
-		
-		return PagedResponse.from(orderDtos);
+		return getMyOrders(userId, pageable, OrderStatus.DONE);
 	}
 	
 	/**
