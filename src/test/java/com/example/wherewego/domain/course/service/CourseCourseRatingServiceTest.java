@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.service;
+package com.example.wherewego.domain.course.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -16,13 +16,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.example.wherewego.common.enums.ErrorCode;
-import com.example.wherewego.domain.auth.Provider;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CourseRatingRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseRatingResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseRating;
 import com.example.wherewego.domain.courses.repository.CourseRatingRepository;
+import com.example.wherewego.domain.courses.service.CourseRatingService;
+import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.courses.service.CourseStatisticsService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;

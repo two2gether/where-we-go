@@ -39,6 +39,9 @@ public enum ErrorCode {
 
 	// 주문 관련 에러 정의
 	ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문이 존재하지 않습니다."),
+	
+	// 결제 관련 에러 정의
+	PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
 
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
@@ -72,6 +75,7 @@ public enum ErrorCode {
 	// 알림 관련 에러 정의
 	NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
 	UNAUTHORIZED_NOTIFICATION_ACCESS(HttpStatus.FORBIDDEN, "해당 알림에 대한 권한이 없습니다."),
+	INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 유형입니다."),
 
 	// 설정 및 구성 관련 에러 정의
 	MISSING_API_KEY(HttpStatus.INTERNAL_SERVER_ERROR, "필수 API 키가 설정되지 않았습니다."),

@@ -14,9 +14,6 @@ public class NotificationRequestDto {
 	private Long receiverId;
 
 	@NotNull
-	private Long courseId;
-
-	@NotNull
 	private NotificationType type;
 
 }
