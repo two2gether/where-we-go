@@ -16,6 +16,7 @@ import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
+import com.example.wherewego.domain.payment.dto.response.PaymentDetailResponseDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 import com.example.wherewego.domain.payment.mapper.PaymentMapper;
@@ -138,5 +139,23 @@ public class PaymentService {
 		paymentRepository.save(payment);
 
 		log.info("결제 승인 완료 - 주문번호: {}, 금액: {}", requestDto.getOrderNo(), requestDto.getPaidAmount());
+	}
+	
+	/**
+	 * 특정 주문의 결제 상세 정보를 조회합니다.
+	 * 본인의 주문만 조회 가능하며, 민감정보는 마스킹 처리됩니다.
+	 *
+	 * @param orderId 주문 ID
+	 * @param userId 사용자 ID (본인 확인용)
+	 * @return 결제 상세 정보
+	 * @throws CustomException 주문을 찾을 수 없거나 결제 정보가 없는 경우
+	 */
+	public PaymentDetailResponseDto getPaymentDetail(Long orderId, Long userId) {
+		// 1. 본인 주문인지 확인하고 결제 정보 조회
+		Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+		
+		// 2. DTO 변환 (민감정보 마스킹 포함)
+		return PaymentMapper.toPaymentDetailDto(payment);
 	}
 }
