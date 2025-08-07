@@ -64,8 +64,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
-				
-				
+
 				// 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 			)
@@ -81,7 +80,6 @@ public class SecurityConfig {
 	public JwtAuthenticationFilter jwtAuthenticationFilter() {
 		return new JwtAuthenticationFilter(jwtUtil, userDetailsService, tokenBlacklistService);
 	}
-
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
