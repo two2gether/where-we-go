@@ -26,33 +26,6 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final EventRepository eventRepository;
 
-	// @Transactional
-	// public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
-	//
-	// 	// 1. 사용자 조회
-	// 	User user = userRepository.findByIdAndIsDeletedFalse(userId)
-	// 		.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-	//
-	// 	// 2. 상품 조회
-	// 	EventProduct product = eventRepository.findById(requestDto.getProductId())
-	// 		.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
-	//
-	// 	// 3. 총 결제 금액 계산 (단가 × 수량)
-	// 	int totalPrice = product.getPrice() * requestDto.getQuantity();
-	//
-	// 	// 4. 주문 번호 생성
-	// 	String orderNo = UUID.randomUUID().toString();
-	//
-	// 	// 5. 매퍼로 Order 엔티티 생성
-	// 	Order order = OrderMapper.toEntity(requestDto, user, product, orderNo, totalPrice);
-	//
-	// 	// 6. 저장
-	// 	orderRepository.save(order);
-	//
-	// 	// 7. 매퍼로 응답 DTO 변환
-	// 	return OrderMapper.toCreateResponseDto(order);
-	// }
-
 	@Transactional
 	public Order createOrder(OrderCreateRequestDto requestDto, Long userId) {
 
