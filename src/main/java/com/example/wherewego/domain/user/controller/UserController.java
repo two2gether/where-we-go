@@ -9,6 +9,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -308,6 +310,20 @@ public class UserController {
 		Long userId = userDetail.getUser().getId();
 		PagedResponse<NotificationResponseDto> response = notificationService.getUserNotifications(userId, pageable);
 		return ApiResponse.ok("알림 목록 조회가 완료되었습니다.", response);
+	}
+
+	/**
+	 * 알림 읽음 처리 API
+	 * PATCH /api/users/mypage/notifications/{notificationId}
+	 */
+	@PatchMapping("/mypage/notifications/{notificationId}")
+	public ApiResponse<NotificationResponseDto> markNotificationAsRead(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@PathVariable Long notificationId
+	) {
+		Long userId = userDetail.getUser().getId();
+		NotificationResponseDto response = notificationService.markAsRead(notificationId, userId);
+		return ApiResponse.ok("알림이 읽음 처리되었습니다.", response);
 	}
 
 }

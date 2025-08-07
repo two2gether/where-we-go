@@ -117,6 +117,29 @@ public class NotificationService {
 	}
 
 	/**
+	 * 알림 읽음 처리
+	 */
+	@Transactional
+	public NotificationResponseDto markAsRead(Long notificationId, Long userId) {
+		// 1. 알림 조회
+		Notification notification = notificationRepository.findById(notificationId)
+			.orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+		// 2. 권한 체크 (알림 수신자가 본인인지)
+		if (!notification.getReceiverId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_NOTIFICATION_ACCESS);
+		}
+
+		// 3. 이미 읽음이면 그냥 반환
+		if (!notification.isRead()) {
+			notification.markAsRead(); // isRead = true
+		}
+
+		// 4. DTO 변환 및 반환
+		return NotificationResponseDto.of(notification);
+	}
+
+	/**
 	 * Notification 엔티티를 DTO로 변환합니다.
 	 */
 	private NotificationResponseDto toDto(Notification notification) {
