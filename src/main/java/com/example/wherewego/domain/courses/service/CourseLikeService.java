@@ -55,11 +55,13 @@ public class CourseLikeService {
 	/**
 	 * 코스에 좋아요를 추가합니다.
 	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
+	 * 낙관적 락 적용
 	 *
 	 * @param userId 좋아요를 추가할 사용자 ID
 	 * @param courseId 좋아요를 추가할 코스 ID
 	 * @return 생성된 좋아요 정보
 	 * @throws CustomException 코스/사용자를 찾을 수 없거나 이미 좋아요가 존재하는 경우
+	 *
 	 */
 	@Transactional
 	@CacheEvict(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId)")
