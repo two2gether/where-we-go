@@ -84,7 +84,7 @@ public class Course extends BaseEntity {
 	private Integer likeCount = 0;
 
 	/**
-	 * 낙관적 락용 적용 버전필드
+	 * 낙관적 락용 적용 버전 필드
 	 */
 	@Version
 	private Long version;

@@ -70,6 +70,7 @@ public class CourseLikeService {
 				// 1) 사용자·코스 조회 및 중복 검사
 				User user = userService.getUserById(userId);
 				Course course = courseService.getCourseById(courseId);
+
 				if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
 					throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
 				}
