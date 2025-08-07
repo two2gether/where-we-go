@@ -107,7 +107,7 @@ public class CourseLikeService {
 	 * @return 페이징된 좋아요 코스 목록 응답 DTO
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId)")
+	@Cacheable(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId, #page, #size)")
     public PagedResponse<CourseLikeListResponseDto> getCourseLikeList(Long userId, int page, int size) {
 		//Page<CourseLike> ->  List<CoureseLike> -> List<Dto>  -> PageResponse<Dto>
 		// 해당 유저의 좋아요 목록 가져오기
@@ -130,7 +130,7 @@ public class CourseLikeService {
 
 		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream()
 				.map(courseLike -> {
-					Course course = courseLike.getCourse();
+					Course course = courseLike.getCourse(); // n+1 문제 발생
 					List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(), new ArrayList<>());
 					List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
 					List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
