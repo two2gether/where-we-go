@@ -55,7 +55,7 @@ public class CourseLikeService {
 	/**
 	 * 코스에 좋아요를 추가합니다.
 	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
-	 * 낙관적 락 적용
+	 * 낙관적 락 적용 3번까지 재시도
 	 *
 	 * @param userId 좋아요를 추가할 사용자 ID
 	 * @param courseId 좋아요를 추가할 코스 ID
