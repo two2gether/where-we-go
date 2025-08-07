@@ -5,6 +5,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.mapper.OrderMapper;
@@ -64,5 +66,23 @@ public class OrderController {
 		PagedResponse<MyOrderResponseDto> orders = orderService.getMyOrders(userId, pageable);
 		
 		return ApiResponse.ok("내 주문 목록을 조회했습니다.", orders);
+	}
+	
+	/**
+	 * 주문 상세 조회 (본인 주문만)
+	 * @param orderId 주문 ID
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 주문 상세 정보
+	 */
+	@GetMapping("/{orderId}")
+	public ApiResponse<OrderDetailResponseDto> getOrderDetail(
+		@PathVariable Long orderId,
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		Long userId = userDetail.getUser().getId();
+		
+		OrderDetailResponseDto orderDetail = orderService.getOrderDetail(orderId, userId);
+		
+		return ApiResponse.ok("주문 상세 정보를 조회했습니다.", orderDetail);
 	}
 }
