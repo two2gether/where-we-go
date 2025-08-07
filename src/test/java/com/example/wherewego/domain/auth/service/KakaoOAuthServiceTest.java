@@ -30,11 +30,9 @@ public class KakaoOAuthServiceTest {
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
 
-		// 리플렉션으로 restTemplate mock 객체 강제 주입
 		RestTemplate mockRestTemplate = mock(RestTemplate.class);
 		ReflectionTestUtils.setField(kakaoOAuthService, "restTemplate", mockRestTemplate);
 
-		// @Value 필드에 테스트용 값 직접 주입
 		ReflectionTestUtils.setField(kakaoOAuthService, "clientId", "test-client-id");
 		ReflectionTestUtils.setField(kakaoOAuthService, "redirectUri", "http://localhost/callback");
 	}
