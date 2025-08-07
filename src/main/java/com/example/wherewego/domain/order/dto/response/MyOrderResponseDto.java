@@ -54,7 +54,7 @@ public class MyOrderResponseDto {
     private OrderStatus status;
     
     /**
-     * 주문 생성일시
+     * 주문일시
      */
-    private LocalDateTime createdAt;
+    private LocalDateTime orderedAt;
 }

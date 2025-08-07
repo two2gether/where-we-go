@@ -53,7 +53,7 @@ public class OrderMapper {
 			.quantity(order.getQuantity())
 			.totalPrice(order.getTotalPrice())
 			.status(order.getStatus())
-			.createdAt(order.getCreatedAt())
+			.orderedAt(order.getCreatedAt())
 			.build();
 	}
 }

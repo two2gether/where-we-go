@@ -92,10 +92,14 @@ public class OrderService {
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
-		// 결제 완료된 주문만 조회 (N+1 방지를 위한 JOIN FETCH 사용)
+		// 1. 사용자 존재 여부 및 상태 검증
+		userRepository.findByIdAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		
+		// 2. 결제 완료된 주문만 조회 (N+1 방지를 위한 JOIN FETCH 사용)
 		Page<Order> orders = orderRepository.findCompletedOrdersByUserId(userId, OrderStatus.DONE, pageable);
 		
-		// DTO 변환
+		// 3. DTO 변환
 		Page<MyOrderResponseDto> orderDtos = orders.map(OrderMapper::toMyOrderResponseDto);
 		
 		return PagedResponse.from(orderDtos);
