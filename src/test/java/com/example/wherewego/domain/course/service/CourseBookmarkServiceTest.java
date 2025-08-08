@@ -15,7 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.example.wherewego.domain.auth.Provider;
+import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.response.CourseBookmarkResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;

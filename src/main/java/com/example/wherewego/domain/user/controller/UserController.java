@@ -9,6 +9,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,11 +20,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
+import com.example.wherewego.domain.courses.dto.response.CourseLikeListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
+import com.example.wherewego.domain.courses.dto.response.NotificationResponseDto;
 import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.courses.service.CourseBookmarkService;
+import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.courses.service.NotificationService;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
@@ -52,10 +58,12 @@ public class UserController {
 
 	private final UserService userService;
 	private final CommentService commentService;
-	private final CourseService courseService;
-	private final CourseBookmarkService courseBookmarkService;
 	private final PlaceBookmarkService placeBookmarkService;
 	private final PlaceReviewService placeReviewService;
+	private final CourseService courseService;
+	private final CourseBookmarkService courseBookmarkService;
+	private final CourseLikeService courseLikeService;
+	private final NotificationService notificationService;
 
 	/**
 	 * 회원 탈퇴 API
@@ -260,6 +268,62 @@ public class UserController {
 			courseBookmarkService.getUserCourseBookmarks(userId, pageable);
 
 		return ApiResponse.ok("내가 북마크한 코스 목록 조회 성공", response);
+	}
+
+	/**
+	 * 내가 좋아요 누른 코스 목록 조회 API
+	 *
+	 * GET /api/users/mypage/likes
+	 *
+	 * 인증된 사용자가 좋아요를 누른 코스 목록을 조회합니다.
+	 * 각 코스에 대한 기본 정보를 포함하여 반환합니다.
+	 *
+	 * @param page 페이지 번호 (기본값: 0)
+	 * @param size 페이지 크기 (기본값: 10)
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 페이징된 내가 좋아요 누른 코스 목록
+	 */
+	@GetMapping("/mypage/likes")
+	public ApiResponse<PagedResponse<CourseLikeListResponseDto>> getCourseLikeList(
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size,
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		Long userId = userDetail.getId();
+		PagedResponse<CourseLikeListResponseDto> response = courseLikeService.getCourseLikeList(userId, page, size);
+
+		if (response == null) {
+			return ApiResponse.ok("좋아요한 코스가 없습니다.", null);
+		}
+		return ApiResponse.ok("내가 좋아요한 코스 목록 조회 성공", response);
+	}
+
+	/**
+	 * 내 알림 목록 조회
+	 * GET /api/users/mypage/notifications?page=0&size=10&sort=createdAt,desc
+	 */
+	@GetMapping("/mypage/notifications")
+	public ApiResponse<PagedResponse<NotificationResponseDto>> getMyNotifications(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@PageableDefault(size = 10, sort = "createdAt") Pageable pageable
+	) {
+		Long userId = userDetail.getUser().getId();
+		PagedResponse<NotificationResponseDto> response = notificationService.getUserNotifications(userId, pageable);
+		return ApiResponse.ok("알림 목록 조회가 완료되었습니다.", response);
+	}
+
+	/**
+	 * 알림 읽음 처리 API
+	 * PATCH /api/users/mypage/notifications/{notificationId}
+	 */
+	@PatchMapping("/mypage/notifications/{notificationId}")
+	public ApiResponse<NotificationResponseDto> markNotificationAsRead(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@PathVariable Long notificationId
+	) {
+		Long userId = userDetail.getUser().getId();
+		NotificationResponseDto response = notificationService.markAsRead(notificationId, userId);
+		return ApiResponse.ok("알림이 읽음 처리되었습니다.", response);
 	}
 
 }

@@ -16,7 +16,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
-@Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final JwtUtil jwtUtil;
@@ -25,15 +24,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 		FilterChain filterChain) throws ServletException, IOException {
-		
-		// 인증이 필요 없는 경로는 JWT 검사 건너뛰기
-		String path = request.getRequestURI();
-		if (path.startsWith("/api/auth/") || 
-			path.equals("/health") || 
-			path.equals("/actuator/health")) {
-			filterChain.doFilter(request, response);
-			return;
-		}
 		String header = request.getHeader("Authorization");
 		if (header != null && header.startsWith("Bearer ")) {
 			String token = header.substring(7);
@@ -73,11 +63,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT");
 				return;
 			}
-		} else {
-			// Authorization 헤더가 없거나 Bearer로 시작하지 않는 경우
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header");
-			return;
 		}
+		// JWT Filter는 토큰 검증만 담당, 인증/권한 체크는 Spring Security에 위임
 
 		filterChain.doFilter(request, response);
 	}

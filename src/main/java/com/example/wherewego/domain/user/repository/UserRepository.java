@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.user.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -18,4 +19,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	@Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.isDeleted = false")
 	boolean existsByEmailAndIsDeletedFalse(@Param("email") String email);
+
+	Optional<User> findByProviderAndProviderId(Provider provider, String providerId);
 }

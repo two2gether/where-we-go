@@ -1,6 +1,6 @@
 package com.example.wherewego.domain.user.dto;
 
-import com.example.wherewego.domain.auth.Provider;
+import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.user.entity.User;
 
 import lombok.AllArgsConstructor;

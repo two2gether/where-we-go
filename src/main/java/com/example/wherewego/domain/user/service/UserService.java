@@ -1,12 +1,15 @@
 package com.example.wherewego.domain.user.service;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.wherewego.domain.auth.dto.social.GoogleUserInfo;
+import com.example.wherewego.domain.auth.dto.social.KakaoUserInfo;
+import com.example.wherewego.domain.auth.enums.Provider;
+import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.auth.security.TokenBlacklistService;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.MyPageResponseDto;
@@ -16,6 +19,8 @@ import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -144,6 +149,42 @@ public class UserService {
 	public User getUserById(Long id) {
 		return userRepository.findByIdAndIsDeletedFalse(id)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+	}
+
+	public User findOrCreateUser(GoogleUserInfo googleUserInfo) {
+		Optional<User> userOptional = userRepository.findByEmailAndIsDeletedFalse(googleUserInfo.getEmail());
+
+		if (userOptional.isPresent()) {
+			return userOptional.get();
+		} else {
+			User newUser = User.builder()
+				.email(googleUserInfo.getEmail())
+				.nickname(googleUserInfo.getName())
+				.password("")
+				.provider(Provider.GOOGLE)
+				.providerId(googleUserInfo.getId())
+				.role(UserRole.USER)
+				.build();
+
+			return userRepository.save(newUser);
+		}
+	}
+
+	public User findOrCreateUser(KakaoUserInfo kakaoUserInfo) {
+		String providerId = kakaoUserInfo.getId();
+
+		return userRepository.findByProviderAndProviderId(Provider.KAKAO, providerId)
+			.orElseGet(() -> {
+				User newUser = User.builder()
+					.email("")  // 카카오 이메일이 없으니 빈 문자열로 처리
+					.nickname(kakaoUserInfo.getNickname())
+					.password("")
+					.provider(Provider.KAKAO)
+					.providerId(providerId)
+					.role(UserRole.USER)
+					.build();
+				return userRepository.save(newUser);
+			});
 	}
 
 }

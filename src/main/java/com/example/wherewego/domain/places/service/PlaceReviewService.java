@@ -3,7 +3,6 @@ package com.example.wherewego.domain.places.service;
 import java.util.List;
 
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +17,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -34,11 +33,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PlaceReviewService {
 
 	private final PlaceReviewRepository placeReviewRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 	private final PlaceSearchService placeSearchService;
 
 	/**
@@ -50,46 +48,28 @@ public class PlaceReviewService {
 	 * @return 작성된 리뷰 정보
 	 * @throws CustomException 이미 리뷰를 작성한 경우, 사용자를 찾을 수 없는 경우
 	 */
-	@CacheEvict(value = {"place-stats", "place-details"}, key = "#placeId")
+	@Transactional
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public PlaceReviewCreateResponseDto createReview(String placeId, PlaceReviewCreateRequestDto requestDto,
 		Long userId) {
 		log.info("장소 리뷰 작성 요청 - placeId: {}, userId: {}, rating: {}", placeId, userId, requestDto.getRating());
 
-		// 1. 장소 존재 여부 검증 (트랜잭션 외부에서 수행)
-		validatePlaceExists(placeId);
-
-		// 2. 트랜잭션 내에서 리뷰 생성 처리
-		return createReviewTransaction(placeId, requestDto, userId);
-	}
-
-	/**
-	 * 장소 존재 여부 검증 (트랜잭션 외부)
-	 */
-	private void validatePlaceExists(String placeId) {
+		// 1. 장소 존재 여부 검증
 		if (placeSearchService.getPlaceDetail(placeId) == null) {
 			log.warn("존재하지 않는 장소에 대한 리뷰 작성 시도 - placeId: {}", placeId);
 			throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
 		}
-	}
 
-	/**
-	 * 리뷰 생성 트랜잭션 처리
-	 */
-	@Transactional
-	protected PlaceReviewCreateResponseDto createReviewTransaction(String placeId,
-		PlaceReviewCreateRequestDto requestDto,
-		Long userId) {
-		// 1. 중복 리뷰 검증
+		// 2. 중복 리뷰 검증
 		if (placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)) {
 			log.warn("이미 리뷰를 작성한 장소 - placeId: {}, userId: {}", placeId, userId);
 			throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
 		}
 
-		// 2. 사용자 조회
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		// 3. 사용자 조회
+		User user = userService.getUserById(userId);
 
-		// 3. 리뷰 엔티티 생성 및 저장
+		// 4. 리뷰 엔티티 생성 및 저장
 		PlaceReview review = PlaceReview.builder()
 			.user(user)
 			.placeId(placeId)
@@ -100,7 +80,7 @@ public class PlaceReviewService {
 		PlaceReview savedReview = placeReviewRepository.save(review);
 		log.info("장소 리뷰 작성 완료 - reviewId: {}", savedReview.getId());
 
-		// 4. 응답 DTO 생성
+		// 5. 응답 DTO 생성
 		return PlaceReviewCreateResponseDto.builder()
 			.reviewId(savedReview.getId())
 			.rating(savedReview.getRating())
@@ -123,7 +103,6 @@ public class PlaceReviewService {
 	 * @param currentUserId 현재 사용자 ID (null 가능)
 	 * @return 페이징된 리뷰 목록
 	 */
-	@Cacheable(value = "place-reviews", key = "#placeId + '-' + #page + '-' + #size + '-' + (#currentUserId != null ? #currentUserId : 'guest')")
 	public PagedResponse<PlaceReviewResponseDto> getPlaceReviews(String placeId, int page, int size,
 		Long currentUserId) {
 		log.info("장소 리뷰 목록 조회 - placeId: {}, page: {}, size: {}", placeId, page, size);
@@ -149,7 +128,7 @@ public class PlaceReviewService {
 	 * @throws CustomException 리뷰를 찾을 수 없거나 권한이 없는 경우
 	 */
 	@Transactional
-	@CacheEvict(value = {"place-stats", "place-details", "place-reviews"}, key = "#placeId")
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public PlaceReviewResponseDto updateMyReview(String placeId, PlaceReviewUpdateRequestDto requestDto, Long userId) {
 		log.info("리뷰 수정 요청 - placeId: {}, userId: {}", placeId, userId);
 
@@ -174,7 +153,7 @@ public class PlaceReviewService {
 	 * @throws CustomException 리뷰를 찾을 수 없거나 권한이 없는 경우
 	 */
 	@Transactional
-	@CacheEvict(value = {"place-stats", "place-details", "place-reviews"}, key = "#placeId")
+	@CacheEvict(value = "place-stats", allEntries = true)
 	public void deleteMyReview(String placeId, Long userId) {
 		log.info("리뷰 삭제 요청 - placeId: {}, userId: {}", placeId, userId);
 
@@ -193,7 +172,6 @@ public class PlaceReviewService {
 	 * @param size 페이지 크기
 	 * @return 페이징된 내 리뷰 목록
 	 */
-	@Cacheable(value = "user-reviews", key = "#userId + '-' + #page + '-' + #size")
 	public PagedResponse<PlaceReviewResponseDto> getMyReviews(Long userId, int page, int size) {
 		log.info("내 리뷰 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
 

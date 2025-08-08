@@ -44,6 +44,9 @@ class PlaceBookmarkServiceTest {
 	@Mock
 	private PlaceSearchService placeSearchService;
 
+	@Mock
+	private PlaceService placeService;
+
 	@InjectMocks
 	private PlaceBookmarkService placeBookmarkService;
 
@@ -166,8 +169,8 @@ class PlaceBookmarkServiceTest {
 				.isBookmarked(true)
 				.build();
 
-			given(placeSearchService.getPlaceDetail("place2")).willReturn(place1);
-			given(placeSearchService.getPlaceDetail("place1")).willReturn(place2);
+			given(placeService.getPlaceDetailWithStats("place2", userId)).willReturn(place1);
+			given(placeService.getPlaceDetailWithStats("place1", userId)).willReturn(place2);
 
 			// when
 			UserBookmarkListDto result = placeBookmarkService.getUserBookmarks(userId, page, size, userLat, userLng);
@@ -229,7 +232,7 @@ class PlaceBookmarkServiceTest {
 
 			given(placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
 				.willReturn(bookmarkPage);
-			given(placeSearchService.getPlaceDetail("invalid-place")).willReturn(null);
+			given(placeService.getPlaceDetailWithStats("invalid-place", userId)).willReturn(null);
 
 			// when & then
 			assertThatThrownBy(() -> placeBookmarkService.getUserBookmarks(userId, page, size, userLat, userLng))
@@ -253,7 +256,7 @@ class PlaceBookmarkServiceTest {
 
 			given(placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable))
 				.willReturn(bookmarkPage);
-			given(placeSearchService.getPlaceDetail("place1"))
+			given(placeService.getPlaceDetailWithStats("place1", userId))
 				.willThrow(new RuntimeException("API 오류"));
 
 			// when & then

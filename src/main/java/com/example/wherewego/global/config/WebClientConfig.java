@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 public class WebClientConfig {
 
-	@Value("${toss.secret-key}")
+	@Value("${toss.secret.key}")
 	private String tossSecretKey;
 
 	@Value("${google.api.key}")

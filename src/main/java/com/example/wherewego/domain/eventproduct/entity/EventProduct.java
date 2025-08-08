@@ -100,14 +100,17 @@ public class EventProduct extends BaseEntity {
 		return this;
 	}
 
-<<<<<<< HEAD
 	/**
 	 * 조회수 증가
 	 */
 	public void incrementViewCount() {
 		this.viewCount++;
 	}
+
+	/**
+	 * 재고 감소
+	 */
+	public void decreaseStock(int quantity) {
+		this.stock -= quantity;
+	}
 }
-=======
-}
->>>>>>> d28442a29debf80c4cfaabb03ababdb91084264b

@@ -5,14 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.wherewego.domain.courses.dto.request.CourseCreateRequestDto;
-import com.example.wherewego.domain.courses.dto.response.CourseCreateResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseDeleteResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
-import com.example.wherewego.domain.courses.dto.response.CoursePlaceInfo;
-import com.example.wherewego.domain.courses.dto.response.CourseUpdateResponseDto;
-import com.example.wherewego.domain.courses.dto.response.UserCourseBookmarkListDto;
+import com.example.wherewego.domain.courses.dto.response.*;
 import com.example.wherewego.domain.courses.entity.Course;
+import com.example.wherewego.domain.courses.entity.CourseLike;
 import com.example.wherewego.domain.user.entity.User;
 
 public class CourseMapper {
@@ -119,4 +114,26 @@ public class CourseMapper {
 			.build();
 	}
 
+	// 내가 좋아요한 코스 목록 조회
+	public static CourseLikeListResponseDto toCourseLikeDto(Course course, CourseLike like,
+																List<CoursePlaceInfo> places) {
+		return CourseLikeListResponseDto.builder()
+				.id(like.getId())
+				.userId(like.getUser().getId())
+				.courseListDto(
+						CourseLikeListResponseDto.CourseListResponseDto.builder()
+								.courseId(course.getId())
+								.nickname(course.getUser().getNickname())
+								.title(course.getTitle())
+								.description(course.getDescription())
+								.themes(new ArrayList<>(course.getThemes()))
+								.region(course.getRegion())
+								.places(places)
+								.likeCount(course.getLikeCount())
+								.averageRating(course.getAverageRating())
+								.isPublic(course.getIsPublic())
+								.build()
+				)
+				.build();
+	}
 }
