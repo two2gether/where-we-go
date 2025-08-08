@@ -24,6 +24,7 @@ import com.example.wherewego.domain.courses.entity.CourseLike;
 import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
+import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.repository.PlaceRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
@@ -31,6 +32,7 @@ import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,46 +45,65 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CourseLikeService {
 
+	private final CourseRepository courseRepository;
 	private final CourseLikeRepository likeRepository;
 	private final UserService userService;
 	private final CourseService courseService;
 	private final PlaceRepository placeRepository;
 	private final PlaceService placeService;
-	private final NotificationService notificationService;
-
+    private final NotificationService notificationService;
+	
 	/**
 	 * 코스에 좋아요를 추가합니다.
 	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
+	 * 낙관적 락 적용 3번까지 재시도
 	 *
 	 * @param userId 좋아요를 추가할 사용자 ID
 	 * @param courseId 좋아요를 추가할 코스 ID
 	 * @return 생성된 좋아요 정보
 	 * @throws CustomException 코스/사용자를 찾을 수 없거나 이미 좋아요가 존재하는 경우
+	 *
 	 */
 	@Transactional
 	@CacheEvict(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId)")
 	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
-		User user = userService.getUserById(userId);
-		Course course = courseService.getCourseById(courseId);
-		// 좋아요 중복 검사
-		if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
-			throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
+		int retries = 3;
+		while (true) {
+			try {
+				// 1) 사용자·코스 조회 및 중복 검사
+				User user = userService.getUserById(userId);
+				Course course = courseService.getCourseById(courseId);
+
+				if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
+					throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
+				}
+
+				// 2) 좋아요 저장
+				CourseLike savedCourseLike = likeRepository.save(new CourseLike(user, course));
+
+				// 3) 좋아요 수 증가 및 저장 (낙관적 락 적용)
+				course.incrementLikeCount();
+				courseRepository.save(course);
+				notificationService.triggerLikeNotification(user, course);
+
+				// 4) 결과 반환
+				return new CourseLikeResponseDto(
+					savedCourseLike.getId(),
+					savedCourseLike.getUser().getId(),
+					savedCourseLike.getCourse().getId()
+				);
+			} catch (OptimisticLockException ex) {
+				// 충돌 발생 시 재시도
+				if (--retries == 0) {
+					throw new CustomException(ErrorCode.LIKE_CONFLICT);  // 적절한 에러코드로 변경
+				}
+				// 잠깐 대기 후 재시도(optional)
+				try {
+					Thread.sleep(50);
+				} catch (InterruptedException ignored) {
+				}
+			}
 		}
-		// 레파지토리 저장
-		CourseLike courseLike = new CourseLike(user, course);
-		CourseLike savedCourseLike = likeRepository.save(courseLike);
-		// 코스 테이블의 좋아요 수(like_count) +1
-		course.incrementLikeCount();
-
-		// 알림 생성
-		notificationService.triggerLikeNotification(user, course);
-
-		// 반환
-		return new CourseLikeResponseDto(
-			savedCourseLike.getId(),
-			savedCourseLike.getUser().getId(),
-			savedCourseLike.getCourse().getId()
-		);
 	}
 
 	/**
