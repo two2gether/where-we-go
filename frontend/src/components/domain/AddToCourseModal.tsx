@@ -19,7 +19,8 @@ export const AddToCourseModal: React.FC<AddToCourseModalProps> = ({
   onAddToCourse
 }) => {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-  const { data: coursesData, isLoading, error } = useMyCourses();
+  // 모달이 열려있을 때만 코스 데이터 조회
+  const { data: coursesData, isLoading, error } = useMyCourses({ enabled: isOpen });
   
   // 에러 시 더미 데이터 제공 (테스트용)
   const dummyCourses = [

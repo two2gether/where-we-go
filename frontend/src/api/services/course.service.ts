@@ -36,7 +36,7 @@ export const courseService = {
     console.log('  queryParams:', queryParams);
     console.log('  원본 params:', params);
 
-    // GET 요청으로 변경
+    // GET 요청으로 변경 - 올바른 엔드포인트 사용
     return apiRequest.get<any>('/courses', { params: queryParams })
       .then(response => {
         console.log('getCourses 응답:', response); // 디버깅용
@@ -182,6 +182,11 @@ export const courseService = {
   // 코스 좋아요/취소
   toggleLike: (courseId: number): Promise<{ liked: boolean; likeCount: number }> =>
     apiRequest.post<{ liked: boolean; likeCount: number }>(`/courses/${courseId}/like`)
+      .then(response => response.data),
+
+  // 코스 좋아요 상태 조회 (현재 사용자의 좋아요 여부 확인)
+  getLikeStatus: (courseId: number): Promise<{ isLiked: boolean }> =>
+    apiRequest.get<{ isLiked: boolean }>(`/courses/${courseId}/like/status`)
       .then(response => response.data),
 
   // 코스 테마 목록 조회

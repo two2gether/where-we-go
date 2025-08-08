@@ -4,6 +4,8 @@ import { AppRouter } from './router/AppRouter';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
 import { initKakaoSDK } from './utils/kakaoInit';
+import ApiMonitorPanel from './components/common/ApiMonitorPanel';
+import ApiMonitorButton from './components/common/ApiMonitorButton';
 
 export const App: React.FC = () => {
   const { user, isAuthenticated, loading, setLoading } = useAuthStore();
@@ -112,6 +114,14 @@ export const App: React.FC = () => {
   return (
     <div className="app">
       <AppRouter />
+      
+      {/* API 모니터링 컴포넌트들 (개발 환경에서만) */}
+      {import.meta.env.DEV && (
+        <>
+          <ApiMonitorButton />
+          <ApiMonitorPanel />
+        </>
+      )}
     </div>
   );
 };

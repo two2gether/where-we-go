@@ -2,11 +2,13 @@ import React from 'react';
 
 export interface CardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'outlined';
+  variant?: 'default' | 'elevated' | 'outlined' | 'glass' | 'gradient' | 'cyber' | 'organic';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   className?: string;
   hover?: boolean;
   onClick?: () => void;
+  glow?: boolean;
+  animate?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -15,25 +17,32 @@ export const Card: React.FC<CardProps> = ({
   padding = 'md',
   className = '',
   hover = false,
-  onClick
+  onClick,
+  glow = false,
+  animate = false
 }) => {
-  const baseClasses = 'bg-white rounded-xl overflow-hidden transition-all duration-200';
+  const baseClasses = 'rounded-md overflow-hidden transition-colors duration-200 relative group border';
   
   const variantClasses = {
-    default: 'shadow-soft',
-    elevated: 'shadow-medium',
-    outlined: 'border border-gray-200 shadow-sm'
+    default: 'bg-github-canvas border-github-border',
+    elevated: 'bg-github-canvas border-github-border shadow-sm',
+    outlined: 'bg-github-canvas border-github-border hover:border-github-border-muted',
+    glass: 'bg-github-canvas-subtle border-github-border-muted',
+    gradient: 'bg-github-canvas border-github-border',
+    cyber: 'bg-github-canvas border-github-border hover:border-secondary-300',
+    organic: 'bg-github-canvas border-github-border hover:border-github-border-muted'
   };
   
   const paddingClasses = {
     none: '',
     sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8'
+    md: 'p-5',
+    lg: 'p-6'
   };
   
-  const hoverClasses = hover ? 'hover:shadow-medium hover:-translate-y-0.5 cursor-pointer' : '';
+  const hoverClasses = hover ? 'hover:bg-github-canvas-subtle cursor-pointer' : '';
   const clickableClasses = onClick ? 'cursor-pointer' : '';
+  const glowClasses = glow ? 'shadow-sm' : '';
   
   const classes = `
     ${baseClasses}
@@ -41,6 +50,7 @@ export const Card: React.FC<CardProps> = ({
     ${paddingClasses[padding]}
     ${hoverClasses}
     ${clickableClasses}
+    ${glowClasses}
     ${className}
   `.trim().replace(/\s+/g, ' ');
 
@@ -57,7 +67,7 @@ export interface CardHeaderProps {
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-b border-gray-200 ${className}`}>
+  <div className={`px-6 py-5 border-b border-white/20 backdrop-blur-sm ${className}`}>
     {children}
   </div>
 );
@@ -68,7 +78,7 @@ export interface CardBodyProps {
 }
 
 export const CardBody: React.FC<CardBodyProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 ${className}`}>
+  <div className={`px-6 py-5 ${className}`}>
     {children}
   </div>
 );
@@ -79,7 +89,7 @@ export interface CardFooterProps {
 }
 
 export const CardFooter: React.FC<CardFooterProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-t border-gray-200 ${className}`}>
+  <div className={`px-6 py-5 border-t border-white/20 backdrop-blur-sm ${className}`}>
     {children}
   </div>
 );

@@ -54,11 +54,13 @@ export const useCourse = (id: number) => {
 };
 
 // 내가 작성한 코스 목록
-export const useMyCourses = (params: Omit<CourseSearchRequest, 'authorId'> = {}) => {
+export const useMyCourses = (params: Omit<CourseSearchRequest, 'authorId'> & { enabled?: boolean } = {}) => {
+  const { enabled = true, ...courseParams } = params;
   return useQuery({
-    queryKey: courseKeys.myList(params),
-    queryFn: () => courseService.getMyCourses(params),
+    queryKey: courseKeys.myList(courseParams),
+    queryFn: () => courseService.getMyCourses(courseParams),
     staleTime: 2 * 60 * 1000, // 2분
+    enabled, // 조건부 실행
   });
 };
 

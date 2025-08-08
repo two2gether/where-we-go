@@ -19,13 +19,28 @@ export const bookmarkService = {
       const placeId = bookmarkData.targetId;
       
       // 먼저 현재 북마크 상태를 확인하고 추가/제거 결정
-      // 실제로는 현재 상태를 모르므로 POST로 시도하고, 실패하면 DELETE 시도
-      return apiRequest.post<any>(`/places/${placeId}/bookmark`)
-        .then(() => ({ bookmarked: true }))
-        .catch(() => {
-          // 이미 북마크가 있다면 제거
-          return apiRequest.delete<any>(`/places/${placeId}/bookmark`)
-            .then(() => ({ bookmarked: false }));
+      return bookmarkService.checkBookmark(placeId, 'PLACE')
+        .then((result) => {
+          if (result.bookmarked) {
+            // 이미 북마크된 경우 제거
+            return apiRequest.delete<any>(`/places/${placeId}/bookmark`)
+              .then(() => ({ bookmarked: false }));
+          } else {
+            // 북마크되지 않은 경우 추가
+            return apiRequest.post<any>(`/places/${placeId}/bookmark`)
+              .then(() => ({ bookmarked: true }));
+          }
+        })
+        .catch((error) => {
+          // 북마크 상태 확인 실패 시 POST로 시도하고, 실패하면 DELETE 시도
+          console.warn('북마크 상태 확인 실패, 토글 시도:', error);
+          return apiRequest.post<any>(`/places/${placeId}/bookmark`)
+            .then(() => ({ bookmarked: true }))
+            .catch(() => {
+              // 이미 북마크가 있다면 제거
+              return apiRequest.delete<any>(`/places/${placeId}/bookmark`)
+                .then(() => ({ bookmarked: false }));
+            });
         });
     } else {
       // 코스 북마크는 기존 방식 사용

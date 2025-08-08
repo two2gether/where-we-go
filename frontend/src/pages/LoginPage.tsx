@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useLogin, useRegister } from '../hooks/useAuth';
 import { useSocialAuth } from '../hooks/useSocialAuth';
@@ -170,28 +170,32 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-github-canvas flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      
+      <div className="max-w-sm w-full space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold gradient-text mb-2">Where We Go</h1>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isLogin ? '로그인' : '회원가입'}
+        <div className="text-center space-y-2">
+          <Link to="/" className="inline-block">
+            <h1 className="text-2xl font-semibold text-primary-900 hover:text-primary-700 transition-colors">
+              Where We Go
+            </h1>
+          </Link>
+          <h2 className="text-lg font-normal text-github-neutral">
+            {isLogin ? '계정에 로그인' : '계정 만들기'}
           </h2>
-          <p className="mt-2 text-gray-600">
-            {isLogin 
-              ? '여행 코스를 탐색하고 공유해보세요.' 
-              : '새로운 여행의 시작, 함께해요!'
-            }
-          </p>
         </div>
 
         {/* Form */}
-        <Card variant="default" padding="lg">
-          <div className="space-y-6">
+        <Card variant="outlined" padding="lg" className="border-github-border">
+          <div className="space-y-4">
             {errors.general && (
-              <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg text-sm">
-                {errors.general}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-3 rounded-md text-sm">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span>{errors.general}</span>
+                </div>
               </div>
             )}
 
@@ -282,31 +286,31 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Toggle Mode */}
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-4 pt-4 border-t border-github-border text-center">
+            <p className="text-sm text-github-neutral">
               {isLogin ? '아직 계정이 없으신가요?' : '이미 계정이 있으신가요?'}
             </p>
             <button
               type="button"
               onClick={toggleMode}
-              className="mt-2 text-primary-600 hover:text-primary-500 font-medium transition-colors"
+              className="mt-2 text-secondary-600 hover:text-secondary-700 text-sm font-medium hover:underline"
             >
-              {isLogin ? '회원가입하기' : '로그인하기'}
+              {isLogin ? '새 계정 만들기' : '기존 계정으로 로그인'}
             </button>
           </div>
 
           {/* Social Login */}
-          <div className="mt-6">
+          <div className="mt-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
+                <div className="w-full border-t border-github-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">또는</span>
+                <span className="px-2 bg-github-canvas text-github-neutral-muted">또는</span>
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 space-y-2">
               <SocialLoginButton
                 provider="google"
                 onClick={handleGoogleLogin}
@@ -325,12 +329,12 @@ export const LoginPage: React.FC = () => {
         </Card>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-xs text-github-neutral-muted space-y-2">
           <p>
             계속 진행하면{' '}
-            <a href="#" className="text-primary-600 hover:text-primary-500">이용약관</a>
+            <a href="#" className="text-secondary-600 hover:text-secondary-700 underline">이용약관</a>
             {' '}및{' '}
-            <a href="#" className="text-primary-600 hover:text-primary-500">개인정보처리방침</a>
+            <a href="#" className="text-secondary-600 hover:text-secondary-700 underline">개인정보처리방침</a>
             에 동의하는 것으로 간주됩니다.
           </p>
         </div>

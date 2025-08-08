@@ -1,5 +1,17 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { useApiMonitorStore } from '../store/apiMonitorStore';
+
+// Axios 설정 타입 확장
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    metadata?: {
+      requestId: string;
+      startTime: number;
+      logId: string;
+    };
+  }
+}
 
 // API Base URL - 환경 변수로 관리 (Vite 프록시 사용)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -16,6 +28,8 @@ export const api: AxiosInstance = axios.create({
 // Request 인터셉터
 api.interceptors.request.use(
   (config: AxiosRequestConfig) => {
+    const startTime = Date.now();
+    
     // 토큰이 있으면 Authorization 헤더에 추가
     const { token, isAuthenticated } = useAuthStore.getState();
     
@@ -26,6 +40,33 @@ api.interceptors.request.use(
       console.log('✅ Authorization header set:', config.headers.Authorization?.substring(0, 30) + '...');
     } else {
       console.log('❌ No token or headers, not setting Authorization');
+    }
+    
+    // API 모니터링 로그 추가
+    const { isEnabled, addLog } = useApiMonitorStore.getState();
+    if (isEnabled) {
+      const requestId = Math.random().toString(36).substring(7);
+      config.metadata = { requestId, startTime, logId: `${requestId}-${startTime}` }; // 메타데이터 추가
+      
+      console.log('🔍 API Monitor - Adding request log:', {
+        method: config.method?.toUpperCase(),
+        url: `${config.baseURL || ''}${config.url || ''}`,
+        data: config.data,
+        params: config.params
+      });
+      
+      // 요청 로그 추가
+      const logEntry = {
+        method: config.method?.toUpperCase() || 'UNKNOWN',
+        url: `${config.baseURL || ''}${config.url || ''}`,
+        requestHeaders: { ...config.headers }, // 깊은 복사
+        requestData: config.data ? JSON.parse(JSON.stringify(config.data)) : null, // 깊은 복사
+        requestParams: config.params ? JSON.parse(JSON.stringify(config.params)) : null, // 깊은 복사
+        requestId: requestId, // requestId 추가
+        type: 'request' as const,
+      };
+      
+      addLog(logEntry);
     }
     
     // 요청 로깅 (개발 환경에서만)
@@ -48,6 +89,26 @@ api.interceptors.request.use(
 // Response 인터셉터
 api.interceptors.response.use(
   (response: AxiosResponse) => {
+    // API 모니터링 로그 업데이트
+    const { isEnabled, updateLogResponse } = useApiMonitorStore.getState();
+    if (isEnabled && response.config.metadata) {
+      const { requestId, startTime } = response.config.metadata;
+      const duration = Date.now() - startTime;
+      
+      console.log('🔍 API Monitor - Updating response log:', {
+        status: response.status,
+        data: response.data,
+        duration,
+        url: response.config.url
+      });
+      
+      // 응답 데이터 깊은 복사
+      const responseData = response.data ? JSON.parse(JSON.stringify(response.data)) : null;
+      
+      // requestId를 사용해서 올바른 로그를 찾아서 업데이트
+      updateLogResponse(requestId, responseData, response.status, duration);
+    }
+    
     // 응답 로깅 (개발 환경에서만)
     if (import.meta.env.DEV) {
       console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
@@ -57,6 +118,15 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    
+    // API 모니터링 에러 로그 업데이트
+    const { isEnabled, updateLogError } = useApiMonitorStore.getState();
+    if (isEnabled && originalRequest.metadata) {
+      const { requestId, startTime } = originalRequest.metadata;
+      const duration = Date.now() - startTime;
+      
+      updateLogError(requestId, error.response?.data || error.message, error.response?.status, duration);
+    }
     
     // 비로그인 상태에서 접근 가능한 API 엔드포인트 정의
     const publicEndpoints = [

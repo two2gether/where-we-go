@@ -105,33 +105,42 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
   const imageUrl = (imageError || !image) ? defaultImage : image;
 
   return (
-    <Card 
-      variant="default" 
-      padding="none" 
-      hover 
-      className={`${className} ${isSelectionMode && isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''}`}
+    <div 
+      className={`group bg-white rounded-lg border border-github-border hover:border-github-border-subtle transition-all duration-200 hover:shadow-md cursor-pointer overflow-hidden flex flex-col h-full ${
+        className
+      } ${isSelectionMode && isSelected ? 'ring-2 ring-primary-500 border-primary-500' : ''}`}
       onClick={handleCardClick}
     >
-      <div className="relative">
+      {/* 이미지 컨테이너 */}
+      <div className="relative overflow-hidden">
         <img
           src={imageUrl}
           alt={name}
-          className="w-full h-48 object-cover"
+          className="w-full h-56 object-cover transition-transform duration-300 group-hover:scale-105"
+          onLoad={handleImageLoad}
           onError={handleImageError}
           loading="lazy"
         />
+        
+        {/* 이미지 위 오버레이 그라데이션 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* 카테고리 배지 */}
         <div className="absolute top-3 left-3">
-          <Badge variant="gray" size="sm">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-github-canvas-subtle text-github-neutral border border-github-border backdrop-blur-sm">
             {category}
-          </Badge>
+          </span>
         </div>
+        
+        {/* 북마크 버튼 */}
         <button
           onClick={handleBookmarkToggle}
-          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+          className="absolute top-3 right-3 p-2 bg-github-canvas-subtle/90 backdrop-blur-sm rounded-full border border-github-border hover:bg-github-canvas transition-all duration-200"
+          title={isBookmarked ? '북마크 해제' : '북마크 추가'}
         >
           <svg 
-            className={`w-5 h-5 ${
-              isBookmarked ? 'text-red-500 fill-current' : 'text-gray-600'
+            className={`w-4 h-4 transition-colors ${
+              isBookmarked ? 'text-red-500 fill-current' : 'text-github-neutral-muted hover:text-github-neutral'
             }`} 
             fill={isBookmarked ? 'currentColor' : 'none'} 
             stroke="currentColor" 
@@ -141,19 +150,19 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
           </svg>
         </button>
         
-        {/* 선택 모드일 때 체크박스 */}
+        {/* 선택 모드 체크박스 */}
         {isSelectionMode && (
           <div className="absolute top-3 right-16">
             <button
               onClick={handleSelect}
-              className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+              className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-200 ${
                 isSelected 
-                  ? 'bg-primary-500 border-primary-500 text-white' 
-                  : 'bg-white/90 border-gray-300 hover:border-primary-500'
+                  ? 'bg-primary-500 border-primary-500 text-white shadow-sm' 
+                  : 'bg-github-canvas-subtle/90 border-github-border hover:border-primary-500 hover:bg-primary-50 backdrop-blur-sm'
               }`}
             >
               {isSelected && (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               )}
@@ -162,56 +171,69 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
         )}
       </div>
       
-      <div className="p-6">
-        <div className="mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+      {/* 카드 내용 */}
+      <div className="p-6 flex flex-col flex-1">
+        {/* 제목과 주소 - 고정된 높이 영역 */}
+        <div className="mb-4 min-h-[100px] flex flex-col">
+          <h3 className="text-lg font-semibold text-github-neutral group-hover:text-primary-600 transition-colors duration-200 line-clamp-1 mb-2">
             {name}
           </h3>
-          <p className="text-sm text-gray-500 flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-start gap-2 flex-1">
+            <svg className="w-4 h-4 text-github-neutral-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             </svg>
-            {address}
-          </p>
-        </div>
-        
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {description}
-        </p>
-        
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {tags.map(tag => (
-            <Badge key={tag} variant="gray" size="sm">
-              #{tag}
-            </Badge>
-          ))}
-        </div>
-        
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <span className="text-sm font-medium">{rating}</span>
-            </div>
-            <span className="text-xs text-gray-500">({reviewCount})</span>
+            <p className="text-sm text-github-neutral-muted leading-relaxed flex-1">
+              {address}
+            </p>
           </div>
-          <span className="text-sm text-gray-600">{region}</span>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="primary" size="sm" fullWidth onClick={handleViewDetails}>
-            상세보기
-          </Button>
-          {!isSelectionMode && (
-            <Button variant="outline" size="sm" onClick={handleAddToCourse}>
-              코스에 추가
-            </Button>
-          )}
+        {/* 평점과 지역 - 하단 고정 영역 */}
+        <div className="mt-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <svg className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                <span className="text-base font-medium text-github-neutral">{rating?.toFixed(1) || '0.0'}</span>
+              </div>
+              {reviewCount > 0 && (
+                <span className="text-sm text-github-neutral-muted">
+                  ({reviewCount}개 리뷰)
+                </span>
+              )}
+            </div>
+            
+            {region && (
+              <span className="text-sm text-github-neutral-muted bg-github-canvas-subtle px-3 py-1.5 rounded-full font-medium">
+                {region}
+              </span>
+            )}
+          </div>
+          
+          {/* 액션 버튼 */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleViewDetails}
+              className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+            >
+              상세보기
+            </button>
+            {!isSelectionMode && (
+              <button
+                onClick={handleAddToCourse}
+                className="px-4 py-2.5 bg-github-canvas-subtle hover:bg-github-canvas text-github-neutral font-medium rounded-lg border border-github-border transition-colors duration-200"
+                title="코스에 추가"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

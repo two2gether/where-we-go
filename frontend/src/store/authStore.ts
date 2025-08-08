@@ -20,6 +20,7 @@ interface AuthActions {
   setLoading: (loading: boolean) => void;
   login: (user: User, token: string, refreshToken: string) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 // Store
@@ -69,6 +70,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         // Dispatch logout event for other tabs
         window.dispatchEvent(new CustomEvent('logout'));
       },
+
+      updateUser: (userData) => set((state) => ({
+        user: state.user ? { ...state.user, ...userData } : null,
+      })),
     }),
     {
       name: 'where-we-go-auth',
