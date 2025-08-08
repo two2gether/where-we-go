@@ -28,7 +28,7 @@ import com.example.wherewego.domain.courses.repository.CommentRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.service.CommentService;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -43,7 +43,7 @@ class CommentServiceTest {
 	private CommentRepository commentRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private UserService userService;
 
 	@Mock
 	private CourseRepository courseRepository;
@@ -75,7 +75,7 @@ class CommentServiceTest {
 			// given
 			CommentRequestDto requestDto = new CommentRequestDto("댓글 내용");
 
-			given(userRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(user));
+			given(userService.getUserById(1L)).willReturn(user);
 			given(courseRepository.findByIdWithThemes(10L)).willReturn(Optional.of(course));
 			given(commentRepository.save(any(Comment.class)))
 				.willAnswer(invocation -> invocation.getArgument(0));
@@ -101,7 +101,7 @@ class CommentServiceTest {
 
 			CommentRequestDto requestDto = new CommentRequestDto("비공개 댓글");
 
-			given(userRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(user)); //현재 로그인된 사용자는 id=1
+			given((userService.getUserById(1L))).willReturn(user);  //현재 로그인된 사용자는 id=1
 			given(courseRepository.findByIdWithThemes(20L)).willReturn(Optional.of(privateCourse));
 
 			// when & then
