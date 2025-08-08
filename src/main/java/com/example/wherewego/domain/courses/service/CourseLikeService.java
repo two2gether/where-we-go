@@ -51,7 +51,8 @@ public class CourseLikeService {
 	private final CourseService courseService;
 	private final PlaceRepository placeRepository;
 	private final PlaceService placeService;
-
+    private final NotificationService notificationService;
+	
 	/**
 	 * 코스에 좋아요를 추가합니다.
 	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
@@ -83,6 +84,7 @@ public class CourseLikeService {
 				// 3) 좋아요 수 증가 및 저장 (낙관적 락 적용)
 				course.incrementLikeCount();
 				courseRepository.save(course);
+				notificationService.triggerLikeNotification(user, course);
 
 				// 4) 결과 반환
 				return new CourseLikeResponseDto(
