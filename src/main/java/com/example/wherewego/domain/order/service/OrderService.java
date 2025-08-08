@@ -113,4 +113,26 @@ public class OrderService {
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
 	}
+	
+	/**
+	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
+	 * @param orderNo 주문 번호
+	 * @return 주문 엔티티
+	 * @throws CustomException 주문을 찾을 수 없는 경우
+	 */
+	@Transactional(readOnly = true)
+	public Order getOrderByOrderNo(String orderNo) {
+		return orderRepository.findByOrderNo(orderNo)
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+	}
+	
+	/**
+	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
+	 * @param order 업데이트할 주문 엔티티
+	 * @return 저장된 주문 엔티티
+	 */
+	@Transactional
+	public Order updateOrder(Order order) {
+		return orderRepository.save(order);
+	}
 }

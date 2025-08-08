@@ -20,7 +20,7 @@ import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.entity.Order;
-import com.example.wherewego.domain.order.repository.OrderRepository;
+import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
 import com.example.wherewego.domain.payment.dto.request.RefundRequestDto;
@@ -45,7 +45,7 @@ public class PaymentService {
 	private static final String TOSS_PAYMENTS_ENDPOINT = "/api/v2/payments";
 	private final @Qualifier("tossWebClient") WebClient tossWebClient;
 	private final PaymentRepository paymentRepository;
-	private final OrderRepository orderRepository;
+	private final OrderService orderService;
 
 	@Value("${toss.secret.key}")
 	private String tossSecretKey;
@@ -55,15 +55,15 @@ public class PaymentService {
 	 *
 	 * @param tossWebClient 토스 API 호출을 위한 WebClient Bean
 	 * @param paymentRepository 결제 정보 저장용 레포지토리
-	 * @param orderRepository 주문 정보 저장/조회용 레포지토리
+	 * @param orderService 주문 정보 관리용 서비스
 	 */
 	public PaymentService(
 		@Qualifier("tossWebClient") WebClient tossWebClient,
 		PaymentRepository paymentRepository,
-		OrderRepository orderRepository) {
+		OrderService orderService) {
 		this.tossWebClient = tossWebClient;
 		this.paymentRepository = paymentRepository;
-		this.orderRepository = orderRepository;
+		this.orderService = orderService;
 	}
 
 	/**
@@ -76,8 +76,7 @@ public class PaymentService {
 	@Transactional
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto, Long userId) {
 		// 1. 주문 조회
-		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 		
 		// 2. 주문 소유권 검증 - 본인의 주문인지 확인
 		if (!order.getUser().getId().equals(userId)) {
@@ -144,8 +143,7 @@ public class PaymentService {
 		}
 
 		// 2. 주문 조회
-		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
 		// 3. 재고 확인 + 감소 처리
 		EventProduct product = order.getEventProduct(); // 주문한 상품
@@ -160,7 +158,7 @@ public class PaymentService {
 
 		// 4. 주문 상태 변경
 		order.markAsPaid();
-		orderRepository.save(order);
+		orderService.updateOrder(order);
 
 		// 5. DTO → 엔티티 매핑 및 저장
 		Payment payment = PaymentMapper.toEntity(requestDto, order);
@@ -317,7 +315,7 @@ public class PaymentService {
 		// 주문 상태도 환불 완료로 변경
 		Order order = payment.getOrder();
 		order.updateStatus(OrderStatus.REFUNDED);
-		orderRepository.save(order);
+		orderService.updateOrder(order);
 
 		log.info("환불 처리 완료 - 결제ID: {}, 주문ID: {}, 환불번호: {}",
 			payment.getId(), order.getId(), refundNo);
