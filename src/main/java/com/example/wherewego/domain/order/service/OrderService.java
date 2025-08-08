@@ -84,16 +84,6 @@ public class OrderService {
 		return PagedResponse.from(orderDtos);
 	}
 	
-	/**
-	 * 내 주문 목록 조회 (결제 완료된 주문만) - 하위 호환성을 위한 오버로드
-	 * @param userId 사용자 ID
-	 * @param pageable 페이징 정보
-	 * @return 페이징된 내 주문 목록
-	 */
-	@Transactional(readOnly = true)
-	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
-		return getMyOrders(userId, pageable, OrderStatus.DONE);
-	}
 	
 	/**
 	 * 주문 상세 조회 (본인 주문만)
@@ -112,5 +102,27 @@ public class OrderService {
 		
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
+	}
+	
+	/**
+	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
+	 * @param orderNo 주문 번호
+	 * @return 주문 엔티티
+	 * @throws CustomException 주문을 찾을 수 없는 경우
+	 */
+	@Transactional(readOnly = true)
+	public Order getOrderByOrderNo(String orderNo) {
+		return orderRepository.findByOrderNo(orderNo)
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+	}
+	
+	/**
+	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
+	 * @param order 업데이트할 주문 엔티티
+	 * @return 저장된 주문 엔티티
+	 */
+	@Transactional
+	public Order updateOrder(Order order) {
+		return orderRepository.save(order);
 	}
 }
