@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
@@ -75,11 +76,11 @@ public class PaymentService {
 			.build();
 		paymentRepository.save(payment); // ✅ DB에 저장
 
-		// 1. Basic 인증 헤더 생성 (API 키 base64 인코딩)
+		// 2. Basic 인증 헤더 생성 (API 키 base64 인코딩)
 		String encodedAuth = Base64.getEncoder()
 			.encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
 
-		// 2. WebClient로 토스 결제 API POST 요청
+		// 3. WebClient로 토스 결제 API POST 요청
 		PaymentResponseDto responseDto = tossWebClient.post()
 			.uri(TOSS_PAYMENTS_ENDPOINT) // API 경로 설정(/api/v2/payments)
 			.header(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth) // 인증 헤더
@@ -96,18 +97,18 @@ public class PaymentService {
 
 		log.info("결제페이지: {}", responseDto.getCheckoutPage());
 
-		// 3. 응답 본문의 code가 0이 아닌 경우 (토스 자체 실패 응답)
+		// 4. 응답 본문의 code가 0이 아닌 경우 (토스 자체 실패 응답)
 		if (responseDto.getCode() != 0) {
 			log.error("토스 결제 실패: code={}, msg={}, errorCode={}",
 				responseDto.getCode(), responseDto.getMsg(), responseDto.getErrorCode());
 			throw new CustomException(ErrorCode.TOSS_PAYMENT_FAILED);
 		}
 
-		// 3. 결제 토큰 저장 (응답 성공 시)
+		// 5. 결제 토큰 저장 (응답 성공 시)
 		payment.updatePayToken(responseDto.getPayToken());
 		paymentRepository.save(payment); // ✅ 다시 저장
 
-		// 4. 성공 응답인 경우 응답 DTO 리턴 (checkoutPage, payToken 포함)
+		// 6. 성공 응답인 경우 응답 DTO 리턴 (checkoutPage, payToken 포함)
 		return responseDto;
 	}
 
@@ -130,17 +131,28 @@ public class PaymentService {
 		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
-		// 2. 주문 상태 변경
+		// 2. 재고 확인 + 감소 처리
+		EventProduct product = order.getEventProduct(); // 주문한 상품
+		int quantity = order.getQuantity(); // 주문 수량
+
+		if (product.getStock() < quantity) {
+			log.error("재고 부족 - productId: {}, 남은 재고: {}, 요청 수량: {}",
+				product.getId(), product.getStock(), quantity);
+			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
+		}
+		product.decreaseStock(quantity); // 재고 감소 (엔티티 내부 로직)
+
+		// 3. 주문 상태 변경
 		order.markAsPaid();
 		orderRepository.save(order);
 
-		// 3. DTO → 엔티티 매핑 및 저장
+		// 4. DTO → 엔티티 매핑 및 저장
 		Payment payment = PaymentMapper.toEntity(requestDto, order);
 		paymentRepository.save(payment);
 
 		log.info("결제 승인 완료 - 주문번호: {}, 금액: {}", requestDto.getOrderNo(), requestDto.getPaidAmount());
 	}
-	
+
 	/**
 	 * 특정 주문의 결제 상세 정보를 조회합니다.
 	 * 본인의 주문만 조회 가능하며, 민감정보는 마스킹 처리됩니다.
@@ -154,7 +166,7 @@ public class PaymentService {
 		// 1. 본인 주문인지 확인하고 결제 정보 조회
 		Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-		
+
 		// 2. DTO 변환 (민감정보 마스킹 포함)
 		return PaymentMapper.toPaymentDetailDto(payment);
 	}
