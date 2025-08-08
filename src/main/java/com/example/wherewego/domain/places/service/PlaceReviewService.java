@@ -17,7 +17,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -36,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PlaceReviewService {
 
 	private final PlaceReviewRepository placeReviewRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 	private final PlaceSearchService placeSearchService;
 
 	/**
@@ -67,8 +67,7 @@ public class PlaceReviewService {
 		}
 
 		// 3. 사용자 조회
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 4. 리뷰 엔티티 생성 및 저장
 		PlaceReview review = PlaceReview.builder()
