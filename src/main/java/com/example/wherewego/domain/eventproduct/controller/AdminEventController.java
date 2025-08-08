@@ -82,9 +82,9 @@ public class AdminEventController {
 	 *
 	 * 기존 상품을 삭제합니다.
 	 * 관리자만 삭제할 수 있으며, 권한 검증을 통해 보안을 보장합니다.
-	 * 삭제된 코스는 더 이상 조회할 수 없으며, 관련 데이터도 함께 정리됩니다.
+	 * 삭제된 상품은 더 이상 조회할 수 없으며, 관련 데이터도 함께 정리됩니다.
 	 *
-	 * @param productId 삭제할 코스의 고유 ID
+	 * @param productId 삭제할 상품의 고유 ID
 	 * @param userDetail 인증된 사용자 정보 (관리자 권한 검증용)
 	 * @return 빈 응답과 성공 메시지
 	 */

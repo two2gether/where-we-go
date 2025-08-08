@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
  * 프론트엔드에서 결제 상세 페이지에 사용되는 데이터 구조
  */
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -80,6 +80,28 @@ public class PaymentDetailResponseDto {
      * 계좌 결제 정보 (계좌 결제 시에만)
      */
     private AccountInfo accountInfo;
+
+    // ========== 환불 관련 정보 ==========
+    
+    /**
+     * 환불 가능 여부
+     */
+    private Boolean refundable;
+    
+    /**
+     * 환불 사유 (환불된 경우)
+     */
+    private String refundReason;
+    
+    /**
+     * 환불 완료 시간
+     */
+    private LocalDateTime refundedAt;
+    
+    /**
+     * 환불 불가 사유 (환불 불가능한 경우)
+     */
+    private String refundUnavailableReason;
 
     /**
      * 카드 결제 상세 정보

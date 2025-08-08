@@ -4,6 +4,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,8 +18,8 @@ import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
-import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.service.OrderService;
@@ -51,7 +52,7 @@ public class OrderController {
 
 		return ApiResponse.created("주문이 생성되었습니다.", response);
 	}
-	
+
 	/**
 	 * 내 주문 목록 조회 (상태별 필터링 가능)
 	 * @param userDetail 인증된 사용자 정보
@@ -66,16 +67,16 @@ public class OrderController {
 		@RequestParam(required = false) OrderStatus status
 	) {
 		Long userId = userDetail.getUser().getId();
-		
+
 		PagedResponse<MyOrderResponseDto> orders = orderService.getMyOrders(userId, pageable, status);
-		
-		String message = status != null 
+
+		String message = status != null
 			? String.format("내 주문 목록을 조회했습니다. (상태: %s)", status)
 			: "내 주문 목록을 조회했습니다. (모든 상태)";
-		
+
 		return ApiResponse.ok(message, orders);
 	}
-	
+
 	/**
 	 * 주문 상세 조회 (본인 주문만)
 	 * @param orderId 주문 ID
@@ -88,9 +89,31 @@ public class OrderController {
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
-		
+
 		OrderDetailResponseDto orderDetail = orderService.getOrderDetail(orderId, userId);
-		
+
 		return ApiResponse.ok("주문 상세 정보를 조회했습니다.", orderDetail);
+	}
+
+	/**
+	 * 주문 취소(삭제) API
+	 *
+	 * 주문을 취소합니다.
+	 * 취소(삭제)된 주문은 더 이상 조회할 수 없으며, 관련 데이터도 함께 정리됩니다.
+	 *
+	 * @param orderId 삭제할 주문의 고유 ID
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 빈 응답과 성공 메시지
+	 */
+	@DeleteMapping("/{orderId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public ApiResponse<Void> deleteOrder(
+		@PathVariable Long orderId,
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		Long userId = userDetail.getUser().getId();
+		orderService.deletedOrderById(orderId, userId);
+
+		return ApiResponse.noContent("주문이 취소되었습니다.");
 	}
 }
