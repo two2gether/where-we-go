@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
+import com.example.wherewego.domain.eventproduct.repository.EventRepository;
 import com.example.wherewego.domain.eventproduct.service.EventService;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
@@ -31,6 +32,7 @@ public class OrderService {
 	private final UserService userService;
 	private final OrderRepository orderRepository;
 	private final EventService eventService;
+	private final EventRepository eventRepository;
 
 	@Transactional
 	public Order createOrder(OrderCreateRequestDto requestDto, Long userId) {
@@ -38,12 +40,22 @@ public class OrderService {
 		// 1. 사용자 검증
 		User user = userService.getUserById(userId);
 
-		// 2. 상품 검증
-		EventProduct product = eventService.getEventProductById(requestDto.getProductId());
+		Long productId = requestDto.getProductId();
+		int quantity = requestDto.getQuantity();
 
-		// 3. 주문 번호 생성
+		// 2. Atomic Update 호출
+		int updated = eventRepository.decreaseStockIfAvailable(productId, quantity);
+		if (updated == 0) {
+			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
+		}
+
+		// 3. 차감된 후 최신 상태 엔티티 조회
+		EventProduct product = eventService.getEventProductById(productId);
+
+		// 4. 주문 번호 생성
 		String orderNo = UUID.randomUUID().toString(); // 고유 주문번호 생성
 
+		// 5. 주문 생성
 		Order order = Order.builder()
 			.orderNo(orderNo)
 			.user(user)
@@ -85,6 +97,17 @@ public class OrderService {
 	}
 
 	/**
+	 * 내 주문 목록 조회 (결제 완료된 주문만) - 하위 호환성을 위한 오버로드
+	 * @param userId 사용자 ID
+	 * @param pageable 페이징 정보
+	 * @return 페이징된 내 주문 목록
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
+		return getMyOrders(userId, pageable, OrderStatus.DONE);
+	}
+
+	/**
 	 * 주문 상세 조회 (본인 주문만)
 	 * @param orderId 주문 ID
 	 * @param userId 사용자 ID
@@ -101,49 +124,5 @@ public class OrderService {
 
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
-	}
-
-	/**
-	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
-	 * @param orderNo 주문 번호
-	 * @return 주문 엔티티
-	 * @throws CustomException 주문을 찾을 수 없는 경우
-	 */
-	@Transactional(readOnly = true)
-	public Order getOrderByOrderNo(String orderNo) {
-		return orderRepository.findByOrderNo(orderNo)
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-	}
-
-	/**
-	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
-	 * @param order 업데이트할 주문 엔티티
-	 * @return 저장된 주문 엔티티
-	 */
-	@Transactional
-	public Order updateOrder(Order order) {
-		return orderRepository.save(order);
-	}
-
-	/**
-	 * 주문을 취소(삭제)합니다.
-	 *
-	 * @param orderId 삭제할 주문 ID
-	 * @param userId 삭제를 요청한 사용자 ID
-	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
-	 */
-	@Transactional
-	public void deletedOrderById(Long orderId, Long userId) {
-		// 1. 주문 조회하기
-		Order findOrder = orderRepository.findById(orderId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-
-		// 2. 사용자 권한 체크
-		if (!findOrder.getUser().getId().equals(userId)) {
-			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
-		}
-
-		// 3. 삭제하기 (DB삭제)
-		orderRepository.delete(findOrder);
 	}
 }
