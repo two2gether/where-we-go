@@ -132,11 +132,41 @@ public class CacheKeyUtil {
      * 사용자의 코스 좋아요 목록 조회 결과에 대한 캐시 키 생성
      *
      * @param userId 사용자 ID
+     * @param page 페이지 번호
+     * @param size 페이지 크기
      * @return 캐시 키
      */
     public String generateCourseLikeListKey(String userId, String page, String size) {
-        return "userId" + DELIMITER + userId
-                + "page" + DELIMITER + page
+        return "userId" + DELIMITER + userId + DELIMITER
+                + "page" + DELIMITER + page + DELIMITER
+                + "size" + DELIMITER + size;
+    }
+
+    /**
+     * 특정 코스의 댓글 목록 조회 결과에 대한 캐시 키 생성
+     *
+     * @param courseId 댓글을 조회할 코스 ID
+     * @param pageNumber 페이지 번호
+     * @param size 페이지 크기
+     * @return 캐시 키
+     */
+    public String generateCourseCommentListKey(String courseId, String pageNumber, String size) {
+        return "courseId" + DELIMITER + courseId + DELIMITER
+                + "page" + DELIMITER + pageNumber + DELIMITER
+                + "size" + DELIMITER + size;
+    }
+
+    /**
+     * 특정 사용자의 댓글 목록 조회 결과에 대한 캐시 키 생성
+     *
+     * @param userId 댓글을 조회할 사용자 ID
+     * @param pageNumber 페이지 번호
+     * @param size 페이지 크기
+     * @return 캐시 키
+     */
+    public String generateUserCommentListKey(String userId, String pageNumber, String size) {
+        return "userId" + DELIMITER + userId + DELIMITER
+                + "page" + DELIMITER + pageNumber + DELIMITER
                 + "size" + DELIMITER + size;
     }
 }
