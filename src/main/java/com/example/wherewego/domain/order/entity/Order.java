@@ -81,4 +81,11 @@ public class Order extends BaseEntity {
 	public void markAsPaid() {
 		this.status = OrderStatus.DONE;
 	}
+	
+	/**
+	 * 주문 상태 업데이트
+	 */
+	public void updateStatus(OrderStatus status) {
+		this.status = status;
+	}
 }

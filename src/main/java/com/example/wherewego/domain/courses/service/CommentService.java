@@ -99,7 +99,7 @@ public class CommentService {
 		}
 
 		commentRepository.delete(comment);
-		log.debug("댓글 삭제 성공 - commentId: {}", commentId);
+
 	}
 
 	/**
