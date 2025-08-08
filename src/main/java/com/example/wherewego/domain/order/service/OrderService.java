@@ -84,16 +84,6 @@ public class OrderService {
 		return PagedResponse.from(orderDtos);
 	}
 	
-	/**
-	 * 내 주문 목록 조회 (결제 완료된 주문만) - 하위 호환성을 위한 오버로드
-	 * @param userId 사용자 ID
-	 * @param pageable 페이징 정보
-	 * @return 페이징된 내 주문 목록
-	 */
-	@Transactional(readOnly = true)
-	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
-		return getMyOrders(userId, pageable, OrderStatus.DONE);
-	}
 	
 	/**
 	 * 주문 상세 조회 (본인 주문만)
