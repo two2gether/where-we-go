@@ -140,6 +140,13 @@ public class NotificationService {
 	}
 
 	/**
+	 * 읽지 않은 알림 갯수 조회
+	 */
+	public long getUnreadCount(Long userId) {
+		return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
+	}
+
+	/**
 	 * Notification 엔티티를 DTO로 변환합니다.
 	 */
 	private NotificationResponseDto toDto(Notification notification) {

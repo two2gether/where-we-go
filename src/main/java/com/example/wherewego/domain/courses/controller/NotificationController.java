@@ -1,11 +1,14 @@
 package com.example.wherewego.domain.courses.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.courses.dto.request.NotificationRequestDto;
 import com.example.wherewego.domain.courses.dto.response.NotificationResponseDto;
 import com.example.wherewego.domain.courses.service.NotificationService;
@@ -38,6 +41,22 @@ public class NotificationController {
 
 		NotificationResponseDto responseDto = notificationService.createNotification(requestDto);
 		return ApiResponse.ok("알림이 성공적으로 생성되었습니다.", responseDto);
+	}
+
+	/**
+	 * 읽지 않은 알림 개수 조회
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 읽지 않은 알림 개수(Long)
+	 */
+	@GetMapping("/api/notifications/unread-count")
+	public ApiResponse<Long> getUnreadNotificationCount(
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		Long userId = userDetail.getUser().getId();
+
+		long count = notificationService.getUnreadCount(userId);
+
+		return ApiResponse.ok("읽지 않은 알림 개수 조회 성공", count);
 	}
 
 }
