@@ -134,7 +134,9 @@ public class CacheKeyUtil {
      * @param userId 사용자 ID
      * @return 캐시 키
      */
-    public String generateCourseLikeListKey(Long userId) {
-        return "userId" + DELIMITER + userId;
+    public String generateCourseLikeListKey(String userId, String page, String size) {
+        return "userId" + DELIMITER + userId
+                + "page" + DELIMITER + page
+                + "size" + DELIMITER + size;
     }
 }
