@@ -43,7 +43,7 @@ public enum ErrorCode {
 	UNAUTHORIZED_ORDER_ACCESS(HttpStatus.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."),
 	// 결제 관련 에러 정의
 	PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
-	
+
 	// 환불 관련 에러 정의
 	INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "결제 완료된 건만 환불 가능합니다."),
 	REFUND_TIME_EXPIRED(HttpStatus.BAD_REQUEST, "환불 가능 기간이 지났습니다."),
