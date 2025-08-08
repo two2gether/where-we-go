@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
@@ -56,6 +57,9 @@ class PaymentServiceTest {
 
 	@Mock
 	private OrderRepository orderRepository;
+
+	@Mock
+	private EventProduct mockProduct; // 상품 mock
 
 	@InjectMocks
 	private PaymentService paymentService;
@@ -174,13 +178,50 @@ class PaymentServiceTest {
 			given(orderRepository.findByOrderNo("ORDER123")).willReturn(Optional.of(mockOrder));
 			given(paymentRepository.existsByOrderNo("ORDER123")).willReturn(false);
 
+			// 재고 관련 메서드 mocking
+			given(mockOrder.getEventProduct()).willReturn(mockProduct);
+			given(mockOrder.getQuantity()).willReturn(2);
+			given(mockProduct.getStock()).willReturn(10);
+
 			// when
 			paymentService.processPaymentApproval(callbackDto);
 
 			// then
+			verify(mockProduct).getStock();
+			verify(mockProduct).decreaseStock(2);
 			verify(mockOrder).markAsPaid();
 			verify(orderRepository).save(mockOrder);
 			verify(paymentRepository).save(any(Payment.class));
+		}
+
+		@Test
+		@DisplayName("재고가 부족하면 예외를 던진다")
+		void shouldThrowExceptionWhenOutOfStock() {
+			// given
+			CallbackRequestDto callbackDto = CallbackRequestDto.builder()
+				.orderNo("ORDER123")
+				.paidAmount(10000)
+				.payToken("TOKEN123")
+				.build();
+
+			Order mockOrder = mock(Order.class);
+			given(orderRepository.findByOrderNo("ORDER123")).willReturn(Optional.of(mockOrder));
+			given(paymentRepository.existsByOrderNo("ORDER123")).willReturn(false);
+
+			given(mockOrder.getEventProduct()).willReturn(mockProduct);
+			given(mockOrder.getQuantity()).willReturn(5);
+			given(mockProduct.getStock()).willReturn(3); // 재고 부족 상황
+
+			// when & then
+			assertThatThrownBy(() -> paymentService.processPaymentApproval(callbackDto))
+				.isInstanceOf(CustomException.class)
+				.hasMessage(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK.getMessage());
+
+			verify(mockProduct).getStock();
+			verify(mockProduct, never()).decreaseStock(anyInt());
+			verify(mockOrder, never()).markAsPaid();
+			verify(orderRepository, never()).save(any());
+			verify(paymentRepository, never()).save(any());
 		}
 
 		@Test
