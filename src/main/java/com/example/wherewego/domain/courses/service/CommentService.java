@@ -151,6 +151,10 @@ public class CommentService {
 	@Transactional(readOnly = true)
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 
+		// 코스 존재 여부 확인
+		courseRepository.findById(courseId)
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+
 		//JPA Repository를 통해 댓글 목록을 조회
 		Page<Comment> commentPage = commentRepository.findAllByCourseIdOrderByCreatedAtDesc(courseId, pageable);
 

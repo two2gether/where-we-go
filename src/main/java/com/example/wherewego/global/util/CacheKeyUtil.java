@@ -1,8 +1,5 @@
 package com.example.wherewego.global.util;
 
-import java.util.List;
-import java.util.Objects;
-
 import org.springframework.stereotype.Component;
 
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
@@ -129,5 +126,17 @@ public class CacheKeyUtil {
             .replaceAll("[^a-zA-Z0-9가-힣]", "_")
             .replaceAll("_+", "_") // 연속된 언더스코어를 하나로
             .replaceAll("^_|_$", ""); // 시작과 끝의 언더스코어 제거
+    }
+
+    /**
+     * 사용자의 코스 좋아요 목록 조회 결과에 대한 캐시 키 생성
+     *
+     * @param userId 사용자 ID
+     * @return 캐시 키
+     */
+    public String generateCourseLikeListKey(String userId, String page, String size) {
+        return "userId" + DELIMITER + userId
+                + "page" + DELIMITER + page
+                + "size" + DELIMITER + size;
     }
 }
