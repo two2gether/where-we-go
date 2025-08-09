@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.payment.entity;
 
+import java.time.LocalDateTime;
+
 import com.example.wherewego.domain.common.entity.BaseEntity;
 import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.order.entity.Order;
@@ -15,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,7 +28,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "payments")
+@Table(name = "payments", 
+       uniqueConstraints = {
+           @UniqueConstraint(name = "uk_payments_order_no", columnNames = "order_no")
+       })
 public class Payment extends BaseEntity {
 
 	/**
@@ -106,10 +112,61 @@ public class Payment extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	private PaymentStatus paymentStatus;
 
+	// ========== 환불 관련 필드 ==========
+	
 	/**
-	 * 업데이트 토큰
+	 * 환불 사유 (환불 시에만 사용)
+	 */
+	private String refundReason;
+	
+	/**
+	 * 환불 완료 시간
+	 */
+	private LocalDateTime refundedAt;
+	
+	/**
+	 * TOSS 환불 거래 키 (환불 완료 시 설정)
+	 */
+	private String refundTransactionKey;
+	
+	/**
+	 * 환불 요청자 ID (감사용)
+	 */
+	private Long refundRequestedBy;
+
+	// ========== 비즈니스 메서드 ==========
+	
+	/**
+	 * 결제 토큰 업데이트
 	 */
 	public void updatePayToken(String payToken) {
 		this.payToken = payToken;
+	}
+	
+	/**
+	 * 결제 상태 업데이트
+	 */
+	public void updatePaymentStatus(PaymentStatus paymentStatus) {
+		this.paymentStatus = paymentStatus;
+	}
+	
+	/**
+	 * 환불 요청 상태로 변경
+	 */
+	public void requestRefund(String refundReason, Long requestedBy) {
+		this.paymentStatus = PaymentStatus.REFUND_REQUESTED;
+		this.refundReason = refundReason;
+		this.refundRequestedBy = requestedBy;
+	}
+	
+	/**
+	 * 환불 처리 완료
+	 */
+	public void processRefund(String refundReason, Long requestedBy, String transactionKey) {
+		this.paymentStatus = PaymentStatus.REFUNDED;
+		this.refundReason = refundReason;
+		this.refundedAt = LocalDateTime.now();
+		this.refundTransactionKey = transactionKey;
+		this.refundRequestedBy = requestedBy;
 	}
 }

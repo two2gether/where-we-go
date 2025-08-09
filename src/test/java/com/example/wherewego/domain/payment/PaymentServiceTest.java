@@ -3,6 +3,7 @@ package com.example.wherewego.domain.payment;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,15 +18,20 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.entity.Order;
-import com.example.wherewego.domain.order.repository.OrderRepository;
+import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
+import com.example.wherewego.domain.payment.dto.request.RefundRequestDto;
+import com.example.wherewego.domain.payment.dto.response.PaymentDetailResponseDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentResponseDto;
+import com.example.wherewego.domain.payment.dto.response.RefundResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 import com.example.wherewego.domain.payment.repository.PaymentRepository;
 import com.example.wherewego.domain.payment.service.PaymentService;
+import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.exception.CustomException;
 
 import reactor.core.publisher.Mono;
@@ -56,7 +62,7 @@ class PaymentServiceTest {
 	private PaymentRepository paymentRepository;
 
 	@Mock
-	private OrderRepository orderRepository;
+	private OrderService orderService;
 
 	@Mock
 	private EventProduct mockProduct; // 상품 mock
@@ -74,6 +80,7 @@ class PaymentServiceTest {
 			.build();
 
 		Order mockOrder = mock(Order.class);
+		User mockUser = mock(User.class);
 		Payment mockPayment = mock(Payment.class);
 
 		PaymentResponseDto responseDto = PaymentResponseDto.builder()
@@ -82,7 +89,9 @@ class PaymentServiceTest {
 			.checkoutPage("https://checkout.page")
 			.build();
 
-		given(orderRepository.findByOrderNo("ORDER123")).willReturn(Optional.of(mockOrder));
+		given(mockOrder.getUser()).willReturn(mockUser);
+		given(mockUser.getId()).willReturn(1L);
+		given(orderService.getOrderByOrderNo("ORDER123")).willReturn(mockOrder);
 		given(paymentRepository.save(any(Payment.class))).willReturn(mockPayment);
 
 		// WebClient mock 체인 설정
@@ -97,7 +106,7 @@ class PaymentServiceTest {
 		given(responseSpec.bodyToMono(PaymentResponseDto.class)).willReturn(Mono.just(responseDto));
 
 		// when
-		PaymentResponseDto result = paymentService.requestPayment(requestDto);
+		PaymentResponseDto result = paymentService.requestPayment(requestDto, 1L);
 
 		// then
 		assertThat(result).isNotNull();
@@ -115,10 +124,10 @@ class PaymentServiceTest {
 			.amount(5000)
 			.build();
 
-		given(orderRepository.findByOrderNo("NOT_EXIST")).willReturn(Optional.empty());
+		given(orderService.getOrderByOrderNo("NOT_EXIST")).willThrow(new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
 		// when & then
-		assertThatThrownBy(() -> paymentService.requestPayment(requestDto))
+		assertThatThrownBy(() -> paymentService.requestPayment(requestDto, 1L))
 			.isInstanceOf(CustomException.class)
 			.hasMessage(ErrorCode.ORDER_NOT_FOUND.getMessage());
 	}
@@ -133,6 +142,7 @@ class PaymentServiceTest {
 			.build();
 
 		Order mockOrder = mock(Order.class);
+		User mockUser = mock(User.class);
 		Payment mockPayment = mock(Payment.class);
 
 		PaymentResponseDto failResponse = PaymentResponseDto.builder()
@@ -141,7 +151,9 @@ class PaymentServiceTest {
 			.errorCode("INVALID_REQUEST")
 			.build();
 
-		given(orderRepository.findByOrderNo("ORDER999")).willReturn(Optional.of(mockOrder));
+		given(mockOrder.getUser()).willReturn(mockUser);
+		given(mockUser.getId()).willReturn(1L);
+		given(orderService.getOrderByOrderNo("ORDER999")).willReturn(mockOrder);
 		given(paymentRepository.save(any(Payment.class))).willReturn(mockPayment);
 
 		given(tossWebClient.post()).willReturn(requestBodyUriSpec);
@@ -155,7 +167,7 @@ class PaymentServiceTest {
 		given(responseSpec.bodyToMono(PaymentResponseDto.class)).willReturn(Mono.just(failResponse));
 
 		// when & then
-		assertThatThrownBy(() -> paymentService.requestPayment(requestDto))
+		assertThatThrownBy(() -> paymentService.requestPayment(requestDto, 1L))
 			.isInstanceOf(CustomException.class)
 			.hasMessage(ErrorCode.TOSS_PAYMENT_FAILED.getMessage());
 	}
@@ -175,7 +187,7 @@ class PaymentServiceTest {
 				.build();
 
 			Order mockOrder = mock(Order.class);
-			given(orderRepository.findByOrderNo("ORDER123")).willReturn(Optional.of(mockOrder));
+			given(orderService.getOrderByOrderNo("ORDER123")).willReturn(mockOrder);
 			given(paymentRepository.existsByOrderNo("ORDER123")).willReturn(false);
 
 			// 재고 관련 메서드 mocking
@@ -190,7 +202,7 @@ class PaymentServiceTest {
 			verify(mockProduct).getStock();
 			verify(mockProduct).decreaseStock(2);
 			verify(mockOrder).markAsPaid();
-			verify(orderRepository).save(mockOrder);
+			verify(orderService).updateOrder(mockOrder);
 			verify(paymentRepository).save(any(Payment.class));
 		}
 
@@ -205,7 +217,7 @@ class PaymentServiceTest {
 				.build();
 
 			Order mockOrder = mock(Order.class);
-			given(orderRepository.findByOrderNo("ORDER123")).willReturn(Optional.of(mockOrder));
+			given(orderService.getOrderByOrderNo("ORDER123")).willReturn(mockOrder);
 			given(paymentRepository.existsByOrderNo("ORDER123")).willReturn(false);
 
 			given(mockOrder.getEventProduct()).willReturn(mockProduct);
@@ -217,10 +229,10 @@ class PaymentServiceTest {
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK.getMessage());
 
-			verify(mockProduct).getStock();
+			verify(mockProduct, atLeastOnce()).getStock();
 			verify(mockProduct, never()).decreaseStock(anyInt());
 			verify(mockOrder, never()).markAsPaid();
-			verify(orderRepository, never()).save(any());
+			verify(orderService, never()).updateOrder(any());
 			verify(paymentRepository, never()).save(any());
 		}
 
@@ -240,8 +252,8 @@ class PaymentServiceTest {
 			paymentService.processPaymentApproval(callbackDto);
 
 			// then
-			verify(orderRepository, never()).findByOrderNo(any());
-			verify(orderRepository, never()).save(any());
+			verify(orderService, never()).getOrderByOrderNo(any());
+			verify(orderService, never()).updateOrder(any());
 			verify(paymentRepository, never()).save(any());
 		}
 
@@ -254,12 +266,157 @@ class PaymentServiceTest {
 				.build();
 
 			given(paymentRepository.existsByOrderNo("NOT_EXIST")).willReturn(false);
-			given(orderRepository.findByOrderNo("NOT_EXIST")).willReturn(Optional.empty());
+			given(orderService.getOrderByOrderNo("NOT_EXIST")).willThrow(new CustomException(ErrorCode.ORDER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> paymentService.processPaymentApproval(callbackDto))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.ORDER_NOT_FOUND.getMessage());
+		}
+	}
+
+	@Nested
+	@DisplayName("결제 상세 조회")
+	class GetPaymentDetail {
+
+		@Test
+		@DisplayName("유효한 주문 ID와 사용자 ID로 결제 상세 정보를 조회할 수 있다")
+		void shouldGetPaymentDetail() {
+			// given
+			Long orderId = 1L;
+			Long userId = 1L;
+			
+			Order mockOrder = mock(Order.class);
+			Payment mockPayment = mock(Payment.class);
+			
+			given(paymentRepository.findByOrderIdAndUserId(orderId, userId))
+				.willReturn(Optional.of(mockPayment));
+			given(mockPayment.getPaymentStatus()).willReturn(PaymentStatus.DONE);
+			given(mockPayment.getCreatedAt()).willReturn(LocalDateTime.now().minusDays(1));
+			given(mockPayment.getAmount()).willReturn(10000);
+			given(mockPayment.getOrder()).willReturn(mockOrder);
+
+			// when
+			PaymentDetailResponseDto result = paymentService.getPaymentDetail(orderId, userId);
+
+			// then
+			assertThat(result).isNotNull();
+			verify(paymentRepository).findByOrderIdAndUserId(orderId, userId);
+		}
+
+		@Test
+		@DisplayName("결제 정보가 없으면 예외를 던진다")
+		void shouldThrowExceptionWhenPaymentNotFound() {
+			// given
+			Long orderId = 1L;
+			Long userId = 1L;
+			
+			given(paymentRepository.findByOrderIdAndUserId(orderId, userId))
+				.willReturn(Optional.empty());
+
+			// when & then
+			assertThatThrownBy(() -> paymentService.getPaymentDetail(orderId, userId))
+				.isInstanceOf(CustomException.class)
+				.hasMessage(ErrorCode.PAYMENT_NOT_FOUND.getMessage());
+		}
+	}
+
+	@Nested
+	@DisplayName("환불 요청")
+	class RequestRefund {
+
+		@Test
+		@DisplayName("결제 상세 정보를 조회할 수 있다")
+		void shouldGetPaymentDetailWithRefundInfo() {
+			// given
+			Long orderId = 1L;
+			Long userId = 1L;
+			
+			Payment mockPayment = mock(Payment.class);
+			Order mockOrder = mock(Order.class);
+			
+			given(paymentRepository.findByOrderIdAndUserId(orderId, userId))
+				.willReturn(Optional.of(mockPayment));
+			
+			// Mock all methods needed by PaymentMapper.toPaymentDetailDto
+			given(mockPayment.getId()).willReturn(1L);
+			given(mockPayment.getOrder()).willReturn(mockOrder);
+			given(mockOrder.getId()).willReturn(orderId);
+			given(mockPayment.getOrderNo()).willReturn("ORDER123");
+			given(mockPayment.getPayMethod()).willReturn("CARD");
+			given(mockPayment.getAmount()).willReturn(10000);
+			given(mockPayment.getDiscountedAmount()).willReturn(0);
+			given(mockPayment.getPaidAmount()).willReturn(10000);
+			given(mockPayment.getPaidTs()).willReturn("20240101123000");
+			given(mockPayment.getPaymentStatus()).willReturn(PaymentStatus.DONE);
+			given(mockPayment.getTransactionId()).willReturn("TXN123");
+			given(mockPayment.getCardNumber()).willReturn("1234567812345678");
+			given(mockPayment.getCardCompanyCode()).willReturn(1);
+			given(mockPayment.getCardAuthorizationNo()).willReturn("AUTH123");
+			given(mockPayment.getSpreadOut()).willReturn(0);
+			given(mockPayment.getNoInterest()).willReturn(false);
+			given(mockPayment.getCardMethodType()).willReturn("CREDIT");
+			given(mockPayment.getCardNum4Print()).willReturn("5678");
+			given(mockPayment.getSalesCheckLinkUrl()).willReturn("http://test.com");
+			
+			// Mock refund info check methods
+			given(mockPayment.getCreatedAt()).willReturn(LocalDateTime.now().minusDays(1)); // 7일 이내
+			given(mockPayment.getRefundReason()).willReturn(null);
+			given(mockPayment.getRefundedAt()).willReturn(null);
+
+			// when
+			PaymentDetailResponseDto result = paymentService.getPaymentDetail(orderId, userId);
+
+			// then
+			assertThat(result).isNotNull();
+			assertThat(result.getPaymentId()).isEqualTo(1L);
+			assertThat(result.getOrderId()).isEqualTo(orderId);
+			verify(paymentRepository).findByOrderIdAndUserId(orderId, userId);
+		}
+
+		@Test
+		@DisplayName("이미 환불된 결제에 대해서는 예외를 던진다")
+		void shouldThrowExceptionWhenAlreadyRefunded() {
+			// given
+			Long orderId = 1L;
+			Long userId = 1L;
+			RefundRequestDto requestDto = RefundRequestDto.builder()
+				.refundReason("단순 변심")
+				.build();
+			
+			Payment mockPayment = mock(Payment.class);
+			
+			given(paymentRepository.findByOrderIdAndUserId(orderId, userId))
+				.willReturn(Optional.of(mockPayment));
+			given(mockPayment.getPaymentStatus()).willReturn(PaymentStatus.REFUND_REQUESTED); // 환불 요청됨
+
+			// when & then
+			assertThatThrownBy(() -> paymentService.requestRefund(orderId, requestDto, userId))
+				.isInstanceOf(CustomException.class)
+				.hasMessage(ErrorCode.INVALID_PAYMENT_STATUS.getMessage());
+		}
+
+		@Test
+		@DisplayName("환불 기간이 만료된 결제에 대해서는 예외를 던진다")
+		void shouldThrowExceptionWhenRefundTimeExpired() {
+			// given
+			Long orderId = 1L;
+			Long userId = 1L;
+			RefundRequestDto requestDto = RefundRequestDto.builder()
+				.refundReason("단순 변심")
+				.build();
+			
+			Payment mockPayment = mock(Payment.class);
+			
+			given(paymentRepository.findByOrderIdAndUserId(orderId, userId))
+				.willReturn(Optional.of(mockPayment));
+			given(mockPayment.getPaymentStatus()).willReturn(PaymentStatus.DONE);
+			given(mockPayment.getCreatedAt()).willReturn(LocalDateTime.now().minusDays(8)); // 7일 초과
+
+			// when & then
+			assertThatThrownBy(() -> paymentService.requestRefund(orderId, requestDto, userId))
+				.isInstanceOf(CustomException.class)
+				.hasMessage(ErrorCode.REFUND_TIME_EXPIRED.getMessage());
 		}
 	}
 }
