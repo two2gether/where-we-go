@@ -169,4 +169,18 @@ public class CacheKeyUtil {
                 + "page" + DELIMITER + pageNumber + DELIMITER
                 + "size" + DELIMITER + size;
     }
+
+    /**
+     * 특정 사용자의 코스 북마크 목록 조회 결과에 대한 캐시 키 생성
+     *
+     * @param userId 북마크를 조회할 사용자 ID
+     * @param pageNumber 페이지 번호
+     * @param size 페이지 크기
+     * @return 캐시 키
+     */
+    public String generateCourseBookmarkListKey(String userId, String pageNumber, String size) {
+        return "userId" + DELIMITER + userId + DELIMITER
+                + "page" + DELIMITER + pageNumber + DELIMITER
+                + "size" + DELIMITER + size;
+    }
 }

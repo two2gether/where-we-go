@@ -28,7 +28,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 @Configuration
 @EnableCaching
-//@Profile("!local") // local 프로필에서는 캐싱 비활성화
+@Profile("!local") // local 프로필에서는 캐싱 비활성화
 public class CacheConfig {
 
     /**
@@ -45,8 +45,8 @@ public class CacheConfig {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // 날짜를 타임스탬프가 아닌 ISO 형식으로
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL
-                //JsonTypeInfo.As.PROPERTY
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
         );
 
         // 기본 캐시 설정

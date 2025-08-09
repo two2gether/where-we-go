@@ -82,6 +82,9 @@ public class CommentService {
 		//알림 생성
 		notificationService.triggerCommentNotification(user, course);
 
+		// 캐시 삭제
+		deleteCache(courseId, userId);
+
 		return toDto(comment);
 	}
 
@@ -111,6 +114,9 @@ public class CommentService {
 
 		commentRepository.delete(comment);
 		log.debug("댓글 삭제 성공 - commentId: {}", commentId);
+
+		// 캐시 삭제
+		deleteCache(comment.getCourse().getId(), userId);
 	}
 
 	/**
@@ -143,18 +149,7 @@ public class CommentService {
 		log.debug("댓글 수정 성공 - commentId: {}", commentId);
 
 		// 캐시 삭제
-		String coursePattern = "course-comment-list::courseId:" + comment.getCourse().getId() + ":*";
-		String userPattern = "user-comment-list::userId:" + userId + ":*";
-
-		Set<String> couresKeysToDelete = redisTemplate.keys(coursePattern);
-		Set<String> userKeysToDelete = redisTemplate.keys(userPattern);
-
-		if (couresKeysToDelete != null && !couresKeysToDelete.isEmpty()) {
-			redisTemplate.delete(couresKeysToDelete);
-		}
-		if (userKeysToDelete != null && !userKeysToDelete.isEmpty()) {
-			redisTemplate.delete(userKeysToDelete);
-		}
+		deleteCache(comment.getCourse().getId(), userId);
 
 		return toDto(comment);
 	}
@@ -220,6 +215,28 @@ public class CommentService {
 	 */
 	private boolean isNotCourseOwner(Long userId, Course course) {
 		return !course.getIsPublic() && !course.getUser().getId().equals(userId);
+	}
+
+	/**
+	 * Redis 캐시에서 특정 코스와 사용자의 댓글 목록 캐시를 삭제합니다.
+	 *
+	 * @param courseId 캐시를 삭제할 코스 ID
+	 * @param userId   캐시를 삭제할 사용자 ID
+	 */
+	private void deleteCache(Long courseId, Long userId) {
+		// 캐시 삭제
+		String coursePattern = "course-comment-list::courseId:" + courseId + ":*";
+		String userPattern = "user-comment-list::userId:" + userId + ":*";
+
+		Set<String> couresKeysToDelete = redisTemplate.keys(coursePattern);
+		Set<String> userKeysToDelete = redisTemplate.keys(userPattern);
+
+		if (couresKeysToDelete != null && !couresKeysToDelete.isEmpty()) {
+			redisTemplate.delete(couresKeysToDelete);
+		}
+		if (userKeysToDelete != null && !userKeysToDelete.isEmpty()) {
+			redisTemplate.delete(userKeysToDelete);
+		}
 	}
 
 }
