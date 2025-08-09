@@ -23,6 +23,7 @@ interface ApiMonitorState {
   isVisible: boolean;
   logs: ApiLogEntry[];
   maxLogs: number;
+  width: number;
   filter: {
     method: string;
     status: string;
@@ -36,6 +37,7 @@ interface ApiMonitorActions {
   addLog: (log: Omit<ApiLogEntry, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
   setFilter: (filter: Partial<ApiMonitorState['filter']>) => void;
+  setWidth: (width: number) => void;
   updateLogResponse: (requestId: string, responseData: any, status: number, duration: number) => void;
   updateLogError: (requestId: string, error: any, status?: number, duration?: number) => void;
 }
@@ -48,6 +50,7 @@ export const useApiMonitorStore = create<ApiMonitorState & ApiMonitorActions>()(
       isVisible: false,
       logs: [],
       maxLogs: 100, // 최대 100개까지만 저장
+      width: 500, // 기본 너비 500px
       filter: {
         method: 'ALL',
         status: 'ALL',
@@ -78,6 +81,8 @@ export const useApiMonitorStore = create<ApiMonitorState & ApiMonitorActions>()(
       setFilter: (filter) => set((state) => ({
         filter: { ...state.filter, ...filter }
       })),
+      
+      setWidth: (width) => set({ width: Math.max(300, Math.min(window.innerWidth * 0.8, width)) }),
 
       updateLogResponse: (logId, responseData, status, duration) => {
         set((state) => {

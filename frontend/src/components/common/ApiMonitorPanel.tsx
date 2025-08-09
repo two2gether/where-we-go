@@ -9,7 +9,8 @@ import {
   Clock as ClockIcon,
   AlertTriangle as ExclamationTriangleIcon,
   CheckCircle as CheckCircleIcon,
-  RotateCw as ArrowPathIcon
+  RotateCw as ArrowPathIcon,
+  Copy as CopyIcon
 } from 'lucide-react';
 
 // HTTP 메소드별 색상
@@ -44,8 +45,52 @@ const getStatusIcon = (status?: number, type?: string) => {
 };
 
 // JSON 포맷터 컴포넌트
-const JsonFormatter: React.FC<{ data: any; title: string }> = ({ data, title }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const JsonFormatter: React.FC<{ data: any; title: string; defaultExpanded?: boolean; isResponseData?: boolean }> = ({ data, title, defaultExpanded = false, isResponseData = false }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [showFullList, setShowFullList] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  
+  // Response 데이터 생략 로직 (data 배열 안의 아이템들을 2개로 제한)
+  const getDisplayData = () => {
+    if (!isResponseData || typeof data !== 'object' || data === null) {
+      return data;
+    }
+    
+    if (showFullList) {
+      return data;
+    }
+    
+    // 직접 배열인 경우
+    if (Array.isArray(data)) {
+      return data.length > 2 ? data.slice(0, 2) : data;
+    }
+    
+    // 객체인 경우 - data 필드의 배열을 생략
+    const result = { ...data };
+    if (result.data && Array.isArray(result.data) && result.data.length > 2) {
+      result.data = result.data.slice(0, 2);
+    }
+    
+    return result;
+  };
+  
+  const displayData = getDisplayData();
+  const hasMore = isResponseData && (
+    (Array.isArray(data) && data.length > 2) || 
+    (typeof data === 'object' && data !== null && !Array.isArray(data) && data.data && Array.isArray(data.data) && data.data.length > 2)
+  );
+  
+  // 복사 기능
+  const handleCopy = async () => {
+    try {
+      const textToCopy = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      await navigator.clipboard.writeText(textToCopy);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('복사 실패:', err);
+    }
+  };
   
   // 데이터가 없거나 빈 객체인 경우 표시하지 않음
   if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
@@ -73,15 +118,61 @@ const JsonFormatter: React.FC<{ data: any; title: string }> = ({ data, title }) 
         )}
         <span className="mr-2">📦</span>
         <span className="font-medium text-gray-800">{title}</span>
-        <span className="ml-auto text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-          {typeof data === 'string' ? `${data.length} chars` : `${Object.keys(data).length} fields`}
-        </span>
+        <div className="ml-auto flex items-center space-x-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy();
+            }}
+            className={`p-1 rounded transition-colors ${
+              copySuccess 
+                ? 'bg-green-100 text-green-600' 
+                : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+            }`}
+            title={copySuccess ? 'Copied!' : 'Copy to clipboard'}
+          >
+            <CopyIcon className="w-3 h-3" />
+          </button>
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {typeof data === 'string' ? `${data.length} chars` : `${Object.keys(data).length} fields`}
+          </span>
+        </div>
       </button>
       {isExpanded && (
         <div className="border-t border-gray-200">
-          <pre className="p-4 bg-gray-900 text-green-400 text-xs overflow-x-auto max-h-60 font-mono rounded-b-md">
-            {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
+          <pre className={`p-4 text-xs overflow-auto font-mono whitespace-pre-wrap break-words ${
+            isResponseData 
+              ? 'bg-slate-900 text-blue-300 max-h-[500px]' 
+              : 'bg-gray-900 text-green-400 max-h-96'
+          } ${hasMore && !showFullList ? 'rounded-none' : 'rounded-b-md'}`}>
+            {typeof displayData === 'string' ? displayData : JSON.stringify(displayData, null, 2)}
+            {hasMore && !showFullList && (
+              <div className="text-yellow-300 mt-2 italic">
+                {Array.isArray(data) 
+                  ? `\n... and ${data.length - 2} more items`
+                  : data.data && Array.isArray(data.data)
+                  ? `\n... and ${data.data.length - 2} more items in data array`
+                  : `\n... truncated`
+                }
+              </div>
+            )}
           </pre>
+          {hasMore && (
+            <div className={`px-4 py-2 ${isResponseData ? 'bg-slate-800' : 'bg-gray-800'} rounded-b-md`}>
+              <button
+                onClick={() => setShowFullList(!showFullList)}
+                className="text-xs px-2 py-1 rounded transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {showFullList ? '간략히 보기' : '전체 보기'} 
+                {!showFullList && (Array.isArray(data) 
+                  ? ` (+${data.length - 2} items)`
+                  : data.data && Array.isArray(data.data)
+                  ? ` (+${data.data.length - 2} items)`
+                  : ''
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -89,8 +180,8 @@ const JsonFormatter: React.FC<{ data: any; title: string }> = ({ data, title }) 
 };
 
 // 개별 로그 항목 컴포넌트
-const LogItem: React.FC<{ log: ApiLogEntry }> = ({ log }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const LogItem: React.FC<{ log: ApiLogEntry; isLatest: boolean }> = ({ log, isLatest }) => {
+  const [isExpanded, setIsExpanded] = useState(isLatest);
   
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -189,8 +280,13 @@ const LogItem: React.FC<{ log: ApiLogEntry }> = ({ log }) => {
               <JsonFormatter data={log.requestData} title="Request Body" />
               <JsonFormatter data={log.requestParams} title="Request Params" />
               <JsonFormatter data={log.requestHeaders} title="Request Headers" />
-              <JsonFormatter data={log.responseData} title="Response Data" />
-              {log.error && <JsonFormatter data={log.error} title="Error Details" />}
+              <JsonFormatter 
+                data={log.responseData} 
+                title="Response Data" 
+                defaultExpanded={isLatest} 
+                isResponseData={true}
+              />
+              {log.error && <JsonFormatter data={log.error} title="Error Details" defaultExpanded={isLatest} />}
             </div>
           </div>
         </div>
@@ -208,21 +304,21 @@ const FilterPanel: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+        className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-900 font-medium bg-gray-100 hover:bg-gray-200 rounded"
       >
         <AdjustmentsHorizontalIcon className="w-4 h-4" />
         <span>Filter</span>
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10 min-w-64">
+        <div className="absolute right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-4 z-20 min-w-64" style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)' }}>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Method</label>
+              <label className="block text-xs font-bold text-gray-900 mb-2">Method</label>
               <select
                 value={filter.method}
                 onChange={(e) => setFilter({ method: e.target.value })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                className="w-full px-3 py-2 text-sm border-2 border-gray-400 rounded-md bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
                 <option value="ALL">All Methods</option>
                 <option value="GET">GET</option>
@@ -234,11 +330,11 @@ const FilterPanel: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-xs font-bold text-gray-900 mb-2">Status</label>
               <select
                 value={filter.status}
                 onChange={(e) => setFilter({ status: e.target.value })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                className="w-full px-3 py-2 text-sm border-2 border-gray-400 rounded-md bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
                 <option value="ALL">All Status</option>
                 <option value="2xx">2xx Success</option>
@@ -249,13 +345,13 @@ const FilterPanel: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Search URL</label>
+              <label className="block text-xs font-bold text-gray-900 mb-2">Search URL</label>
               <input
                 type="text"
                 value={filter.search}
                 onChange={(e) => setFilter({ search: e.target.value })}
                 placeholder="Filter by URL..."
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                className="w-full px-3 py-2 text-sm border-2 border-gray-400 rounded-md bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
             </div>
             
@@ -281,11 +377,52 @@ const ApiMonitorPanel: React.FC = () => {
     isVisible, 
     logs, 
     filter,
+    width,
     toggleVisible, 
     clearLogs,
     toggleEnabled,
+    setWidth,
     isEnabled
   } = useApiMonitorStore();
+  
+  const [isResizing, setIsResizing] = useState(false);
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+  
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const newWidth = window.innerWidth - e.clientX;
+    setWidth(newWidth);
+  }, [isResizing, setWidth]);
+  
+  const handleMouseUp = React.useCallback(() => {
+    setIsResizing(false);
+  }, []);
+  
+  React.useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
   
   // 필터링된 로그
   const filteredLogs = useMemo(() => {
@@ -315,7 +452,18 @@ const ApiMonitorPanel: React.FC = () => {
   if (!isVisible) return null;
   
   return (
-    <div className="fixed top-0 right-0 w-1/3 h-full bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col min-w-[400px] max-w-[600px]">
+    <div 
+      className="fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col"
+      style={{ width: `${width}px` }}
+    >
+      {/* 리사이즈 핸들 */}
+      <div
+        className="absolute left-0 top-0 w-1 h-full cursor-ew-resize hover:bg-blue-400 transition-colors z-10"
+        onMouseDown={handleMouseDown}
+        style={{ 
+          background: isResizing ? '#60a5fa' : 'transparent',
+        }}
+      />
       {/* 헤더 */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center space-x-3">
@@ -387,8 +535,12 @@ const ApiMonitorPanel: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {filteredLogs.map((log) => (
-              <LogItem key={`${log.id}-${log.timestamp}`} log={log} />
+            {filteredLogs.map((log, index) => (
+              <LogItem 
+                key={`${log.id}-${log.timestamp}`} 
+                log={log} 
+                isLatest={index === 0} 
+              />
             ))}
           </div>
         )}
