@@ -59,6 +59,16 @@ export const GitHubHeader: React.FC = () => {
                   <Link to="/bookmarks" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
                     북마크
                   </Link>
+                  <Link to="/orders" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                    주문내역
+                  </Link>
+                  <Link to="/events" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                    이벤트
+                  </Link>
+                  {/* 관리자용 메뉴 */}
+                  <Link to="/admin/products" className="text-yellow-300 hover:text-yellow-100 transition-colors text-sm font-medium">
+                    👑 관리자
+                  </Link>
                 </nav>
 
                 {/* User Menu */}

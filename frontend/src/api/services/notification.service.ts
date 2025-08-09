@@ -18,8 +18,8 @@ export const notificationService = {
 
   // 읽지 않은 알림 개수 조회
   getUnreadCount: (): Promise<number> =>
-    apiRequest.get<{ count: number }>('/notifications/unread/count')
-      .then(response => response.data.count),
+    apiRequest.get<number>('/notifications/unread-count')
+      .then(response => response.data),
 
   // 알림 읽음 처리
   markAsRead: (notificationId: number): Promise<void> =>

@@ -1,0 +1,1 @@
+export { EventProductCard } from './EventProductCard';

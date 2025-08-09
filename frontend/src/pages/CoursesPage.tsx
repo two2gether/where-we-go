@@ -39,9 +39,21 @@ export const CoursesPage: React.FC = () => {
     size: 20,
   }), [debouncedSearchQuery, selectedRegion, selectedTheme]);
 
-  // React Query 훅 사용
-  const { data: allCoursesData, isLoading: isLoadingAll, error: errorAll, refetch: refetchAll } = useCourses(searchParams);
-  const { data: myCoursesData, isLoading: isLoadingMy, error: errorMy, refetch: refetchMy } = useMyCourses(searchParams);
+  // API 호출 조건 로깅
+  console.log('=== API 호출 조건 ===');
+  console.log('activeTab:', activeTab);
+  console.log('useCourses enabled:', activeTab === 'all');
+  console.log('useMyCourses enabled:', activeTab === 'my' && isAuthenticated);
+
+  // React Query 훅 사용 - 활성 탭에 따라 조건부로 API 호출
+  const { data: allCoursesData, isLoading: isLoadingAll, error: errorAll, refetch: refetchAll } = useCourses(
+    searchParams, 
+    { enabled: activeTab === 'all' }  // 'all' 탭일 때만 호출
+  );
+  const { data: myCoursesData, isLoading: isLoadingMy, error: errorMy, refetch: refetchMy } = useMyCourses({
+    ...searchParams,
+    enabled: activeTab === 'my' && isAuthenticated  // 'my' 탭이고 로그인된 경우만 호출
+  });
   const toggleLikeMutation = useToggleCourseLike();
 
   // 현재 탭에 따라 데이터 선택

@@ -110,40 +110,31 @@ export const courseService = {
     apiRequest.delete<void>(`/courses/${id}`)
       .then(response => response.data),
 
-  // 내가 작성한 코스 목록 조회 (임시로 전체 코스와 동일한 API 사용)
+  // 내가 작성한 코스 목록 조회
   getMyCourses: (params: Omit<CourseSearchRequest, 'authorId'> = {}): Promise<PageResponse<Course>> => {
-    // 임시로 전체 코스와 동일한 로직 사용
     const queryParams: any = {
-      region: params.region || '서울', // 기본값을 서울로 통일
       page: params.page || 0,
       size: params.size || 10,
-      sort: 'createdAt,desc'
     };
 
-    // themes가 있을 때만 추가
+    // 필터 파라미터 추가
+    if (params.region && params.region !== '전체') {
+      queryParams.region = params.region;
+    }
     if (params.theme) {
-      queryParams.themes = params.theme;
+      queryParams.theme = params.theme;
+    }
+    if (params.keyword) {
+      queryParams.keyword = params.keyword;
     }
 
-    console.log('getMyCourses API 호출:', '/courses (임시)', queryParams);
+    console.log('getMyCourses API 호출:', '/users/mypage/courses', queryParams);
 
-    // getCourses와 동일한 방식 사용 (GET 요청)
-    return apiRequest.get<any>('/courses', { params: queryParams })
+    // 올바른 백엔드 엔드포인트 사용: /api/users/mypage/courses
+    return apiRequest.get<PageResponse<Course>>('/users/mypage/courses', { params: queryParams })
       .then(response => {
-        if (!response?.data) {
-          console.warn('getMyCourses: Invalid response structure', response);
-          return {
-            content: [],
-            totalElements: 0,
-            totalPages: 0,
-            number: 0,
-            size: pageParams.size,
-            first: true,
-            last: true,
-            empty: true
-          };
-        }
-        return response.data; // ApiResponse<PagedResponse<T>> 구조
+        console.log('getMyCourses 응답:', response);
+        return response.data;
       })
       .catch(error => {
         console.error('getMyCourses API failed:', error);
@@ -153,7 +144,7 @@ export const courseService = {
           totalElements: 0,
           totalPages: 0,
           number: 0,
-          size: pageParams.size,
+          size: queryParams.size,
           first: true,
           last: true,
           empty: true

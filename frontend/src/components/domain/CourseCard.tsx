@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, Badge, Avatar, Button } from '../base';
+import { useCourseLikes, useCourseBookmarks } from '../../hooks';
+import { useAuthStore } from '../../store/authStore';
 
 export interface CourseCardProps {
   id: number;
@@ -15,7 +17,8 @@ export interface CourseCardProps {
     name: string;
     avatar: string;
   };
-  onLike?: (id: number) => void;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
   onViewDetails?: (id: number) => void;
   className?: string;
 }
@@ -31,13 +34,39 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   likeCount,
   duration,
   author,
-  onLike,
+  isLiked = false,
+  isBookmarked = false,
   onViewDetails,
   className = ''
 }) => {
-  const handleLike = (e: React.MouseEvent) => {
+  const { user } = useAuthStore();
+  const { toggleCourseLike, isToggling: isLikeToggling } = useCourseLikes();
+  const { toggleCourseBookmark, isToggling: isBookmarkToggling } = useCourseBookmarks();
+
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onLike?.(id);
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    try {
+      await toggleCourseLike(id, isLiked);
+    } catch (error) {
+      console.error('좋아요 처리 실패:', error);
+    }
+  };
+
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    try {
+      await toggleCourseBookmark(id, isBookmarked);
+    } catch (error) {
+      console.error('북마크 처리 실패:', error);
+    }
   };
 
   const handleViewDetails = () => {
@@ -65,10 +94,34 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </div>
         <button
           onClick={handleLike}
-          className="absolute top-3 left-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+          disabled={isLikeToggling}
+          className="absolute top-3 left-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors disabled:opacity-50"
         >
-          <svg className="w-5 h-5 text-gray-600 hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            className={`w-5 h-5 transition-colors ${
+              isLiked ? 'text-red-500 fill-current' : 'text-gray-600 hover:text-red-500'
+            }`} 
+            fill={isLiked ? 'currentColor' : 'none'} 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+        <button
+          onClick={handleBookmark}
+          disabled={isBookmarkToggling}
+          className="absolute top-3 right-16 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors disabled:opacity-50"
+        >
+          <svg 
+            className={`w-5 h-5 transition-colors ${
+              isBookmarked ? 'text-blue-500 fill-current' : 'text-gray-600 hover:text-blue-500'
+            }`} 
+            fill={isBookmarked ? 'currentColor' : 'none'} 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
       </div>

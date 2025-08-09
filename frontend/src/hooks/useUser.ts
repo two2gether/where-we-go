@@ -130,8 +130,16 @@ export const useMyCourseBookmarks = (page: number = 0, size: number = 20) => {
 export const useMyCourseLikes = (page: number = 0, size: number = 10) => {
   return useQuery({
     queryKey: userKeys.courseLikes(page, size),
-    queryFn: () => userService.getMyCourseLikes(page, size),
+    queryFn: async () => {
+      console.log('🔍 좋아요한 코스 API 호출:', { page, size });
+      const result = await userService.getMyCourseLikes(page, size);
+      console.log('🔍 좋아요한 코스 API 응답:', result);
+      return result;
+    },
     staleTime: 5 * 60 * 1000, // 5분
+    onError: (error) => {
+      console.error('🚨 좋아요한 코스 API 에러:', error);
+    },
   });
 };
 

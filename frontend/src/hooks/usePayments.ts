@@ -31,11 +31,8 @@ export const useCreatePayment = () => {
   return useMutation({
     mutationFn: (paymentData: PaymentRequest) => paymentService.createPayment(paymentData),
     onSuccess: (response) => {
-      // 결제 상세 캐시에 추가
-      queryClient.setQueryData(
-        paymentKeys.detail(response.orderId), 
-        response
-      );
+      // 결제 성공 로깅
+      console.log('Payment creation successful:', response);
     },
     onError: (error) => {
       console.error('Payment creation failed:', error);

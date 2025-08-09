@@ -15,6 +15,12 @@ import MyPage from '../pages/MyPage';
 import PlaceDetailPage from '../pages/PlaceDetailPage';
 import CourseDetailPage from '../pages/CourseDetailPage';
 import { BookmarksPage } from '../pages/BookmarksPage';
+import OrdersPage from '../pages/OrdersPage';
+import EventProductsPage from '../pages/EventProductsPage';
+import EventProductDetailPage from '../pages/EventProductDetailPage';
+import ProductManagePage from '../pages/admin/ProductManagePage';
+import ProductCreatePage from '../pages/admin/ProductCreatePage';
+import ProductEditPage from '../pages/admin/ProductEditPage';
 
 // 임시 페이지 컴포넌트들
 const PageSkeleton = () => (
@@ -62,11 +68,17 @@ const HomePage = () => {
               </svg>
               장소 둘러보기
             </Link>
+            <Link to="/events" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              🔥 특가 이벤트
+            </Link>
           </div>
         </div>
 
         {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-16">
           <div className="bg-github-canvas border border-github-border rounded-lg p-8 hover:border-github-border-muted transition-colors">
             <div className="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mb-6 mx-auto">
               <svg className="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,6 +125,22 @@ const HomePage = () => {
             </p>
             <Link to="/places" className="inline-block mt-4 text-secondary-600 hover:text-secondary-700 font-medium">
               코스 만들기 →
+            </Link>
+          </div>
+          
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-8 hover:border-red-300 transition-colors">
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-6 mx-auto">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-primary-900 mb-4">🔥 특가 이벤트</h3>
+            <p className="text-github-neutral leading-relaxed">
+              한정 기간 특가 혜택! 여행 상품을 할인된 가격으로 
+              만나보세요. 놓치면 후회할 기회입니다.
+            </p>
+            <Link to="/events" className="inline-block mt-4 text-red-600 hover:text-red-700 font-medium">
+              이벤트 보러가기 →
             </Link>
           </div>
         </div>
@@ -270,6 +298,69 @@ const router = createBrowserRouter([
             <BookmarksPage />
           </Suspense>
         ),
+      },
+      {
+        path: 'orders',
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <OrdersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'events',
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <EventProductsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ':productId',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <EventProductDetailPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+      {
+        path: 'admin',
+        children: [
+          {
+            path: 'products',
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<PageSkeleton />}>
+                    <ProductManagePage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'create',
+                element: (
+                  <Suspense fallback={<PageSkeleton />}>
+                    <ProductCreatePage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ':productId/edit',
+                element: (
+                  <Suspense fallback={<PageSkeleton />}>
+                    <ProductEditPage />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+        ],
       },
       {
         path: '*',

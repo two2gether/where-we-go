@@ -19,12 +19,23 @@ export const courseKeys = {
 };
 
 // 코스 목록 조회 (페이지네이션)
-export const useCourses = (params: CourseSearchRequest = {}) => {
+export const useCourses = (
+  params: CourseSearchRequest = {}, 
+  options: { enabled?: boolean } = {}
+) => {
+  const { enabled = true } = options;
+  
   return useQuery({
     queryKey: courseKeys.list(params),
-    queryFn: () => courseService.getCourses(params),
+    queryFn: () => {
+      console.log('📋 useCourses API 호출:', params);
+      return courseService.getCourses(params);
+    },
     staleTime: 5 * 60 * 1000, // 5분
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // 마운트 시 재조회 방지
+    refetchOnReconnect: false, // 재연결 시 재조회 방지
+    enabled, // 조건부 실행
   });
 };
 
@@ -58,8 +69,14 @@ export const useMyCourses = (params: Omit<CourseSearchRequest, 'authorId'> & { e
   const { enabled = true, ...courseParams } = params;
   return useQuery({
     queryKey: courseKeys.myList(courseParams),
-    queryFn: () => courseService.getMyCourses(courseParams),
+    queryFn: () => {
+      console.log('👤 useMyCourses API 호출:', courseParams);
+      return courseService.getMyCourses(courseParams);
+    },
     staleTime: 2 * 60 * 1000, // 2분
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // 마운트 시 재조회 방지
+    refetchOnReconnect: false, // 재연결 시 재조회 방지
     enabled, // 조건부 실행
   });
 };

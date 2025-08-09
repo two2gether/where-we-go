@@ -9,9 +9,17 @@ import type {
 
 export const paymentService = {
   // 결제 생성
-  createPayment: (paymentData: PaymentRequest): Promise<PaymentResponse> =>
-    apiRequest.post<PaymentResponse>('/payments', paymentData)
-      .then(response => response.data),
+  createPayment: async (paymentData: PaymentRequest): Promise<PaymentResponse> => {
+    console.log('Payment service - 요청 데이터:', paymentData);
+    try {
+      const response = await apiRequest.post<PaymentResponse>('/payments', paymentData);
+      console.log('Payment service - 응답 데이터:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Payment service - API 호출 실패:', error);
+      throw error;
+    }
+  },
 
   // 결제 상세 조회
   getPaymentDetail: (orderId: number): Promise<PaymentDetailResponse> =>

@@ -249,23 +249,28 @@ export interface FileUploadResponse {
   mimeType: string;
 }
 
-// 결제 관련 타입
+// 결제 관련 타입 (백엔드 PaymentRequestDto와 매칭)
 export interface PaymentRequest {
+  apiKey: string;
   orderNo: string;
-  payMethod: 'CARD' | 'ACCOUNT' | 'TOSS_MONEY';
   amount: number;
-  orderName: string;
-  successUrl?: string;
-  failUrl?: string;
+  amountTaxFree: number;
+  productDesc: string;
+  retUrl: string;
+  retCancelUrl: string;
+  autoExecute: boolean;
+  resultCallback?: string;
+  callbackVersion?: string;
+  productId?: number;
+  quantity?: number;
 }
 
 export interface PaymentResponse {
-  paymentId: number;
-  orderId: number;
-  orderNo: string;
-  payMethod: 'CARD' | 'ACCOUNT' | 'TOSS_MONEY';
-  amount: number;
-  paymentUrl: string;
+  code: number;
+  checkoutPage: string;
+  payToken: string;
+  msg?: string;
+  errorCode?: string;
 }
 
 export interface PaymentDetailResponse {
@@ -431,11 +436,33 @@ export interface CourseBookmark {
   createdAt: string;
 }
 
-// 좋아요 관련 타입
+// 좋아요 관련 타입 (백엔드 CourseLikeListResponseDto와 매칭)
 export interface CourseLike {
   id: number;
-  course: Course;
-  createdAt: string;
+  userId: number;
+  courseListDto: {
+    courseId: number;
+    nickname: string;
+    title: string;
+    description: string;
+    themes: string[];
+    region: string;
+    places: Array<{
+      placeId: string;
+      name: string;
+      category: string;
+      latitude: number;
+      longitude: number;
+      distanceFromUser?: number | null;
+      distanceFromPrevious?: number | null;
+      visitOrder: number;
+      imageUrl?: string;
+    }>;
+    likeCount: number;
+    averageRating: number;
+    isPublic: boolean;
+  };
+  createdAt?: string; // 생성일시 (선택사항)
 }
 
 // 에러 응답 타입

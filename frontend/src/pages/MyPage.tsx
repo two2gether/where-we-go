@@ -305,23 +305,77 @@ const MyPage: React.FC = () => {
 
       case 'comments':
         return (
-          <div className="bg-white rounded-lg border border-github-border">
-            <div className="border-b border-github-border p-4">
-              <h2 className="text-lg font-semibold text-github-neutral">내가 작성한 댓글</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">내가 작성한 댓글</h2>
+                <span className="text-sm text-gray-500">
+                  총 {commentsData?.totalElements || 0}개
+                </span>
+              </div>
             </div>
-            <div className="divide-y divide-github-border">
+            <div className="divide-y divide-gray-200">
               {commentsData?.content?.map((comment) => (
-                <div key={comment.id} className="p-4">
-                  <div className="text-sm text-github-neutral-muted mb-2">
-                    <span className="font-medium">{comment.courseTitle}</span>에 댓글
-                    <span className="ml-2">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                <div key={comment.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">📝 댓글</span>
+                          <Link 
+                            to={`/courses/${comment.courseId}`}
+                            className="inline-flex items-center group"
+                          >
+                            <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                              코스 #{comment.courseId}
+                            </h3>
+                            <svg 
+                              className="ml-1 w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </Link>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {new Date(comment.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-200">
+                        <p className="text-gray-700 leading-relaxed">{comment.content}</p>
+                      </div>
+                      
+                      {comment.updatedAt && comment.updatedAt !== comment.createdAt && (
+                        <div className="text-xs text-gray-400 mt-2">
+                          편집됨: {new Date(comment.updatedAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-github-neutral">{comment.content}</p>
                 </div>
               ))}
+              
               {(!commentsData?.content || commentsData.content.length === 0) && (
-                <div className="p-8 text-center text-github-neutral-muted">
-                  작성한 댓글이 없습니다.
+                <div className="p-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">작성한 댓글이 없습니다</h3>
+                  <p className="text-gray-500 mb-4">코스에 댓글을 남겨보세요!</p>
+                  <Link 
+                    to="/courses" 
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    코스 둘러보기
+                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
                 </div>
               )}
             </div>
@@ -516,32 +570,111 @@ const MyPage: React.FC = () => {
 
       case 'likes':
         return (
-          <div className="bg-white rounded-lg border border-github-border">
-            <div className="border-b border-github-border p-4">
-              <h2 className="text-lg font-semibold text-github-neutral">좋아요한 코스</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">좋아요한 코스</h2>
+                <span className="text-sm text-gray-500">
+                  총 {likesData?.totalElements || 0}개
+                </span>
+              </div>
             </div>
-            <div className="divide-y divide-github-border">
+            <div className="divide-y divide-gray-200">
               {likesData?.content?.map((like) => (
-                <div key={like.id} className="p-4">
+                <div key={like.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-github-neutral">{like.course.title}</h3>
-                      <p className="text-sm text-github-neutral-muted mt-1">{like.course.description}</p>
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-github-neutral-muted">
-                        <span>작성자: {like.course.authorNickname}</span>
-                        <span>👥 {like.course.commentCount || 0}개 댓글</span>
-                        <span>🔖 {like.course.bookmarkCount || 0}개 북마크</span>
+                      <Link 
+                        to={`/courses/${like.courseListDto.courseId}`}
+                        className="inline-flex items-center group mb-3"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {like.courseListDto.title}
+                        </h3>
+                        <svg 
+                          className="ml-2 w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </Link>
+                      
+                      <p className="text-gray-600 mb-3 leading-relaxed">
+                        {like.courseListDto.description}
+                      </p>
+                      
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        {like.courseListDto.themes?.map((theme, index) => (
+                          <span 
+                            key={index} 
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {theme}
+                          </span>
+                        ))}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          📍 {like.courseListDto.region}
+                        </span>
                       </div>
-                      <div className="text-xs text-github-neutral-muted mt-2">
-                        좋아요 일시: {new Date(like.createdAt).toLocaleDateString()}
+                      
+                      <div className="flex items-center space-x-6 text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {like.courseListDto.nickname}
+                        </div>
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                          </svg>
+                          {like.courseListDto.likeCount}
+                        </div>
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          {like.courseListDto.averageRating.toFixed(1)}
+                        </div>
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {like.courseListDto.places?.length || 0}개 장소
+                        </div>
                       </div>
+                      
+                      {like.createdAt && (
+                        <div className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
+                          좋아요 일시: {new Date(like.createdAt).toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
+              
               {(!likesData?.content || likesData.content.length === 0) && (
-                <div className="p-8 text-center text-github-neutral-muted">
-                  좋아요한 코스가 없습니다.
+                <div className="p-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <svg className="w-8 h-8 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">좋아요한 코스가 없습니다</h3>
+                  <p className="text-gray-500 mb-4">마음에 드는 코스에 좋아요를 눌러보세요!</p>
+                  <Link 
+                    to="/courses" 
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    코스 둘러보기
+                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
                 </div>
               )}
             </div>
