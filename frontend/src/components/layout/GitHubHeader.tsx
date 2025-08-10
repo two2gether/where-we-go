@@ -7,113 +7,311 @@ export const GitHubHeader: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
   return (
-    <header className="bg-primary-900 text-white border-b border-primary-800">
+    <header 
+      style={{
+        background: 'var(--notion-white)',
+        borderBottom: '1px solid var(--notion-gray-light)',
+        color: 'var(--notion-text)'
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Notion 스타일 로고 */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-2 hover:text-gray-200 transition-colors">
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <Link 
+              to="/" 
+              className="flex items-center space-x-2 transition-colors"
+              style={{
+                color: 'var(--notion-text)',
+                textDecoration: 'none'
+              }}
+            >
+              <svg 
+                className="w-7 h-7" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                style={{ color: 'var(--notion-blue)' }}
+              >
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                 <circle cx="12" cy="10" r="3"/>
               </svg>
-              <span className="text-xl font-semibold">Where We Go</span>
+              <span 
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: 'var(--notion-text)'
+                }}
+              >
+                Where We Go
+              </span>
             </Link>
           </div>
 
-          {/* Search Bar */}
+          {/* Notion 스타일 검색바 */}
           <div className="flex-1 max-w-lg mx-8">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg 
+                  className="h-4 w-4" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  style={{ color: 'var(--notion-gray)' }}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
               <input
                 type="text"
-                placeholder="검색하거나 명령어를 입력하세요"
-                className="block w-full pl-10 pr-3 py-2 text-sm bg-primary-800 border border-primary-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                value={searchQuery}
+                onChange={handleSearchInput}
+                placeholder="코스나 장소를 검색하세요"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  paddingLeft: '40px',
+                  paddingRight: '12px',
+                  paddingTop: '8px',
+                  paddingBottom: '8px',
+                  fontSize: '14px',
+                  background: 'var(--notion-gray-bg)',
+                  border: '1px solid var(--notion-gray-light)',
+                  borderRadius: '6px',
+                  color: 'var(--notion-text)',
+                  outline: 'none',
+                  transition: 'all 0.15s ease'
+                }}
               />
-            </div>
+            </form>
           </div>
 
-          {/* Navigation & User Menu */}
+          {/* Notion 스타일 Navigation & User Menu */}
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {/* Navigation Links */}
-                <nav className="hidden md:flex items-center space-x-6">
-                  <Link to="/places" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                {/* Notion 스타일 Navigation Links */}
+                <nav className="hidden md:flex items-center space-x-1">
+                  <Link 
+                    to="/places" 
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     장소
                   </Link>
-                  <Link to="/courses" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                  <Link 
+                    to="/courses"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     코스
                   </Link>
-                  <Link to="/bookmarks" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                  <Link 
+                    to="/bookmarks"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     북마크
                   </Link>
-                  <Link to="/orders" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                  <Link 
+                    to="/orders"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     주문내역
                   </Link>
-                  <Link to="/events" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                  <Link 
+                    to="/events"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     이벤트
                   </Link>
-                  {/* 관리자용 메뉴 */}
-                  <Link to="/admin/products" className="text-yellow-300 hover:text-yellow-100 transition-colors text-sm font-medium">
+                  {/* 관리자용 메뉴 - Notion 스타일 */}
+                  <Link 
+                    to="/admin/products"
+                    style={{
+                      color: 'var(--notion-blue)',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      textDecoration: 'none',
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     👑 관리자
                   </Link>
                 </nav>
 
-                {/* User Menu */}
+                {/* Notion 스타일 User Menu */}
                 <div className="relative">
                   <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="flex items-center space-x-1 text-gray-300 hover:text-white transition-colors"
+                    className="flex items-center space-x-1 transition-colors"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px'
+                    }}
                   >
-                    <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium">
+                    <div 
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        backgroundColor: 'var(--notion-gray-light)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <span 
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          color: 'var(--notion-text)'
+                        }}
+                      >
                         {user?.nickname?.[0]?.toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                      <div className="px-4 py-2 border-b border-gray-200">
-                        <p className="text-sm text-gray-900 font-medium">{user?.nickname}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                    <div 
+                      className="absolute right-0 mt-2 w-48 z-50"
+                      style={{
+                        background: 'var(--notion-white)',
+                        borderRadius: '6px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        border: '1px solid var(--notion-gray-light)',
+                        padding: '4px'
+                      }}
+                    >
+                      <div 
+                        style={{
+                          padding: '8px 12px',
+                          borderBottom: '1px solid var(--notion-gray-light)',
+                          marginBottom: '4px'
+                        }}
+                      >
+                        <p style={{ fontSize: '14px', color: 'var(--notion-text)', fontWeight: '500', margin: 0 }}>
+                          {user?.nickname}
+                        </p>
+                        <p style={{ fontSize: '12px', color: 'var(--notion-text-light)', margin: 0 }}>
+                          {user?.email}
+                        </p>
                       </div>
                       <Link
                         to="/mypage"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="block transition-colors"
                         onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '14px',
+                          color: 'var(--notion-text)',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          display: 'block'
+                        }}
                       >
                         마이페이지
                       </Link>
                       <Link
                         to="/settings"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="block transition-colors"
                         onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '14px',
+                          color: 'var(--notion-text)',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          display: 'block'
+                        }}
                       >
                         설정
                       </Link>
-                      <hr className="my-1" />
+                      <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid var(--notion-gray-light)' }} />
                       <button
                         onClick={() => {
                           handleLogout();
                           setIsMenuOpen(false);
                         }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '6px 12px',
+                          fontSize: '14px',
+                          color: 'var(--notion-text)',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
                       >
                         로그아웃
                       </button>
@@ -123,22 +321,38 @@ export const GitHubHeader: React.FC = () => {
               </>
             ) : (
               <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={() => navigate('/login')}
-                  className="text-white hover:bg-primary-800 border-transparent"
+                  style={{
+                    color: 'var(--notion-text-light)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
                 >
                   로그인
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <button
                   onClick={() => navigate('/login')}
-                  className="text-primary-900 bg-white border-white hover:border-gray-300 hover:bg-gray-50"
+                  style={{
+                    color: 'var(--notion-white)',
+                    background: 'var(--notion-blue)',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
                 >
                   회원가입
-                </Button>
+                </button>
               </div>
             )}
           </div>

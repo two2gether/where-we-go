@@ -19,6 +19,7 @@ import { BookmarksPage } from '../pages/BookmarksPage';
 import OrdersPage from '../pages/OrdersPage';
 import EventProductsPage from '../pages/EventProductsPage';
 import EventProductDetailPage from '../pages/EventProductDetailPage';
+import SearchPage from '../pages/SearchPage';
 import ProductManagePage from '../pages/admin/ProductManagePage';
 import ProductCreatePage from '../pages/admin/ProductCreatePage';
 import ProductEditPage from '../pages/admin/ProductEditPage';
@@ -181,6 +182,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageSkeleton />}>
             <OrdersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'search',
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <SearchPage />
           </Suspense>
         ),
       },

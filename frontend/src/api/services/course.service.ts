@@ -13,12 +13,18 @@ export const courseService = {
   getCourses: (params: CourseSearchRequest = {}): Promise<PageResponse<Course>> => {
     // 백엔드 API 스펙에 맞게 쿼리 파라미터 구성  
     const queryParams: any = {
-      region: params.region || '서울', // DB에 서울 지역 코스가 있으므로 기본값을 서울로 설정
       page: params.page || 0,
       size: params.size || 10,
       sort: 'createdAt,desc'
     };
 
+    // 검색어가 있을 때만 추가
+    if (params.search) {
+      queryParams.search = params.search;
+    } else {
+      // 검색어가 없을 때만 기본 region 설정
+      queryParams.region = params.region || '서울';
+    }
 
     // themes가 있을 때만 추가
     if (params.theme) {

@@ -9,8 +9,8 @@ import type {
 export const placeService = {
   // 장소 검색 (POST 요청)
   getPlaces: (params: PlaceSearchRequest = {}): Promise<Place[]> => {
-    // 검색 쿼리 조합
-    let query = params.keyword || '맛집'; // 기본 검색어
+    // 검색 쿼리 조합 - query 또는 keyword 사용
+    let query = params.query || params.keyword || '맛집'; // 기본 검색어
     
     // 카테고리가 선택되었으면 쿼리에 추가
     if (params.category) {
