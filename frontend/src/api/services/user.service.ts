@@ -8,6 +8,7 @@ import type {
   Notification,
   UserBookmarkList,
   CourseBookmark,
+  UserCourseBookmarkListDto,
   CourseListResponse,
   CourseLike,
   PageResponse,
@@ -61,8 +62,8 @@ export const userService = {
       .then(response => response.data),
 
   // 내가 북마크한 코스 목록
-  getMyCourseBookmarks: (page: number = 0, size: number = 20): Promise<PageResponse<CourseBookmark>> =>
-    apiRequest.get<PageResponse<CourseBookmark>>(`/users/mypage/coursebookmark?page=${page}&size=${size}`)
+  getMyCourseBookmarks: (page: number = 0, size: number = 20): Promise<PageResponse<UserCourseBookmarkListDto>> =>
+    apiRequest.get<PageResponse<UserCourseBookmarkListDto>>(`/users/mypage/coursebookmark?page=${page}&size=${size}`)
       .then(response => response.data),
 
   // 내가 좋아요한 코스 목록

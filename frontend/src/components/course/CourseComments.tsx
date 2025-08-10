@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '../../api/axios';
+import { commentService } from '../../api/services/comment.service';
 import { useAuthStore } from '../../store/authStore';
 import { CourseComment, CourseCommentRequest, PageResponse } from '../../api/types';
 
@@ -19,8 +19,7 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
   const { data: commentsData, isLoading, error } = useQuery({
     queryKey: ['course-comments', courseId],
     queryFn: async () => {
-      const response = await apiRequest.get<PageResponse<CourseComment>>(`/courses/${courseId}/comments`);
-      return response.data;
+      return await commentService.getCourseComments(courseId);
     },
     enabled: !!courseId,
     staleTime: 30 * 1000, // 30초
@@ -29,8 +28,7 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
   // 댓글 작성 뮤테이션
   const createCommentMutation = useMutation({
     mutationFn: async (commentData: CourseCommentRequest) => {
-      const response = await apiRequest.post<CourseComment>(`/courses/${courseId}/comments`, commentData);
-      return response.data;
+      return await commentService.createCourseComment(courseId, commentData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['course-comments', courseId] });
@@ -47,7 +45,7 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
   // 댓글 삭제 뮤테이션
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: number) => {
-      await apiRequest.delete(`/courses/${courseId}/comments/${commentId}`);
+      await commentService.deleteCourseComment(courseId, commentId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['course-comments', courseId] });
@@ -102,27 +100,27 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
     <div className={`${className}`}>
       {/* 댓글 작성 폼 */}
       {isAuthenticated && (
-        <div className="bg-white rounded-lg border border-github-border p-4 mb-6">
-          <h3 className="text-lg font-semibold text-github-neutral mb-4">댓글 작성</h3>
+        <div className="linear-card p-6 mb-6">
+          <h3 className="text-lg font-semibold text-linear-text-primary mb-4">댓글 작성</h3>
           <form onSubmit={handleSubmitComment}>
             <div className="mb-4">
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="이 코스에 대한 의견을 남겨보세요..."
-                className="w-full p-3 border border-github-border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                className="linear-input resize-none"
                 rows={3}
                 maxLength={500}
                 disabled={isSubmitting}
               />
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-xs text-github-neutral-muted">
+              <div className="flex justify-between items-center mt-3">
+                <span className="text-xs text-linear-text-tertiary">
                   {newComment.length}/500
                 </span>
                 <button
                   type="submit"
                   disabled={isSubmitting || !newComment.trim()}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className={`linear-button linear-button-primary ${isSubmitting || !newComment.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isSubmitting ? '작성 중...' : '댓글 작성'}
                 </button>
@@ -133,63 +131,67 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
       )}
 
       {/* 댓글 목록 */}
-      <div className="bg-white rounded-lg border border-github-border">
-        <div className="border-b border-github-border p-4">
-          <h3 className="text-lg font-semibold text-github-neutral">
+      <div className="linear-card">
+        <div className="border-b border-linear-border-primary p-6">
+          <h3 className="text-lg font-semibold text-linear-text-primary">
             댓글 ({commentsData?.totalElements || 0})
           </h3>
         </div>
 
         {isLoading && (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-3"></div>
-            <p className="text-github-neutral-muted">댓글을 불러오는 중...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-linear-primary mx-auto mb-3"></div>
+            <p className="text-linear-text-secondary">댓글을 불러오는 중...</p>
           </div>
         )}
 
         {error && (
           <div className="p-8 text-center">
-            <svg className="w-8 h-8 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-linear-error mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
-            <p className="text-red-600">댓글을 불러오는데 실패했습니다.</p>
+            <p className="text-linear-error">댓글을 불러오는데 실패했습니다.</p>
           </div>
         )}
 
         {commentsData?.content && commentsData.content.length > 0 ? (
-          <div className="divide-y divide-github-border">
-            {commentsData.content.map((comment) => (
-              <div key={comment.commentId} className="p-4">
+          <div className="space-y-4 p-6">
+            {commentsData.content.map((comment, index) => (
+              <div key={comment.commentId} className={`linear-thread ${index === commentsData.content.length - 1 ? 'mb-0' : ''}`}>
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
+                  <div className="flex items-start space-x-4 flex-1">
                     <div className="flex-shrink-0">
-                      {/* 프로필 이미지는 백엔드에서 제공하지 않으므로 기본 아바타 사용 */}
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-600 font-medium text-sm">
+                      <div className="linear-avatar">
+                        <span>
                           {comment.nickname.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="text-sm font-medium text-github-neutral">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <h4 className="text-sm font-semibold text-linear-text-primary">
                           {comment.nickname}
                         </h4>
-                        <span className="text-xs text-github-neutral-muted">
+                        {comment.isMine && (
+                          <span className="linear-badge linear-badge-primary text-xs">
+                            내 댓글
+                          </span>
+                        )}
+                        <span className="text-xs text-linear-text-tertiary">
                           {formatDate(comment.createdAt)}
                         </span>
                       </div>
-                      <p className="text-github-neutral whitespace-pre-wrap">
+                      <p className="text-linear-text-primary whitespace-pre-wrap leading-relaxed">
                         {comment.content}
                       </p>
                     </div>
                   </div>
                   
-                  {/* 삭제 버튼 (본인 댓글만) */}
-                  {user && user.id === comment.userId && (
+                  {/* 삭제 버튼 (본인 댓글만) - isMine 필드 활용 */}
+                  {comment.isMine && (
                     <button
                       onClick={() => handleDeleteComment(comment.commentId)}
-                      className="text-github-neutral-muted hover:text-red-600 p-1 ml-2"
+                      className="text-linear-text-tertiary hover:text-linear-error p-1 transition-colors"
                       title="댓글 삭제"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,14 +205,14 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
           </div>
         ) : (
           !isLoading && (
-            <div className="p-8 text-center">
-              <svg className="w-12 h-12 text-github-neutral-muted mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-12 text-center">
+              <svg className="w-12 h-12 text-linear-text-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-github-neutral-muted mb-2">아직 댓글이 없습니다.</p>
+              <p className="text-linear-text-secondary mb-3">아직 댓글이 없습니다.</p>
               {!isAuthenticated && (
-                <p className="text-sm text-github-neutral-muted">
-                  <span className="text-primary-600 hover:text-primary-700 cursor-pointer">로그인</span>하고 첫 댓글을 남겨보세요!
+                <p className="text-sm text-linear-text-tertiary">
+                  <span className="text-linear-primary hover:text-linear-primary-dark cursor-pointer transition-colors">로그인</span>하고 첫 댓글을 남겨보세요!
                 </p>
               )}
             </div>

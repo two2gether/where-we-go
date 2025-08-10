@@ -323,7 +323,7 @@ export const PlacesPage: React.FC = () => {
       const courseCreateRequest = {
         title: courseData.title,
         description: courseData.description,
-        themes: courseData.themes,
+        themes: courseData.themes, // 이미 CourseCreationModal에서 ENUM으로 변환됨
         region: courseData.region,
         isPublic: courseData.isPublic,
         placeIds: courseData.orderedPlaceIds // API 스펙에 맞게 필드명 변경

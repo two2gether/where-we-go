@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Input, Spinner } from '../base';
 import type { Place } from '../../api/types';
+import { AVAILABLE_THEMES, convertThemesToEnum } from '../../constants/themes';
 
 interface CourseCreationModalProps {
   selectedPlaceIds: string[];
@@ -17,10 +18,7 @@ interface CourseCreationModalProps {
   }) => void;
 }
 
-const AVAILABLE_THEMES = [
-  '맛집탐방', '자연힐링', '문화체험', '쇼핑', '액티비티', 
-  '야경명소', '역사탐방', '드라이브', '카페투어', '힐링'
-];
+// AVAILABLE_THEMES는 이제 constants/themes.ts에서 import됨
 
 export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
   selectedPlaceIds,
@@ -153,7 +151,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
       await onConfirm({
         title: title.trim(),
         description: description.trim(),
-        themes: selectedThemes,
+        themes: convertThemesToEnum(selectedThemes), // 백엔드 ENUM으로 변환
         region: region.trim(),
         isPublic,
         orderedPlaceIds

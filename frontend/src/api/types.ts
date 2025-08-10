@@ -165,6 +165,7 @@ export interface CourseComment {
   nickname: string; // author.nickname 대신 직접 nickname 제공
   content: string;
   createdAt: string;
+  isMine?: boolean; // 현재 사용자가 작성한 댓글인지 여부
 }
 
 export interface CourseCommentRequest {
@@ -357,6 +358,7 @@ export interface Comment {
   courseTitle: string;
   createdAt: string;
   updatedAt: string;
+  isMine?: boolean; // 현재 사용자가 작성한 댓글인지 여부
 }
 
 export interface CreateCommentRequest {
@@ -434,6 +436,22 @@ export interface CourseBookmark {
   id: number;
   course: Course;
   createdAt: string;
+}
+
+// 내가 북마크한 코스 목록 응답 타입 (백엔드 UserCourseBookmarkListDto와 매칭)
+export interface UserCourseBookmarkListDto {
+  courseId: number;
+  title: string;
+  description: string;
+  themes: string[];
+  region: string;
+  likeCount: number;
+  averageRating: number;
+  isPublic: boolean;
+  places: CoursePlace[];
+  createdAt: string;
+  bookmarkCreatedAt: string;
+  isMine?: boolean; // 현재 사용자가 생성한 코스인지 여부
 }
 
 // 좋아요 관련 타입 (백엔드 CourseLikeListResponseDto와 매칭)
