@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.order.service;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -37,9 +39,19 @@ public class OrderService {
 	@Transactional
 	public Order createOrder(OrderCreateRequestDto requestDto, Long userId) {
 
-		// 1. 사용자 검증
-		User user = userService.getUserById(userId);
+		// 재주문 금지 대상
+		Set<OrderStatus> blockedStatus = EnumSet.of(
+			OrderStatus.PENDING,
+			OrderStatus.READY,
+			OrderStatus.DONE
+		);
+		if (orderRepository.existsByUserIdAndEventProductIdAndStatusIn(
+			userId, requestDto.getProductId(), blockedStatus)) {
+			throw new CustomException(ErrorCode.ORDER_ALREADY_EXISTS_FOR_USER);
+		}
 
+		// 1. 사용자 조회
+		User user = userService.getUserById(userId);
 		Long productId = requestDto.getProductId();
 		int quantity = requestDto.getQuantity();
 
@@ -124,5 +136,49 @@ public class OrderService {
 
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
+	}
+
+	/**
+	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
+	 * @param orderNo 주문 번호
+	 * @return 주문 엔티티
+	 * @throws CustomException 주문을 찾을 수 없는 경우
+	 */
+	@Transactional(readOnly = true)
+	public Order getOrderByOrderNo(String orderNo) {
+		return orderRepository.findByOrderNo(orderNo)
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+	}
+
+	/**
+	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
+	 * @param order 업데이트할 주문 엔티티
+	 * @return 저장된 주문 엔티티
+	 */
+	@Transactional
+	public Order updateOrder(Order order) {
+		return orderRepository.save(order);
+	}
+
+	/**
+	 * 주문을 취소(삭제)합니다.
+	 *
+	 * @param orderId 삭제할 주문 ID
+	 * @param userId 삭제를 요청한 사용자 ID
+	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
+	 */
+	@Transactional
+	public void deletedOrderById(Long orderId, Long userId) {
+		// 1. 주문 조회하기
+		Order findOrder = orderRepository.findById(orderId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+		// 2. 사용자 권한 체크
+		if (!findOrder.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
+		}
+
+		// 3. 삭제하기 (DB삭제)
+		orderRepository.delete(findOrder);
 	}
 }

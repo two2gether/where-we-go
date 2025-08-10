@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 
@@ -17,7 +18,9 @@ public interface EventRepository extends JpaRepository<EventProduct, Long> {
 
 	Page<EventProduct> findAllByIsDeletedFalse(Pageable pageable);
 
+	// 재고 즉시 차감
 	@Modifying
+	@Transactional
 	@Query("""
 		UPDATE EventProduct e
 		   SET e.stock = e.stock - :quantity
@@ -25,6 +28,19 @@ public interface EventRepository extends JpaRepository<EventProduct, Long> {
 		   AND e.isDeleted = false
 		   AND e.stock >= :quantity
 		""")
-	int decreaseStockIfAvailable(@Param("productId") Long productId,
+	int decreaseStockIfAvailable(
+		@Param("productId") Long productId,
+		@Param("quantity") int quantity);
+
+	// 재고 복구
+	@Modifying
+	@Transactional
+	@Query("""
+		UPDATE EventProduct e
+		   SET e.stock = e.stock + :quantity
+		 WHERE e.id = :productId
+		   AND e.isDeleted = false
+		""")
+	int increaseStock(@Param("productId") Long productId,
 		@Param("quantity") int quantity);
 }

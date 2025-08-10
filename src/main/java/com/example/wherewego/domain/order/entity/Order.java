@@ -16,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,7 +30,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "orders")
+@Table(
+	name = "orders",
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_user_product_status",
+			columnNames = {"user_id", "product_id", "status"}
+		)
+	}
+)
 public class Order extends BaseEntity {
 	/**
 	 * 주문 고유 ID
@@ -75,13 +84,14 @@ public class Order extends BaseEntity {
 	 * 주문 상태 (대기중, 준비완료, 성공, 실패)
 	 */
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	@Column(nullable = false, length = 20)
+	@Builder.Default
 	private OrderStatus status = OrderStatus.PENDING;
 
 	public void markAsPaid() {
 		this.status = OrderStatus.DONE;
 	}
-	
+
 	/**
 	 * 주문 상태 업데이트
 	 */
