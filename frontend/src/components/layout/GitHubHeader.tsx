@@ -68,9 +68,9 @@ export const GitHubHeader: React.FC = () => {
             </Link>
           </div>
 
-          {/* Notion 스타일 검색바 */}
-          <div className="flex-1 max-w-lg mx-8">
-            <form onSubmit={handleSearch} className="relative">
+          {/* Notion 스타일 검색바 - 고정 너비로 일관성 유지 */}
+          <div className="flex-1" style={{ maxWidth: '400px', minWidth: '300px' }}>
+            <form onSubmit={handleSearch} className="relative mx-auto" style={{ maxWidth: '400px' }}>
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg 
                   className="h-4 w-4" 
@@ -110,8 +110,8 @@ export const GitHubHeader: React.FC = () => {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {/* Notion 스타일 Navigation Links */}
-                <nav className="hidden md:flex items-center space-x-1">
+                {/* 주요 Navigation Links만 외부에 노출 */}
+                <nav className="hidden md:flex items-center space-x-2">
                   <Link 
                     to="/places" 
                     style={{
@@ -119,7 +119,7 @@ export const GitHubHeader: React.FC = () => {
                       fontSize: '14px',
                       fontWeight: '400',
                       textDecoration: 'none',
-                      padding: '6px 8px',
+                      padding: '6px 10px',
                       borderRadius: '4px',
                       transition: 'all 0.15s ease'
                     }}
@@ -133,40 +133,12 @@ export const GitHubHeader: React.FC = () => {
                       fontSize: '14px',
                       fontWeight: '400',
                       textDecoration: 'none',
-                      padding: '6px 8px',
+                      padding: '6px 10px',
                       borderRadius: '4px',
                       transition: 'all 0.15s ease'
                     }}
                   >
                     코스
-                  </Link>
-                  <Link 
-                    to="/bookmarks"
-                    style={{
-                      color: 'var(--notion-text-light)',
-                      fontSize: '14px',
-                      fontWeight: '400',
-                      textDecoration: 'none',
-                      padding: '6px 8px',
-                      borderRadius: '4px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    북마크
-                  </Link>
-                  <Link 
-                    to="/orders"
-                    style={{
-                      color: 'var(--notion-text-light)',
-                      fontSize: '14px',
-                      fontWeight: '400',
-                      textDecoration: 'none',
-                      padding: '6px 8px',
-                      borderRadius: '4px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    주문내역
                   </Link>
                   <Link 
                     to="/events"
@@ -175,7 +147,7 @@ export const GitHubHeader: React.FC = () => {
                       fontSize: '14px',
                       fontWeight: '400',
                       textDecoration: 'none',
-                      padding: '6px 8px',
+                      padding: '6px 10px',
                       borderRadius: '4px',
                       transition: 'all 0.15s ease'
                     }}
@@ -265,6 +237,37 @@ export const GitHubHeader: React.FC = () => {
                         </p>
                       </div>
                       <Link
+                        to="/bookmarks"
+                        className="block transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '14px',
+                          color: 'var(--notion-text)',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          display: 'block'
+                        }}
+                      >
+                        북마크
+                      </Link>
+                      <Link
+                        to="/orders"
+                        className="block transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '14px',
+                          color: 'var(--notion-text)',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          display: 'block'
+                        }}
+                      >
+                        주문내역
+                      </Link>
+                      <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid var(--notion-gray-light)' }} />
+                      <Link
                         to="/mypage"
                         className="block transition-colors"
                         onClick={() => setIsMenuOpen(false)}
@@ -320,40 +323,88 @@ export const GitHubHeader: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => navigate('/login')}
-                  style={{
-                    color: 'var(--notion-text-light)',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '400',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  로그인
-                </button>
-                <button
-                  onClick={() => navigate('/login')}
-                  style={{
-                    color: 'var(--notion-white)',
-                    background: 'var(--notion-blue)',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  회원가입
-                </button>
-              </div>
+              <>
+                {/* 비로그인 상태에서도 주요 링크 표시 */}
+                <nav className="hidden md:flex items-center space-x-2">
+                  <Link 
+                    to="/places" 
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    장소
+                  </Link>
+                  <Link 
+                    to="/courses"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    코스
+                  </Link>
+                  <Link 
+                    to="/events"
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    이벤트
+                  </Link>
+                </nav>
+                
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => navigate('/login')}
+                    style={{
+                      color: 'var(--notion-text-light)',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    로그인
+                  </button>
+                  <button
+                    onClick={() => navigate('/login')}
+                    style={{
+                      color: 'var(--notion-white)',
+                      background: 'var(--notion-blue)',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    회원가입
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

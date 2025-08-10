@@ -1,5 +1,19 @@
-// 대한민국 지역 데이터
-export const KOREA_REGIONS = [
+/**
+ * 한국 행정구역 상수 데이터 (1차 행정구역만)
+ * 
+ * Google Places API에서 실제로 제공되는 데이터에 맞춰 1차 행정구역만 사용
+ */
+
+export interface RegionOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * 한국 1차 행정구역 목록
+ * 실제 여행 코스/장소가 많이 등록될 것으로 예상되는 지역들 위주로 구성
+ */
+export const KOREA_REGIONS: RegionOption[] = [
   { value: '', label: '전체' },
   
   // 특별시/광역시
@@ -14,16 +28,16 @@ export const KOREA_REGIONS = [
   
   // 도 단위
   { value: '경기', label: '경기도' },
-  { value: '강원', label: '강원도' },
+  { value: '강원', label: '강원특별자치도' },
   { value: '충북', label: '충청북도' },
   { value: '충남', label: '충청남도' },
-  { value: '전북', label: '전라북도' },
+  { value: '전북', label: '전북특별자치도' },
   { value: '전남', label: '전라남도' },
   { value: '경북', label: '경상북도' },
   { value: '경남', label: '경상남도' },
   { value: '제주', label: '제주특별자치도' },
   
-  // 주요 관광도시
+  // 주요 관광도시 (별도 검색 편의용)
   { value: '제주도', label: '제주도' },
   { value: '경주', label: '경주' },
   { value: '강릉', label: '강릉' },

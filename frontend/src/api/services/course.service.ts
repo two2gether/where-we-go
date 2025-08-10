@@ -10,23 +10,94 @@ import type {
 
 export const courseService = {
   // 코스 목록 조회 - GET 요청
-  getCourses: (params: CourseSearchRequest = {}): Promise<PageResponse<Course>> => {
-    // 백엔드 API 스펙에 맞게 쿼리 파라미터 구성  
+  getCourses: async (params: CourseSearchRequest = {}): Promise<PageResponse<Course>> => {
+    const region = params.region || '전체';
+    
+    // "전체" 지역인 경우 여러 주요 지역에서 데이터를 가져와서 합치기
+    if (region === '전체') {
+      const majorRegions = ['서울', '부산', '제주', '강릉', '경주', '전주', '여수', '대구', '인천', '대전'];
+      const allResults: Course[] = [];
+      let totalElements = 0;
+      
+      const queryParams: any = {
+        page: 0,
+        size: Math.ceil((params.size || 10) / majorRegions.length) + 2, // 더 많은 데이터 요청
+        sort: 'createdAt,desc'
+      };
+
+      // 백엔드에서 키워드 검색을 지원하지 않음
+      if (params.theme) {
+        queryParams.themes = params.theme;
+      }
+
+      console.log('getCourses - 전체 지역 검색 시작');
+
+      // 각 지역별로 API 호출
+      for (const regionName of majorRegions) {
+        try {
+          const regionParams = { ...queryParams, region: regionName };
+          console.log(`  지역별 호출: ${regionName}`, regionParams);
+          
+          const response = await apiRequest.get<any>('/courses', { params: regionParams });
+          const actualData = response.data?.data || response.data;
+          
+          if (actualData?.content?.length > 0) {
+            allResults.push(...actualData.content);
+            totalElements += actualData.totalElements || actualData.content.length;
+            console.log(`  ${regionName} 결과: ${actualData.content.length}개`);
+          }
+        } catch (error) {
+          console.warn(`지역 ${regionName} 검색 실패:`, error);
+          // 실패한 지역은 무시하고 계속 진행
+        }
+      }
+
+      // 중복 제거 (ID 기준)
+      const uniqueResults = allResults.filter((course, index, self) => 
+        index === self.findIndex(c => (c.id || c.courseId) === (course.id || course.courseId))
+      );
+
+      // 최신순 정렬 및 페이지네이션 적용
+      const sortedResults = uniqueResults.sort((a, b) => 
+        new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
+      );
+
+      const page = params.page || 0;
+      const size = params.size || 10;
+      const startIndex = page * size;
+      const endIndex = startIndex + size;
+      const paginatedResults = sortedResults.slice(startIndex, endIndex);
+
+      console.log(`전체 지역 검색 완료: ${uniqueResults.length}개 발견, ${paginatedResults.length}개 반환`);
+
+      return {
+        content: paginatedResults,
+        totalElements: uniqueResults.length,
+        totalPages: Math.ceil(uniqueResults.length / size),
+        number: page,
+        size: size,
+        first: page === 0,
+        last: endIndex >= uniqueResults.length,
+        empty: paginatedResults.length === 0
+      };
+    }
+
+    // 특정 지역 검색인 경우 기존 로직 사용
     const queryParams: any = {
       page: params.page || 0,
       size: params.size || 10,
       sort: 'createdAt,desc'
     };
 
-    // 검색어가 있을 때만 추가
-    if (params.search) {
-      queryParams.search = params.search;
-    } else {
-      // 검색어가 없을 때만 기본 region 설정
-      queryParams.region = params.region || '서울';
-    }
+    queryParams.region = region;
 
-    // themes가 있을 때만 추가
+    // 백엔드에서 키워드 검색을 지원하지 않음 - 주석 처리
+    // TODO: 백엔드에서 keyword 검색 기능 구현 필요
+    // if (params.keyword) {
+    //   queryParams.keyword = params.keyword;
+    // }
+
+    // themes가 있을 때만 추가 (백엔드는 CourseTheme enum 배열 형태)
     if (params.theme) {
       queryParams.themes = params.theme;
     }
@@ -49,36 +120,38 @@ export const courseService = {
         console.log('getCourses 응답 data:', response.data); // 데이터 구조 확인
         console.log('getCourses 응답 data type:', typeof response.data); // 데이터 타입 확인
         
+        // 백엔드 ApiResponse 구조: { success: boolean, message: string, data: PagedResponse }
+        const actualData = response.data?.data || response.data;
+        
         // 빈 배열인 경우 디버깅 정보 추가
-        if (response.data?.content?.length === 0) {
+        if (actualData?.content?.length === 0) {
           console.log('⚠️ 빈 결과 - 요청 파라미터와 DB 데이터 확인 필요');
           console.log('  요청한 region:', queryParams.region);
           console.log('  요청 전체:', queryParams);
-        } else if (response.data?.content?.length > 0) {
+        } else if (actualData?.content?.length > 0) {
           console.log('✅ 코스 데이터 발견!');
-          console.log('  첫 번째 코스 데이터:', response.data.content[0]);
-          console.log('  첫 번째 코스 author:', response.data.content[0]?.author);
+          console.log('  첫 번째 코스 데이터:', actualData.content[0]);
+          console.log('  첫 번째 코스 author:', actualData.content[0]?.author);
         }
         
         // 응답 데이터 검증
-        if (!response?.data) {
+        if (!actualData) {
           console.warn('getCourses: Invalid response structure', response);
           return {
             content: [],
             totalElements: 0,
             totalPages: 0,
             number: 0,
-            size: pageParams.size,
+            size: queryParams.size,
             first: true,
             last: true,
             empty: true
           };
         }
         
-        // 데이터가 객체인지 확인하고 반환
-        const result = response.data;
-        console.log('getCourses 최종 반환값:', result);
-        return result;
+        // 백엔드 응답에서 data 필드 추출
+        console.log('getCourses 최종 반환값:', actualData);
+        return actualData;
       })
       .catch(error => {
         console.error('getCourses API failed:', error);
@@ -88,7 +161,7 @@ export const courseService = {
           totalElements: 0,
           totalPages: 0,
           number: 0,
-          size: pageParams.size,
+          size: queryParams.size,
           first: true,
           last: true,
           empty: true
@@ -159,7 +232,54 @@ export const courseService = {
   },
 
   // 인기 코스 조회
-  getPopularCourses: (region: string = '전체', themes?: string[], limit: number = 10): Promise<PageResponse<Course>> => {
+  getPopularCourses: async (region: string = '전체', themes?: string[], limit: number = 10): Promise<PageResponse<Course>> => {
+    // 전체 지역인 경우 주요 지역들에서 인기 코스를 가져와서 합치기
+    if (region === '전체') {
+      const majorRegions = ['서울', '부산', '제주', '강릉', '경주', '전주', '여수', '대구'];
+      const allResults: Course[] = [];
+      
+      const queryParams = {
+        themes: themes?.join(','),
+        page: 0,
+        size: Math.ceil(limit / majorRegions.length) + 1
+      };
+
+      for (const regionName of majorRegions) {
+        try {
+          const regionParams = { ...queryParams, region: regionName };
+          const response = await apiRequest.get<any>('/courses/popular', { params: regionParams });
+          const actualData = response.data?.data || response.data;
+          
+          if (actualData?.content?.length > 0) {
+            allResults.push(...actualData.content);
+          }
+        } catch (error) {
+          console.warn(`인기 코스 지역 ${regionName} 검색 실패:`, error);
+        }
+      }
+
+      // 중복 제거 및 북마크 수 기준 정렬
+      const uniqueResults = allResults.filter((course, index, self) => 
+        index === self.findIndex(c => (c.id || c.courseId) === (course.id || course.courseId))
+      );
+
+      const sortedResults = uniqueResults
+        .sort((a, b) => (b.bookmarkCount || 0) - (a.bookmarkCount || 0))
+        .slice(0, limit);
+
+      return {
+        content: sortedResults,
+        totalElements: sortedResults.length,
+        totalPages: 1,
+        number: 0,
+        size: limit,
+        first: true,
+        last: true,
+        empty: sortedResults.length === 0
+      };
+    }
+
+    // 특정 지역인 경우 기존 로직
     const pageParams = {
       region,
       themes: themes?.join(','),

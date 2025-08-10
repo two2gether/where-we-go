@@ -33,13 +33,13 @@ api.interceptors.request.use(
     // 토큰이 있으면 Authorization 헤더에 추가
     const { token, isAuthenticated } = useAuthStore.getState();
     
-    console.log('🔍 Request interceptor - token:', token?.substring(0, 20) + '...', 'isAuthenticated:', isAuthenticated);
+    // Debug logging removed for production security
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('✅ Authorization header set:', config.headers.Authorization?.substring(0, 30) + '...');
+      // Authorization header set successfully
     } else {
-      console.log('❌ No token or headers, not setting Authorization');
+      // No token available for authorization
     }
     
     // API 모니터링 로그 추가
@@ -48,12 +48,7 @@ api.interceptors.request.use(
       const requestId = Math.random().toString(36).substring(7);
       config.metadata = { requestId, startTime, logId: `${requestId}-${startTime}` }; // 메타데이터 추가
       
-      console.log('🔍 API Monitor - Adding request log:', {
-        method: config.method?.toUpperCase(),
-        url: `${config.baseURL || ''}${config.url || ''}`,
-        data: config.data,
-        params: config.params
-      });
+      // API monitoring log entry created
       
       // 요청 로그 추가
       const logEntry = {
@@ -95,12 +90,7 @@ api.interceptors.response.use(
       const { requestId, startTime } = response.config.metadata;
       const duration = Date.now() - startTime;
       
-      console.log('🔍 API Monitor - Updating response log:', {
-        status: response.status,
-        data: response.data,
-        duration,
-        url: response.config.url
-      });
+      // API monitoring response log updated
       
       // 응답 데이터 깊은 복사
       const responseData = response.data ? JSON.parse(JSON.stringify(response.data)) : null;
@@ -147,11 +137,7 @@ api.interceptors.response.use(
     );
     
     if (import.meta.env.DEV) {
-      console.log('🔎 Endpoint check:', {
-        requestUrl,
-        publicEndpoints,
-        isPublicEndpoint
-      });
+      // Endpoint accessibility check performed
     }
     
     // 401/403 에러 처리
@@ -162,18 +148,12 @@ api.interceptors.response.use(
       
       // 디버깅 로그
       if (import.meta.env.DEV) {
-        console.log('🔍 API Error Debug:', {
-          url: originalRequest.url,
-          status: error.response?.status,
-          isPublicEndpoint,
-          isAuthenticated,
-          hasRefreshToken: !!refreshToken
-        });
+        // API error debug information logged
       }
       
       // Public endpoint는 인증 없이 접근 허용 (403/401 에러여도 토큰 없이 재시도)
       if (isPublicEndpoint) {
-        console.log('🔓 Public endpoint - retrying without token');
+        // Retrying public endpoint without token
         // 토큰 없이 재시도
         delete originalRequest.headers.Authorization;
         return api(originalRequest);
@@ -204,17 +184,17 @@ api.interceptors.response.use(
           }
           
           // Private endpoint라면 로그아웃
-          console.log('🔐 Private endpoint - token refresh failed, redirecting to login');
+          // Token refresh failed, redirecting to login
           logout();
           window.location.href = '/login';
         }
       } else {
         // 리프레시 토큰이 없는 경우
-        console.log('❌ No refresh token');
+        // No refresh token available
         
         // Public endpoint가 아닌 경우에만 로그아웃 처리
         if (!isPublicEndpoint) {
-          console.log('🔐 Private endpoint - redirecting to login');
+          // Private endpoint requires authentication, redirecting
           logout();
           window.location.href = '/login';
         }

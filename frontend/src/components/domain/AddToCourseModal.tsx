@@ -100,7 +100,7 @@ export const AddToCourseModal: React.FC<AddToCourseModalProps> = ({
               <Button 
                 variant="primary"
                 onClick={() => {
-                  // TODO: 새 코스 생성 페이지로 이동
+                  // Navigation to course creation page pending
                   console.log('Navigate to create new course');
                   onClose();
                 }}

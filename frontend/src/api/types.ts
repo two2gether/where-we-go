@@ -432,6 +432,22 @@ export interface UserBookmarkList {
   number: number;
 }
 
+// 백엔드 UserBookmarkListDto와 매칭되는 타입
+export interface UserBookmarkListDto {
+  content: BookmarkItemDto[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
+// 백엔드 BookmarkItem과 매칭되는 타입
+export interface BookmarkItemDto {
+  bookmarkId: number;
+  place: Place;
+  createdAt: string;
+}
+
 export interface CourseBookmark {
   id: number;
   course: Course;

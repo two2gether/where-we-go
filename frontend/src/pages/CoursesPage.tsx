@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { CourseCard, SearchFilter, EmptyState } from '../components/domain';
 import { Button, Card, Spinner } from '../components/base';
 import { GitHubLayout, GitHubSidebar, GitHubSidebarSection } from '../components/layout';
-import { useCourses, useMyCourses, useToggleCourseLike } from '../hooks/useCourses';
+import { RegionFilter } from '../components/common/RegionFilter';
+import { useInfiniteCourses, useMyCourses, useToggleCourseLike } from '../hooks/useCourses';
 import { useDebounce } from '../hooks/useDebounce';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { useScrollPosition } from '../hooks/useScrollPosition';
 import { useAuthStore } from '../store/authStore';
 import type { Course } from '../api/types';
-import { KOREA_REGIONS } from '../constants/regions';
 
 
 export const CoursesPage: React.FC = () => {
@@ -30,26 +32,29 @@ export const CoursesPage: React.FC = () => {
   // 검색어 디바운싱 (500ms 지연)
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // API 파라미터 준비 (디바운싱된 검색어 사용)
+  // API 파라미터 준비 (백엔드에서 검색을 지원하지 않으므로 keyword 제거, page 제거)
   const searchParams = useMemo(() => ({
-    keyword: debouncedSearchQuery || undefined,
-    region: selectedRegion || '전체', // 백엔드 필수 필드
+    region: selectedRegion === '' ? '전체' : selectedRegion, // 빈 문자열은 '전체'로 변환
     theme: selectedTheme || undefined,
-    page: 0,
     size: 20,
-  }), [debouncedSearchQuery, selectedRegion, selectedTheme]);
+  }), [selectedRegion, selectedTheme]);
 
   // API 호출 조건 로깅
   console.log('=== API 호출 조건 ===');
   console.log('activeTab:', activeTab);
-  console.log('useCourses enabled:', activeTab === 'all');
+  console.log('useInfiniteCourses enabled:', activeTab === 'all');
   console.log('useMyCourses enabled:', activeTab === 'my' && isAuthenticated);
 
   // React Query 훅 사용 - 활성 탭에 따라 조건부로 API 호출
-  const { data: allCoursesData, isLoading: isLoadingAll, error: errorAll, refetch: refetchAll } = useCourses(
-    searchParams, 
-    { enabled: activeTab === 'all' }  // 'all' 탭일 때만 호출
-  );
+  const { 
+    data: infiniteCoursesData, 
+    isLoading: isLoadingAll, 
+    error: errorAll, 
+    refetch: refetchAll,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage
+  } = useInfiniteCourses(searchParams);
   const { data: myCoursesData, isLoading: isLoadingMy, error: errorMy, refetch: refetchMy } = useMyCourses({
     ...searchParams,
     enabled: activeTab === 'my' && isAuthenticated  // 'my' 탭이고 로그인된 경우만 호출
@@ -57,40 +62,43 @@ export const CoursesPage: React.FC = () => {
   const toggleLikeMutation = useToggleCourseLike();
 
   // 현재 탭에 따라 데이터 선택
-  const currentData = activeTab === 'all' ? allCoursesData : myCoursesData;
-  const courses = currentData?.content || [];
+  const allInfiniteCourses = useMemo(() => {
+    if (!infiniteCoursesData?.pages) return [];
+    return infiniteCoursesData.pages.flatMap(page => page.content || []);
+  }, [infiniteCoursesData]);
+
+  const currentData = activeTab === 'all' ? { content: allInfiniteCourses } : myCoursesData;
+  const allCourses = currentData?.content || [];
+  
+  // 백엔드에서 검색을 지원하지 않으므로 프론트엔드에서 필터링
+  const courses = useMemo(() => {
+    if (!debouncedSearchQuery) return allCourses;
+    
+    return allCourses.filter(course => 
+      course.title?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      course.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [allCourses, debouncedSearchQuery]);
+  
   const isLoading = activeTab === 'all' ? isLoadingAll : isLoadingMy;
   const error = activeTab === 'all' ? errorAll : errorMy;
   const refetch = activeTab === 'all' ? refetchAll : refetchMy;
 
-  // 검색 결과에서 동적으로 지역 목록 생성
-  const availableRegions = useMemo(() => {
-    const regions = [{ value: '', label: '전체' }];
-    
-    if (courses && courses.length > 0) {
-      const regionSet = new Set<string>();
-      courses.forEach(course => {
-        if (course.region) {
-          // 쉼표로 구분된 지역 문자열 파싱
-          const regionParts = course.region.split(',').map(r => r.trim());
-          regionParts.forEach(region => {
-            if (region && region !== '전체') {
-              regionSet.add(region);
-            }
-          });
-        }
-      });
-      
-      // 정렬해서 지역 옵션 생성
-      Array.from(regionSet)
-        .sort()
-        .forEach(region => {
-          regions.push({ value: region, label: region });
-        });
-    }
-    
-    return regions;
-  }, [courses]);
+  // 무한 스크롤 적용 (all 탭일 때만)
+  const observerTarget = useInfiniteScroll({
+    hasNextPage: activeTab === 'all' ? hasNextPage : false,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
+
+  // 스크롤 위치 추적 (sticky 검색바용)
+  const scrollPosition = useScrollPosition();
+  const isSearchSticky = scrollPosition > 150; // 150px 이상 스크롤하면 sticky 활성화
+
+  // 지역 필터 변경 핸들러
+  const handleRegionChange = (region: string) => {
+    setSelectedRegion(region);
+  };
 
   const handleLike = async (courseId: number) => {
     try {
@@ -113,7 +121,7 @@ export const CoursesPage: React.FC = () => {
 
   // GitHub 스타일 탭 구성
   const tabs = [
-    { label: '모든 코스', href: '/courses', active: activeTab === 'all', count: allCoursesData?.content?.length },
+    { label: '모든 코스', href: '/courses', active: activeTab === 'all', count: allInfiniteCourses?.length },
     { label: '내 코스', href: '/courses?tab=my', active: activeTab === 'my', count: myCoursesData?.content?.length },
   ];
 
@@ -123,23 +131,13 @@ export const CoursesPage: React.FC = () => {
       {/* 필터 섹션 */}
       <GitHubSidebarSection title="필터">
         <div className="space-y-4">
-          {/* 지역 필터 */}
-          <div>
-            <label className="block text-sm font-medium text-primary-900 mb-2">
-              지역
-            </label>
-            <select
-              value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-github-border rounded-md bg-github-canvas focus:border-secondary-500 focus:outline-none focus:ring-1 focus:ring-secondary-500"
-            >
-              {availableRegions.map(region => (
-                <option key={region.value} value={region.value}>
-                  {region.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 2단계 지역 필터 */}
+          <RegionFilter
+            selectedRegion={selectedRegion}
+            onRegionChange={handleRegionChange}
+            className="pb-4 border-b border-gray-200"
+            availableRegionsData={allCourses.map(course => ({ regionSummary: course.region }))}
+          />
 
           {/* 테마 필터 */}
           <div>
@@ -254,7 +252,35 @@ export const CoursesPage: React.FC = () => {
       tabs={tabs}
       sidebar={sidebar}
     >
-      {/* Top Search Bar */}
+      {/* Sticky Search Bar */}
+      <div 
+        className={`sticky top-0 bg-white transition-all duration-300 ease-in-out z-30 ${
+          isSearchSticky 
+            ? 'shadow-md border-b border-github-border opacity-100 transform translate-y-0' 
+            : 'shadow-none border-transparent opacity-0 transform -translate-y-full pointer-events-none'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-3">
+            <div className="relative max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-4 w-4 text-github-neutral-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 text-sm border border-github-border rounded-md bg-github-canvas text-primary-900 placeholder-github-neutral-muted focus:border-secondary-500 focus:outline-none focus:ring-1 focus:ring-secondary-500"
+                placeholder="코스 검색..."
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Original Search Bar */}
       <div className="mb-6">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -320,12 +346,29 @@ export const CoursesPage: React.FC = () => {
         </div>
       )}
 
+      {/* 무한 스크롤 트리거 및 로딩 표시 */}
+      {!isLoading && !error && courses.length > 0 && activeTab === 'all' && (
+        <div ref={observerTarget} className="py-8 flex justify-center">
+          {isFetchingNextPage && (
+            <div className="flex items-center space-x-2 text-gray-500">
+              <Spinner size="sm" />
+              <span className="text-sm">더 많은 코스를 불러오는 중...</span>
+            </div>
+          )}
+          {!hasNextPage && !isFetchingNextPage && (
+            <div className="text-sm text-gray-500">
+              모든 코스를 불러왔습니다.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Empty State */}
       {!isLoading && !error && courses.length === 0 && (
         <Card variant="outlined" padding="lg" className="text-center">
           <div className="py-8">
             <svg className="mx-auto h-12 w-12 text-github-neutral-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 713 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
             <h3 className="text-lg font-medium text-primary-900 mb-2">
               {activeTab === 'my' ? "아직 생성한 코스가 없습니다" : "검색 결과가 없습니다"}

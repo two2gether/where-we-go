@@ -183,6 +183,37 @@ const JsonFormatter: React.FC<{ data: any; title: string; defaultExpanded?: bool
 const LogItem: React.FC<{ log: ApiLogEntry; isLatest: boolean }> = ({ log, isLatest }) => {
   const [isExpanded, setIsExpanded] = useState(isLatest);
   
+  // 디버깅을 위한 로그
+  const handleToggle = (e?: React.MouseEvent) => {
+    console.log(`🔄 API Monitor - Click detected on ${log.method} ${log.url}`);
+    console.log(`   Current expanded state: ${isExpanded}`);
+    console.log(`   New expanded state will be: ${!isExpanded}`);
+    console.log(`   Event details:`, e?.type, e?.target);
+    
+    // 사용자가 수동으로 조작했다는 것을 표시
+    setUserInteracted(true);
+    
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    
+    // 상태 변경 확인을 위한 추가 로그
+    setTimeout(() => {
+      console.log(`   ✅ State change confirmed: ${newState}`);
+    }, 100);
+  };
+  
+  // 사용자가 수동으로 조작했는지 추적
+  const [userInteracted, setUserInteracted] = React.useState(false);
+  
+  // 새로운 로그가 최신이 아니게 되면 자동으로 닫기
+  React.useEffect(() => {
+    if (!isLatest && isExpanded && !userInteracted) {
+      setIsExpanded(false);
+    } else if (isLatest && !isExpanded && !userInteracted) {
+      setIsExpanded(true);
+    }
+  }, [isLatest, isExpanded, userInteracted]);
+  
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
       hour12: false,
@@ -209,7 +240,7 @@ const LogItem: React.FC<{ log: ApiLogEntry; isLatest: boolean }> = ({ log, isLat
     <div className="border-b border-gray-100 last:border-b-0">
       <div
         className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleToggle}
       >
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <div className={`flex items-center space-x-2 ${getStatusColor(log.status, log.type)}`}>
@@ -238,10 +269,13 @@ const LogItem: React.FC<{ log: ApiLogEntry; isLatest: boolean }> = ({ log, isLat
         
         <div className="flex items-center space-x-2">
           {isExpanded ? (
-            <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+            <ChevronDownIcon className="w-4 h-4 text-blue-600 transition-transform" />
           ) : (
-            <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+            <ChevronRightIcon className="w-4 h-4 text-gray-400 transition-transform" />
           )}
+          <span className="text-xs text-gray-500 font-mono">
+            {isExpanded ? 'OPEN' : 'CLOSED'}
+          </span>
         </div>
       </div>
       

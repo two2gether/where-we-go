@@ -20,12 +20,8 @@ export const useSocialAuth = () => {
       // 실제 구현에서는 Google OAuth 2.0 라이브러리 사용
       console.log('Google login initiated...');
       
-      // TODO: Google OAuth 구현
-      // 1. Google OAuth 클라이언트 초기화
-      // 2. 사용자 승인 요청
-      // 3. 승인 코드 받기
-      // 4. 백엔드 API 호출하여 JWT 토큰 받기
-      // 5. 사용자 정보 저장 및 리다이렉트
+      // Google OAuth implementation pending
+      // Implementation will include: client initialization, user authorization, token exchange
       
       // 임시로 알림 표시
       toast.success('Google 로그인 기능이 준비 중입니다.');
@@ -58,7 +54,7 @@ export const useSocialAuth = () => {
             success: async (userInfo: any) => {
               console.log('카카오 사용자 정보:', userInfo);
               
-              // TODO: 백엔드 API 호출
+              // Backend API integration required
               // const response = await fetch('/api/auth/kakao', {
               //   method: 'POST',
               //   headers: { 'Content-Type': 'application/json' },

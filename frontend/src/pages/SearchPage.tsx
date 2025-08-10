@@ -10,7 +10,7 @@ const SearchPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'courses' | 'places'>('all');
 
   // 코스 검색 - 백엔드에서 search 파라미터를 지원하지 않아 임시로 비활성화
-  // TODO: 백엔드에 search 파라미터 추가 후 활성화
+  // Search parameter implementation pending backend support
   const { data: coursesData, isLoading: coursesLoading } = useCourses({
     page: 0,
     size: 20

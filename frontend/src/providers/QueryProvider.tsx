@@ -33,7 +33,7 @@ const queryClient = new QueryClient({
         }
         
         // 기타 에러에 대한 사용자 알림 (토스트 등)
-        // TODO: 토스트 알림 구현
+        // Toast notification implementation pending
       },
     },
   },

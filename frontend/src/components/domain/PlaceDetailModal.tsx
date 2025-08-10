@@ -140,7 +140,7 @@ export const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
                 <Button 
                   variant="primary"
                   onClick={() => {
-                    // TODO: 코스에 추가 기능
+                    // Add to course functionality implementation pending
                     console.log('Add to course:', placeId);
                   }}
                 >

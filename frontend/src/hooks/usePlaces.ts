@@ -23,24 +23,47 @@ export const usePlaces = (params: PlaceSearchRequest = {}) => {
   return useQuery({
     queryKey: placeKeys.list(params),
     queryFn: () => placeService.getPlaces(params),
-    staleTime: 5 * 60 * 1000, // 5분
+    staleTime: 2 * 60 * 1000, // 2분으로 단축 (북마크 변경 감지 향상)
     refetchOnWindowFocus: false,
-    // 중복 요청 방지를 위해 한번만 fetch하고 캐시 활용
-    refetchOnMount: false,
+    // 북마크 변경을 위해 mount 시에도 refetch 허용
+    refetchOnMount: 'always',
     refetchOnReconnect: false,
   });
 };
 
-// 무한 스크롤을 위한 장소 목록 조회
+// 무한 스크롤을 위한 장소 목록 조회 (20개 기준 클라이언트 사이드 페이지네이션)
 export const useInfinitePlaces = (params: Omit<PlaceSearchRequest, 'page'> = {}) => {
   return useInfiniteQuery({
     queryKey: [...placeKeys.lists(), 'infinite', params],
-    queryFn: ({ pageParam = 0 }) => 
-      placeService.getPlaces({ ...params, page: pageParam }),
+    queryFn: ({ pageParam = 0 }) => {
+      console.log(`🔄 Fetching places page ${pageParam} with params:`, { ...params, page: pageParam });
+      return placeService.getPlaces({ ...params, page: pageParam, size: 10 }); // 20개를 2페이지로 나누기 위해 10개씩
+    },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      if (lastPage.last) return undefined;
-      return lastPage.number + 1;
+      console.log('📄 Determining next page from (20개 기준):', lastPage);
+      console.log(`  - Current page: ${lastPage?.number}`);
+      console.log(`  - Is last: ${lastPage?.last}`);
+      console.log(`  - Content length: ${lastPage?.content?.length || 0}`);
+      console.log(`  - Total pages: ${lastPage?.totalPages}`);
+      console.log(`  - Total elements: ${lastPage?.totalElements}`);
+      
+      // Google API 20개 기준으로 종료 조건 체크
+      if (lastPage?.last || lastPage?.content?.length === 0) {
+        console.log('❌ No more pages (reached end of Google API results)');
+        return undefined;
+      }
+      
+      const nextPage = (lastPage?.number || 0) + 1;
+      
+      // 총 페이지 수를 초과하지 않도록 체크 (20개 기준)
+      if (nextPage >= (lastPage?.totalPages || 0)) {
+        console.log('❌ No more pages (exceeded total pages for 20 results)');
+        return undefined;
+      }
+      
+      console.log(`✅ Next page: ${nextPage} (expecting up to 2 pages for 20 results)`);
+      return nextPage;
     },
     staleTime: 5 * 60 * 1000,
   });

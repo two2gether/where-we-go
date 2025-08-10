@@ -22,11 +22,12 @@ export const useBookmarks = (params: PageRequest & { type?: 'PLACE' | 'COURSE' }
 };
 
 // 북마크한 장소 목록
-export const useBookmarkedPlaces = (params: PageRequest = {}) => {
+export const useBookmarkedPlaces = (params: PageRequest = {}, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [...bookmarkKeys.places(), params],
     queryFn: () => bookmarkService.getBookmarkedPlaces(params),
     staleTime: 2 * 60 * 1000,
+    enabled: options?.enabled !== false, // 기본적으로 활성화, 명시적으로 false일 때만 비활성화
   });
 };
 

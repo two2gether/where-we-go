@@ -11,6 +11,7 @@ export interface GitHubLayoutProps {
     href: string;
     active?: boolean;
     count?: number;
+    onClick?: () => void;
   }>;
   sidebar?: React.ReactNode;
   actions?: React.ReactNode;
@@ -84,40 +85,78 @@ export const GitHubLayout: React.FC<GitHubLayoutProps> = ({
               <div style={{ borderBottom: '1px solid var(--notion-gray-light)' }}>
                 <nav className="flex" style={{ marginBottom: '-1px' }}>
                   {tabs.map((tab, index) => (
-                    <a
-                      key={index}
-                      href={tab.href}
-                      style={{
-                        padding: '8px 12px',
-                        marginRight: '4px',
-                        fontSize: '14px',
-                        fontWeight: tab.active ? '500' : '400',
-                        color: tab.active ? 'var(--notion-text)' : 'var(--notion-text-light)',
-                        backgroundColor: tab.active ? 'var(--notion-gray-bg)' : 'transparent',
-                        borderRadius: '4px',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {tab.label}
-                      {tab.count !== undefined && (
-                        <span 
-                          style={{
-                            backgroundColor: 'var(--notion-gray-light)',
-                            color: 'var(--notion-text-light)',
-                            fontSize: '12px',
-                            padding: '2px 6px',
-                            borderRadius: '12px',
-                            fontWeight: '500'
-                          }}
-                        >
-                          {tab.count}
-                        </span>
-                      )}
-                    </a>
+                    tab.onClick ? (
+                      <button
+                        key={index}
+                        onClick={tab.onClick}
+                        style={{
+                          padding: '8px 12px',
+                          marginRight: '4px',
+                          fontSize: '14px',
+                          fontWeight: tab.active ? '500' : '400',
+                          color: tab.active ? 'var(--notion-text)' : 'var(--notion-text-light)',
+                          backgroundColor: tab.active ? 'var(--notion-gray-bg)' : 'transparent',
+                          borderRadius: '4px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {tab.label}
+                        {tab.count !== undefined && (
+                          <span 
+                            style={{
+                              backgroundColor: 'var(--notion-gray-light)',
+                              color: 'var(--notion-text-light)',
+                              fontSize: '12px',
+                              padding: '2px 6px',
+                              borderRadius: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <a
+                        key={index}
+                        href={tab.href}
+                        style={{
+                          padding: '8px 12px',
+                          marginRight: '4px',
+                          fontSize: '14px',
+                          fontWeight: tab.active ? '500' : '400',
+                          color: tab.active ? 'var(--notion-text)' : 'var(--notion-text-light)',
+                          backgroundColor: tab.active ? 'var(--notion-gray-bg)' : 'transparent',
+                          borderRadius: '4px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {tab.label}
+                        {tab.count !== undefined && (
+                          <span 
+                            style={{
+                              backgroundColor: 'var(--notion-gray-light)',
+                              color: 'var(--notion-text-light)',
+                              fontSize: '12px',
+                              padding: '2px 6px',
+                              borderRadius: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {tab.count}
+                          </span>
+                        )}
+                      </a>
+                    )
                   ))}
                 </nav>
               </div>
@@ -127,21 +166,37 @@ export const GitHubLayout: React.FC<GitHubLayoutProps> = ({
       )}
 
       {/* Notion 스타일 Main Content */}
-      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 py-8">
         {sidebar ? (
-          <div className="flex gap-8">
-            {/* Sidebar */}
-            <aside className="w-80 flex-shrink-0">
-              {sidebar}
+          <div className="flex" style={{ width: '1200px', margin: '0 auto' }}>
+            {/* Sidebar - 고정 너비, sticky 적용 */}
+            <aside 
+              className="w-80 flex-shrink-0 relative z-20" 
+              style={{ paddingLeft: '1rem' }}
+            >
+              <div 
+                className="sticky"
+                style={{ 
+                  top: '2rem',
+                  maxHeight: 'calc(100vh - 4rem)',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  scrollBehavior: 'smooth',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--notion-gray-light) transparent'
+                }}
+              >
+                {sidebar}
+              </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 min-w-0">
+            {/* Main Content - 나머지 너비 고정 */}
+            <main style={{ width: 'calc(1200px - 320px - 2rem)', paddingLeft: '2rem', paddingRight: '1rem' }}>
               {children}
             </main>
           </div>
         ) : (
-          <main>{children}</main>
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</main>
         )}
       </div>
 

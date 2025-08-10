@@ -1000,6 +1000,15 @@ img {
   transform: scale(0.95);
 }
 
+/* Sticky Search Bar Animations */
+.sticky-search-enter {
+  animation: stickySearchSlideDown 0.3s var(--ease-notion) forwards;
+}
+
+.sticky-search-exit {
+  animation: stickySearchSlideUp 0.3s var(--ease-notion) forwards;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1059,6 +1068,28 @@ img {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes stickySearchSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stickySearchSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
   }
 }
 

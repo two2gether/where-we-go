@@ -1,20 +1,24 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { PlaceCard, SearchFilter, EmptyState, PlaceDetailModal, AddToCourseModal, CourseCreationModal } from '../components/domain';
 import { Button, Card, Spinner } from '../components/base';
 import { GitHubLayout, GitHubSidebar, GitHubSidebarSection } from '../components/layout';
-import { usePlaces } from '../hooks/usePlaces';
-import { useToggleBookmark } from '../hooks/useBookmarks';
+import { RegionFilter } from '../components/common/RegionFilter';
+import { useInfinitePlaces, placeKeys } from '../hooks/usePlaces';
+import { useToggleBookmark, useBookmarkedPlaces, bookmarkKeys } from '../hooks/useBookmarks';
 import { useDebounce } from '../hooks/useDebounce';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { useScrollPosition } from '../hooks/useScrollPosition';
 import { useAuthStore } from '../store/authStore';
 import { apiRequest } from '../api/axios';
 import type { Place } from '../api/types';
-import { KOREA_REGIONS } from '../constants/regions';
 
 
 export const PlacesPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -23,6 +27,9 @@ export const PlacesPage: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAddToCourseModalOpen, setIsAddToCourseModalOpen] = useState(false);
   const [selectedPlaceForCourse, setSelectedPlaceForCourse] = useState<{ id: string; name: string } | null>(null);
+  
+  // 탭 상태 관리 (모든 장소, 북마크만 장소, 최근 본 장소)
+  const [activeTab, setActiveTab] = useState<'all' | 'bookmarks' | 'recent'>('all');
   
   // 다중 선택 상태 관리
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
@@ -46,51 +53,128 @@ export const PlacesPage: React.FC = () => {
   // 검색어 디바운싱 (500ms 지연)
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // API 파라미터 준비 (디바운싱된 검색어 사용)
+  // API 파라미터 준비 (디바운싱된 검색어 사용, page 제거)
   const searchParams = useMemo(() => ({
     keyword: debouncedSearchQuery || undefined,
     category: selectedCategory || undefined,
     region: selectedRegion || undefined,
-    page: 0,
     size: 20,
   }), [debouncedSearchQuery, selectedCategory, selectedRegion]);
 
   // React Query 훅 사용
-  const { data: places, isLoading, error, refetch } = usePlaces(searchParams);
+  const { 
+    data: infinitePlacesData, 
+    isLoading, 
+    error, 
+    refetch,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage
+  } = useInfinitePlaces(searchParams);
+  
+  // 무한 스크롤 데이터를 flat하게 변환
+  const allPlaces = useMemo(() => {
+    if (!infinitePlacesData?.pages) return [];
+    
+    console.log('Processing infinite places data:', infinitePlacesData.pages);
+    
+    return infinitePlacesData.pages.flatMap(page => {
+      // PageResponse 형태인 경우 .content에서 추출
+      if (page && typeof page === 'object' && 'content' in page) {
+        console.log(`Processing page ${page.number}: ${page.content?.length || 0} places`);
+        return page.content || [];
+      }
+      // 배열인 경우 그대로 반환 (하위 호환성)
+      console.log('Processing page as array:', page?.length || 0, 'places');
+      return Array.isArray(page) ? page : [];
+    });
+  }, [infinitePlacesData]);
 
-  // 검색 결과에서 동적으로 지역 목록 생성
-  const availableRegions = useMemo(() => {
-    const regions = [{ value: '', label: '전체' }];
+  // 무한 스크롤 적용
+  const observerTarget = useInfiniteScroll({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
+
+  // 스크롤 위치 추적 (sticky 검색바용)
+  const scrollPosition = useScrollPosition();
+  const isSearchSticky = scrollPosition > 150; // 150px 이상 스크롤하면 sticky 활성화
+
+  // 북마크된 장소를 API로 조회 (카운트용 - 항상 호출)
+  const bookmarkedPlacesQuery = useBookmarkedPlaces({
+    page: 0,
+    size: 1 // 카운트만 필요하므로 1개만 조회
+  }, {
+    enabled: isAuthenticated // 인증된 사용자일 때 항상 호출
+  });
+  
+  // 북마크 탭용 전체 데이터 조회 (탭 활성화 시에만)
+  const bookmarkedPlacesFullQuery = useBookmarkedPlaces({
+    page: 0,
+    size: 100 // 충분히 큰 size로 모든 북마크 장소 조회
+  }, {
+    enabled: activeTab === 'bookmarks' && isAuthenticated // 북마크 탭이고 인증된 사용자일 때만 호출
+  });
+  
+  // 북마크 데이터와 로딩 상태
+  const bookmarkedPlacesData = activeTab === 'bookmarks' ? bookmarkedPlacesFullQuery.data : null;
+  const isBookmarkedPlacesLoading = activeTab === 'bookmarks' ? bookmarkedPlacesFullQuery.isLoading : false;
+
+  // 탭에 따른 장소 필터링
+  const places = useMemo(() => {
+    if (!allPlaces) return [];
     
-    if (places && places.length > 0) {
-      const regionSet = new Set<string>();
-      places.forEach(place => {
-        if (place.regionSummary) {
-          // 지역 문자열을 파싱해서 주요 지역만 추출
-          const mainRegion = place.regionSummary.split(' ')[0];
-          if (mainRegion && mainRegion !== '전체') {
-            regionSet.add(mainRegion);
-          }
+    console.log('🔄 Filtering places for tab:', activeTab);
+    console.log('Total places:', allPlaces.length);
+    console.log('Authentication status:', isAuthenticated);
+    
+    switch (activeTab) {
+      case 'bookmarks':
+        // 북마크된 장소만 표시 (API 응답 사용)
+        if (!isAuthenticated) {
+          console.log('❌ User not authenticated, returning empty bookmarks');
+          return [];
         }
-      });
-      
-      // 정렬해서 지역 옵션 생성
-      Array.from(regionSet)
-        .sort()
-        .forEach(region => {
-          regions.push({ value: region, label: region });
-        });
+        
+        if (isBookmarkedPlacesLoading) {
+          console.log('⏳ Loading bookmarked places from API...');
+          return []; // 로딩 중에는 빈 배열 반환
+        }
+        
+        const apiBookmarkedPlaces = bookmarkedPlacesData?.content || [];
+        console.log(`🔖 Found ${apiBookmarkedPlaces.length} bookmarked places from API`);
+        
+        // 북마크된 장소들을 API 응답에서 직접 추출
+        const bookmarkedPlaces = apiBookmarkedPlaces.map(bookmarkItem => bookmarkItem.place);
+        console.log('🔖 Extracted places from bookmark items:', bookmarkedPlaces.map(p => p.name));
+        
+        console.log(`✅ Matched ${bookmarkedPlaces.length} places from current search with API bookmarks`);
+        return bookmarkedPlaces;
+        
+      case 'recent':
+        // 최근 본 장소 (백엔드 API 필요)
+        console.log('📚 Recent tab selected (not implemented)');
+        return [];
+        
+      case 'all':
+      default:
+        console.log(`📋 Showing all ${allPlaces.length} places`);
+        return allPlaces;
     }
-    
-    return regions;
-  }, [places]);
+  }, [allPlaces, activeTab, isAuthenticated, bookmarkedPlacesData, isBookmarkedPlacesLoading]);
+
+  // 지역 필터 변경 핸들러
+  const handleRegionChange = (region: string) => {
+    setSelectedRegion(region);
+  };
 
   // 초기 로드 완료 시 플래그 업데이트
   useEffect(() => {
-    if (isInitialLoad && (places || error)) {
+    if (isInitialLoad && (allPlaces || error)) {
       setIsInitialLoad(false);
     }
-  }, [places, error, isInitialLoad]);
+  }, [allPlaces, error, isInitialLoad]);
   const toggleBookmarkMutation = useToggleBookmark();
 
   // 사용자 로그인 상태가 변경될 때 북마크 상태 초기화
@@ -109,11 +193,11 @@ export const PlacesPage: React.FC = () => {
 
   // 서버에서 장소 데이터를 불러올 때 북마크 상태 동기화 (서버 상태 우선)
   useEffect(() => {
-    if (places && places.length > 0 && isAuthenticated) {
+    if (allPlaces && allPlaces.length > 0 && isAuthenticated) {
       console.log('🔄 Syncing bookmark states with server data...');
       const serverBookmarkStates: Record<string, boolean> = {};
       
-      places.forEach(place => {
+      allPlaces.forEach(place => {
         const serverState = place.isBookmarked || false;
         serverBookmarkStates[place.placeId] = serverState;
         console.log(`🔍 Place ${place.name}: server=${serverState}, local=${localBookmarkStates[place.placeId]}`);
@@ -128,27 +212,37 @@ export const PlacesPage: React.FC = () => {
       } catch (error) {
         console.warn('Failed to save bookmark states to localStorage:', error);
       }
-    } else if (places && places.length > 0 && !isAuthenticated) {
+    } else if (allPlaces && allPlaces.length > 0 && !isAuthenticated) {
       // 비로그인 사용자의 경우 모든 북마크 상태를 false로 설정
       setLocalBookmarkStates({});
     }
-  }, [places, isAuthenticated]);
+  }, [allPlaces, isAuthenticated]);
 
   const toggleBookmark = async (placeId: string) => {
+    console.log(`🚀 Starting bookmark toggle for place: ${placeId}`);
+    
     // 비로그인 사용자는 알림만 표시
     if (!isAuthenticated) {
+      console.log('❌ User not authenticated');
       alert('북마크 기능을 사용하려면 로그인이 필요합니다.');
       return;
     }
     
     try {
       // 현재 북마크 상태 확인 (로컬 상태 우선, 없으면 서버 상태)
-      const currentPlace = places?.find(p => p.placeId === placeId);
+      const currentPlace = allPlaces?.find(p => p.placeId === placeId);
       const serverBookmarkState = currentPlace?.isBookmarked || false;
       const localBookmarkState = localBookmarkStates[placeId];
       const isCurrentlyBookmarked = localBookmarkState !== undefined ? localBookmarkState : serverBookmarkState;
       
-      console.log(`Current bookmark state for ${placeId}:`, isCurrentlyBookmarked);
+      console.log(`📊 Current bookmark state:`, {
+        placeId,
+        placeName: currentPlace?.name,
+        serverBookmarkState,
+        localBookmarkState,
+        isCurrentlyBookmarked,
+        newState: !isCurrentlyBookmarked
+      });
       
       // 즉시 UI 업데이트 (낙관적 업데이트)
       const newBookmarkState = !isCurrentlyBookmarked;
@@ -157,6 +251,7 @@ export const PlacesPage: React.FC = () => {
         [placeId]: newBookmarkState
       };
       setLocalBookmarkStates(newStates);
+      console.log('🎨 UI updated optimistically');
       
       // localStorage에 저장
       try {
@@ -164,52 +259,50 @@ export const PlacesPage: React.FC = () => {
       } catch (error) {
         console.warn('Failed to save bookmark states to localStorage:', error);
       }
+
+      // useToggleBookmark 훅 사용
+      console.log('📡 Calling API via useToggleBookmark hook...');
+      const result = await toggleBookmarkMutation.mutateAsync({
+        targetId: placeId,
+        type: 'PLACE'
+      });
       
-      let result;
-      try {
-        if (isCurrentlyBookmarked) {
-          // 이미 북마크된 상태라면 제거
-          result = await apiRequest.delete(`/places/${placeId}/bookmark`);
-          console.log('Bookmark removed:', result);
-        } else {
-          // 북마크되지 않은 상태라면 추가
-          result = await apiRequest.post(`/places/${placeId}/bookmark`);
-          console.log('Bookmark added:', result);
-        }
-      } catch (apiError: any) {
-        // 409 Conflict 에러가 발생한 경우 (이미 북마크 존재)
-        if (apiError.response?.status === 409) {
-          console.log('Conflict detected - bookmark already exists, trying to remove...');
-          result = await apiRequest.delete(`/places/${placeId}/bookmark`);
-          console.log('Bookmark removed after conflict:', result);
-          // 409 에러의 경우 실제로는 제거되었으므로 상태를 false로 설정
-          const conflictStates = {
-            ...localBookmarkStates,
-            [placeId]: false
-          };
-          setLocalBookmarkStates(conflictStates);
-          try {
-            localStorage.setItem('bookmarkStates', JSON.stringify(conflictStates));
-          } catch (error) {
-            console.warn('Failed to save bookmark states to localStorage:', error);
-          }
-        } else {
-          // API 에러 시 원래 상태로 되돌리기
-          const revertStates = {
-            ...localBookmarkStates,
-            [placeId]: isCurrentlyBookmarked
-          };
-          setLocalBookmarkStates(revertStates);
-          try {
-            localStorage.setItem('bookmarkStates', JSON.stringify(revertStates));
-          } catch (error) {
-            console.warn('Failed to save bookmark states to localStorage:', error);
-          }
-          throw apiError;
-        }
+      console.log('✅ API response:', result);
+
+      console.log('🔄 Refreshing bookmark queries...');
+      // 추가로 북마크 카운트 쿼리도 강제 재실행
+      await bookmarkedPlacesQuery.refetch();
+      if (activeTab === 'bookmarks') {
+        await bookmarkedPlacesFullQuery.refetch();
       }
+      console.log('✅ All queries refreshed successfully');
+      
     } catch (error) {
-      console.error('Bookmark toggle failed:', error);
+      console.error('❌ Bookmark toggle failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      // API 에러 시 원래 상태로 되돌리기
+      const currentPlace = allPlaces?.find(p => p.placeId === placeId);
+      const originalBookmarkState = currentPlace?.isBookmarked || false;
+      const revertStates = {
+        ...localBookmarkStates,
+        [placeId]: originalBookmarkState
+      };
+      setLocalBookmarkStates(revertStates);
+      console.log('🔄 Reverted UI state due to error');
+      
+      try {
+        localStorage.setItem('bookmarkStates', JSON.stringify(revertStates));
+      } catch (localError) {
+        console.warn('Failed to save reverted bookmark states to localStorage:', localError);
+      }
+      
+      // 사용자에게 에러 알림
+      alert('북마크 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -225,7 +318,7 @@ export const PlacesPage: React.FC = () => {
       return;
     }
     
-    const place = places?.find(p => p.placeId === placeId);
+    const place = allPlaces?.find(p => p.placeId === placeId);
     if (place) {
       setSelectedPlaceForCourse({ id: placeId, name: place.name });
       setIsAddToCourseModalOpen(true);
@@ -250,7 +343,7 @@ export const PlacesPage: React.FC = () => {
 
   const handleConfirmAddToCourse = async (courseId: number, placeId: string) => {
     try {
-      // TODO: 실제 API 구현 필요 - 백엔드에 코스에 장소 추가 API 확인 필요
+      // Course place addition API implementation pending
       console.log('Adding place to course:', { courseId, placeId });
       
       // 임시 API 호출 시뮬레이션
@@ -294,7 +387,7 @@ export const PlacesPage: React.FC = () => {
     } else {
       // 선택 추가
       newSelectedPlaces.add(placeId);
-      const placeData = places?.find(place => place.placeId === placeId);
+      const placeData = allPlaces?.find(place => place.placeId === placeId);
       if (placeData && !newSelectedPlacesData.some(p => p.placeId === placeId)) {
         newSelectedPlacesData.push(placeData);
         setSelectedPlacesData(newSelectedPlacesData);
@@ -352,11 +445,52 @@ export const PlacesPage: React.FC = () => {
     }
   };
 
-  // GitHub 스타일 탭 구성
+  // 북마크된 장소 개수 계산 (API 기준)
+  const bookmarkedCount = useMemo(() => {
+    if (!isAuthenticated) {
+      console.log('📊 Bookmark count: 0 (not authenticated)');
+      return 0;
+    }
+    // 카운트용 API 쿼리에서 전체 북마크 개수 사용
+    const count = bookmarkedPlacesQuery.data?.totalElements || 0;
+    console.log('📊 Bookmark count updated:', count);
+    return count;
+  }, [bookmarkedPlacesQuery.data, isAuthenticated]);
+
+  // GitHub 스타일 탭 구성 - 현재 페이지 내 필터링으로 변경
   const tabs = [
-    { label: '모든 장소', href: '/places', active: true, count: places?.length },
-    { label: '북마크', href: '/bookmarks', active: false },
-    { label: '최근 본 장소', href: '/recent', active: false },
+    { 
+      label: '모든 장소', 
+      href: '#all',
+      active: activeTab === 'all',
+      count: allPlaces?.length,
+      onClick: () => setActiveTab('all')
+    },
+    { 
+      label: '북마크한 장소', 
+      href: '#bookmarks',
+      active: activeTab === 'bookmarks',
+      count: bookmarkedCount,
+      onClick: () => {
+        if (!isAuthenticated) {
+          alert('북마크 기능을 사용하려면 로그인이 필요합니다.');
+          return;
+        }
+        console.log('🔖 Switching to bookmarks tab...');
+        console.log('Will fetch bookmarked places from API...');
+        setActiveTab('bookmarks');
+      }
+    },
+    { 
+      label: '최근 본 장소', 
+      href: '#recent',
+      active: activeTab === 'recent',
+      count: 0, // 백엔드 API 구현 후 실제 카운트 표시
+      onClick: () => {
+        // 최근 본 장소 기능은 백엔드 작업 필요
+        alert('최근 본 장소 기능은 개발 중입니다. 백엔드 API 작업이 필요합니다.');
+      }
+    },
   ];
 
   // 사이드바 구성
@@ -385,23 +519,13 @@ export const PlacesPage: React.FC = () => {
             </select>
           </div>
 
-          {/* 지역 필터 */}
-          <div>
-            <label className="block text-sm font-medium text-primary-900 mb-2">
-              지역
-            </label>
-            <select
-              value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-github-border rounded-md bg-github-canvas focus:border-secondary-500 focus:outline-none focus:ring-1 focus:ring-secondary-500"
-            >
-              {availableRegions.map(region => (
-                <option key={region.value} value={region.value}>
-                  {region.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 2단계 지역 필터 */}
+          <RegionFilter
+            selectedRegion={selectedRegion}
+            onRegionChange={handleRegionChange}
+            className="pb-4 border-b border-gray-200"
+            availableRegionsData={allPlaces || []}
+          />
 
           {/* 필터 초기화 버튼 */}
           <Button
@@ -520,8 +644,35 @@ export const PlacesPage: React.FC = () => {
       tabs={tabs}
       sidebar={sidebar}
     >
+      {/* Sticky Search Bar */}
+      <div 
+        className={`sticky top-0 bg-white transition-all duration-300 ease-in-out z-30 ${
+          isSearchSticky 
+            ? 'shadow-md border-b border-github-border opacity-100 transform translate-y-0' 
+            : 'shadow-none border-transparent opacity-0 transform -translate-y-full pointer-events-none'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-3">
+            <div className="relative max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-4 w-4 text-github-neutral-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 text-sm border border-github-border rounded-md bg-github-canvas text-primary-900 placeholder-github-neutral-muted focus:border-secondary-500 focus:outline-none focus:ring-1 focus:ring-secondary-500"
+                placeholder="장소 검색..."
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Search and Filters */}
+      {/* Original Search and Filters */}
       <SearchFilter
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -544,7 +695,7 @@ export const PlacesPage: React.FC = () => {
           {
             label: '지역',
             value: selectedRegion,
-            options: availableRegions,
+            options: [{ value: '', label: '전체' }], // 간소화된 옵션
             onChange: setSelectedRegion
           }
         ]}
@@ -597,9 +748,12 @@ export const PlacesPage: React.FC = () => {
         </Card>
 
       {/* Loading State */}
-      {isLoading && (
+      {(isLoading || (activeTab === 'bookmarks' && isBookmarkedPlacesLoading)) && (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
+          {activeTab === 'bookmarks' && isBookmarkedPlacesLoading && (
+            <p className="ml-3 text-sm text-gray-500">북마크한 장소를 불러오는 중...</p>
+          )}
         </div>
       )}
 
@@ -614,7 +768,7 @@ export const PlacesPage: React.FC = () => {
       )}
 
         {/* Places Grid */}
-        {!isLoading && !error && places && (
+        {!isLoading && !(activeTab === 'bookmarks' && isBookmarkedPlacesLoading) && !error && places && (
           <>
             {/* 검색 결과 헤더 */}
             <div className="flex items-center justify-between mb-6">
@@ -696,6 +850,21 @@ export const PlacesPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* 무한 스크롤 트리거 및 로딩 표시 */}
+            <div ref={observerTarget} className="py-8 flex justify-center">
+              {isFetchingNextPage && (
+                <div className="flex items-center space-x-2 text-gray-500">
+                  <Spinner size="sm" />
+                  <span className="text-sm">더 많은 장소를 불러오는 중...</span>
+                </div>
+              )}
+              {!hasNextPage && !isFetchingNextPage && places.length > 0 && (
+                <div className="text-sm text-gray-500">
+                  모든 장소를 불러왔습니다.
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -703,14 +872,42 @@ export const PlacesPage: React.FC = () => {
         {!isLoading && !error && (!places || places.length === 0) && (
           <Card variant="outlined" padding="lg" className="text-center">
             <div className="py-8">
-              <svg className="mx-auto h-12 w-12 text-github-neutral-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <h3 className="text-lg font-medium text-primary-900 mb-2">검색 결과가 없습니다</h3>
-              <p className="text-github-neutral mb-4">다른 검색어나 필터를 시도해보세요.</p>
-              <Button variant="secondary" size="sm" onClick={resetFilters}>
-                필터 초기화
-              </Button>
+              {activeTab === 'bookmarks' ? (
+                <>
+                  <svg className="mx-auto h-12 w-12 text-github-neutral-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-primary-900 mb-2">북마크한 장소가 없습니다</h3>
+                  <p className="text-github-neutral mb-4">
+                    관심있는 장소의 ❤️ 버튼을 눌러 북마크하면 여기서 쉽게 찾을 수 있습니다.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={() => setActiveTab('all')}>
+                    모든 장소 보기
+                  </Button>
+                </>
+              ) : activeTab === 'recent' ? (
+                <>
+                  <svg className="mx-auto h-12 w-12 text-github-neutral-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-primary-900 mb-2">최근 본 장소가 없습니다</h3>
+                  <p className="text-github-neutral mb-4">장소를 둘러본 후 여기서 확인하세요.</p>
+                  <Button variant="secondary" size="sm" onClick={() => setActiveTab('all')}>
+                    장소 둘러보기
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <svg className="mx-auto h-12 w-12 text-github-neutral-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-primary-900 mb-2">검색 결과가 없습니다</h3>
+                  <p className="text-github-neutral mb-4">다른 검색어나 필터를 시도해보세요.</p>
+                  <Button variant="secondary" size="sm" onClick={resetFilters}>
+                    필터 초기화
+                  </Button>
+                </>
+              )}
             </div>
           </Card>
         )}

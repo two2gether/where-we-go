@@ -7,8 +7,8 @@ import type {
 } from '../types';
 
 export const placeService = {
-  // 장소 검색 (POST 요청)
-  getPlaces: (params: PlaceSearchRequest = {}): Promise<Place[]> => {
+  // 장소 검색 (POST 요청) - 클라이언트 사이드 페이지네이션
+  getPlaces: (params: PlaceSearchRequest = {}): Promise<PageResponse<Place>> => {
     // 검색 쿼리 조합 - query 또는 keyword 사용
     let query = params.query || params.keyword || '맛집'; // 기본 검색어
     
@@ -22,26 +22,58 @@ export const placeService = {
       query += ` ${params.region}`;
     }
 
-    // 백엔드 API 형식에 맞게 요청 데이터 변환
+    // 백엔드 API 형식에 맞게 요청 데이터 변환 (페이지네이션 제거)
     const searchRequest: any = {
       query: query.trim(), // 공백 제거
+      sort: 'distance'
     };
 
-    // pagination 설정 (선택사항)
-    if (params.page !== undefined || params.size !== undefined) {
-      searchRequest.pagination = {
-        page: (params.page || 0) + 1, // 백엔드는 1부터 시작
-        size: params.size || 20
-      };
-    }
+    console.log('Place search request (no pagination):', searchRequest);
 
-    // sort 설정 (선택사항)
-    searchRequest.sort = 'distance';
+    return apiRequest.post<any>('/places/search', searchRequest)
+      .then(response => {
+        console.log('Raw API response:', response.data);
+        
+        // 백엔드에서 받은 전체 결과 (최대 60개 예상)
+        let allPlaces: Place[] = [];
+        
+        if (Array.isArray(response.data)) {
+          allPlaces = response.data as Place[];
+        } else if (response.data?.data) {
+          allPlaces = response.data.data as Place[];
+        } else {
+          allPlaces = [];
+        }
 
-    console.log('Place search request:', searchRequest); // 디버깅용
-
-    return apiRequest.post<Place[]>('/places/search', searchRequest)
-      .then(response => response.data);
+        // 클라이언트 사이드 페이지네이션 적용 (20개 기준)
+        const page = params.page || 0;
+        const size = params.size || 10; // 20개를 2페이지로 나누기 위해 10개씩
+        const startIndex = page * size;
+        const endIndex = startIndex + size;
+        
+        // 요청된 페이지에 해당하는 데이터 추출
+        const pageContent = allPlaces.slice(startIndex, endIndex);
+        
+        // Google API 최대 결과 60개 기준으로 페이지네이션 처리
+        const totalElements = allPlaces.length;
+        const totalPages = Math.ceil(totalElements / size);
+        const isLast = endIndex >= totalElements;
+        
+        console.log(`Client-side pagination (20개 기준): page=${page}, size=${size}, start=${startIndex}, end=${endIndex}, total=${totalElements}`);
+        console.log(`Page content: ${pageContent.length} items, isLast=${isLast}`);
+        console.log(`Google API results: ${totalElements} (max 20)`);
+        
+        return {
+          content: pageContent,
+          number: page,
+          size: size,
+          totalElements: totalElements,
+          totalPages: totalPages,
+          first: page === 0,
+          last: isLast,
+          empty: pageContent.length === 0
+        } as PageResponse<Place>;
+      });
   },
 
   // 장소 상세 조회  

@@ -72,13 +72,23 @@ export const BookmarksPage: React.FC = () => {
     );
   }
 
-  // GitHub 스타일 탭 구성
-  const tabs = [
-    { label: '장소 북마크', href: '#places', active: activeTab === 'places' },
-    { label: '코스 북마크', href: '#courses', active: activeTab === 'courses' },
-  ];
-
   const bookmarks = bookmarkData?.content || [];
+
+  // GitHub 스타일 탭 구성 (클릭 가능하도록 수정)
+  const tabs = [
+    { 
+      label: `장소 북마크 (${bookmarks.filter(b => b.place).length})`, 
+      href: '#places', 
+      active: activeTab === 'places',
+      onClick: () => setActiveTab('places')
+    },
+    { 
+      label: `코스 북마크 (${bookmarks.filter(b => b.course).length})`, 
+      href: '#courses', 
+      active: activeTab === 'courses',
+      onClick: () => setActiveTab('courses')
+    },
+  ];
 
   return (
     <GitHubLayout
@@ -86,31 +96,6 @@ export const BookmarksPage: React.FC = () => {
       subtitle="저장해둔 장소와 코스를 확인하고 관리하세요"
       tabs={tabs}
     >
-      {/* 탭 네비게이션 */}
-      <div className="mb-6">
-        <nav className="flex space-x-1 bg-github-canvas-subtle p-1 rounded-lg">
-          <button
-            onClick={() => setActiveTab('places')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'places'
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-github-neutral-muted hover:text-github-neutral'
-            }`}
-          >
-            장소 북마크 ({bookmarks.filter(b => b.place).length})
-          </button>
-          <button
-            onClick={() => setActiveTab('courses')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'courses'
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-github-neutral-muted hover:text-github-neutral'
-            }`}
-          >
-            코스 북마크 ({bookmarks.filter(b => b.course).length})
-          </button>
-        </nav>
-      </div>
 
       {/* 로딩 상태 */}
       {isLoading && (
