@@ -205,9 +205,8 @@ api.interceptors.response.use(
           
           // Private endpoint라면 로그아웃
           console.log('🔐 Private endpoint - token refresh failed, redirecting to login');
-          console.log('TEMP: NOT REDIRECTING FOR DEBUG');
           logout();
-          // window.location.href = '/login';  // 임시 주석처리
+          window.location.href = '/login';
         }
       } else {
         // 리프레시 토큰이 없는 경우
@@ -216,9 +215,8 @@ api.interceptors.response.use(
         // Public endpoint가 아닌 경우에만 로그아웃 처리
         if (!isPublicEndpoint) {
           console.log('🔐 Private endpoint - redirecting to login');
-          console.log('TEMP: NOT REDIRECTING FOR DEBUG');
           logout();
-          // window.location.href = '/login';  // 임시 주석처리
+          window.location.href = '/login';
         }
       }
     }

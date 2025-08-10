@@ -68,6 +68,10 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
+				
+				// 공개 장소 조회 API
+				.requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/places/search").permitAll()
 
 				// 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()

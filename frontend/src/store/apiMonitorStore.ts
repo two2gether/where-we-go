@@ -21,6 +21,7 @@ export interface ApiLogEntry {
 interface ApiMonitorState {
   isEnabled: boolean;
   isVisible: boolean;
+  isModalMode: boolean; // 모달 모드 추가
   logs: ApiLogEntry[];
   maxLogs: number;
   width: number;
@@ -34,6 +35,7 @@ interface ApiMonitorState {
 interface ApiMonitorActions {
   toggleEnabled: () => void;
   toggleVisible: () => void;
+  toggleModalMode: () => void; // 모달 모드 토글 추가
   addLog: (log: Omit<ApiLogEntry, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
   setFilter: (filter: Partial<ApiMonitorState['filter']>) => void;
@@ -48,6 +50,7 @@ export const useApiMonitorStore = create<ApiMonitorState & ApiMonitorActions>()(
       // Initial state
       isEnabled: import.meta.env.DEV, // 개발 환경에서만 기본 활성화
       isVisible: false,
+      isModalMode: false, // 기본값은 사이드바 모드
       logs: [],
       maxLogs: 100, // 최대 100개까지만 저장
       width: 500, // 기본 너비 500px
@@ -61,6 +64,8 @@ export const useApiMonitorStore = create<ApiMonitorState & ApiMonitorActions>()(
       toggleEnabled: () => set((state) => ({ isEnabled: !state.isEnabled })),
 
       toggleVisible: () => set((state) => ({ isVisible: !state.isVisible })),
+
+      toggleModalMode: () => set((state) => ({ isModalMode: !state.isModalMode })),
 
       addLog: (log) => {
         const id = Math.random().toString(36).substring(7);

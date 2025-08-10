@@ -175,10 +175,6 @@ export const courseService = {
     apiRequest.post<{ liked: boolean; likeCount: number }>(`/courses/${courseId}/like`)
       .then(response => response.data),
 
-  // 코스 좋아요 상태 조회 (현재 사용자의 좋아요 여부 확인)
-  getLikeStatus: (courseId: number): Promise<{ isLiked: boolean }> =>
-    apiRequest.get<{ isLiked: boolean }>(`/courses/${courseId}/like/status`)
-      .then(response => response.data),
 
   // 코스 테마 목록 조회
   getThemes: (): Promise<string[]> =>

@@ -150,7 +150,7 @@ public class CourseLikeService {
 
 		//place가져오기
 		List<Long> courseIds = pagedLikeList.getContent().stream()
-			.map(CourseLike::getId)
+			.map(courseLike -> courseLike.getCourse().getId())
 			.toList();
 
 		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
@@ -169,6 +169,6 @@ public class CourseLikeService {
 			})
 			.toList();
 
-		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalPages()));
+		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalElements()));
 	}
 }

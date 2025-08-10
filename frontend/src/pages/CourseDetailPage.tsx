@@ -17,6 +17,7 @@ const CourseDetailPage: React.FC = () => {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'info' | 'places' | 'map' | 'comments'>('info');
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(false); // 로컬 좋아요 상태
   const queryClient = useQueryClient();
 
   // 코스 상세 정보 조회
@@ -30,13 +31,6 @@ const CourseDetailPage: React.FC = () => {
     staleTime: 0,
   });
 
-  // 좋아요 상태 조회 (로그인된 사용자만)
-  const { data: likeStatus, isLoading: isLikeStatusLoading } = useQuery({
-    queryKey: ['course-like-status', courseId],
-    queryFn: () => courseService.getLikeStatus(Number(courseId)),
-    enabled: !!courseId && !!user, // 로그인된 상태에서만 호출
-    staleTime: 0,
-  });
 
   // 평점 정보는 코스 상세 정보에 포함되어 있음 (averageRating, myRating 등)
 
@@ -46,10 +40,16 @@ const CourseDetailPage: React.FC = () => {
       const response = await apiRequest.post(`/courses/${courseId}/like`);
       return response.data;
     },
-    onSuccess: () => {
-      // 코스 정보와 좋아요 상태 쿼리 모두 무효화
+    onSuccess: (data) => {
+      // 응답에서 받은 좋아요 상태로 로컬 상태 업데이트
+      if (data && typeof data.liked === 'boolean') {
+        setIsLiked(data.liked);
+      } else {
+        // 응답에 liked 정보가 없다면 토글
+        setIsLiked(prev => !prev);
+      }
+      // 코스 정보 다시 불러오기 (좋아요 수 업데이트를 위해)
       queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-      queryClient.invalidateQueries({ queryKey: ['course-like-status', courseId] });
       alert('좋아요가 반영되었습니다.');
     },
     onError: (error) => {
@@ -235,16 +235,16 @@ const CourseDetailPage: React.FC = () => {
             <div className="flex items-center space-x-2 mt-4 md:mt-0">
               <button
                 onClick={handleLike}
-                disabled={likeMutation.isPending || isLikeStatusLoading}
+                disabled={likeMutation.isPending}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  likeStatus?.isLiked 
+                  isLiked 
                     ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100'
                     : 'bg-white border-github-border text-github-neutral hover:bg-github-canvas-subtle'
                 }`}
               >
                 <svg 
                   className="w-4 h-4" 
-                  fill={likeStatus?.isLiked ? "currentColor" : "none"} 
+                  fill={isLiked ? "currentColor" : "none"} 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
                 >
@@ -253,11 +253,9 @@ const CourseDetailPage: React.FC = () => {
                 <span>
                   {likeMutation.isPending 
                     ? '처리 중...' 
-                    : isLikeStatusLoading
-                      ? '확인 중...'
-                      : likeStatus?.isLiked 
-                        ? '좋아요 취소' 
-                        : '좋아요'
+                    : isLiked 
+                      ? '좋아요 취소' 
+                      : '좋아요'
                   }
                 </span>
               </button>

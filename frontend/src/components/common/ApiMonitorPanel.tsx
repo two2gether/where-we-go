@@ -372,16 +372,18 @@ const FilterPanel: React.FC = () => {
 };
 
 // 메인 API 모니터링 패널
-const ApiMonitorPanel: React.FC = () => {
+const ApiMonitorPanel: React.FC<{ isPopupMode?: boolean }> = ({ isPopupMode = false }) => {
   const { 
     isVisible, 
     logs, 
     filter,
     width,
+    isModalMode,
     toggleVisible, 
     clearLogs,
     toggleEnabled,
     setWidth,
+    toggleModalMode,
     isEnabled
   } = useApiMonitorStore();
   
@@ -449,8 +451,151 @@ const ApiMonitorPanel: React.FC = () => {
     });
   }, [logs, filter]);
   
-  if (!isVisible) return null;
-  
+  if (!isVisible && !isPopupMode) return null;
+
+  // 팝업 모드일 때 (새 창에서만 사용)
+  if (isPopupMode) {
+    return (
+      <div className="h-full flex flex-col bg-gray-50">
+        {/* 로그 리스트만 표시 */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredLogs.length === 0 ? (
+            <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-50 to-white">
+              <div className="text-center p-8">
+                <div className="text-6xl mb-4">🌟</div>
+                <div className="text-lg font-semibold text-gray-800 mb-2">
+                  {!isEnabled ? 'API Monitoring Disabled' : 'No API Calls Yet'}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {!isEnabled 
+                    ? 'Enable monitoring in the main window to see API calls here'
+                    : 'Try logging in or searching for places to see API activity'
+                  }
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredLogs.map((log, index) => (
+                <LogItem 
+                  key={`${log.id}-${log.timestamp}`} 
+                  log={log} 
+                  isLatest={index === 0} 
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 모달 모드일 때
+  if (isModalMode) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-lg shadow-2xl w-[90vw] h-[90vh] max-w-6xl flex flex-col">
+          {/* 모달 헤더 */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${isEnabled ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-xl font-bold text-gray-800">🔍 API Monitor</span>
+                <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-md font-medium">상세 모드</span>
+              </div>
+              <span className="text-sm font-medium text-gray-600 bg-white px-3 py-1 rounded-md">
+                {filteredLogs.length} / {logs.length}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={toggleEnabled}
+                className={`px-3 py-1 text-sm rounded ${
+                  isEnabled 
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                }`}
+              >
+                {isEnabled ? 'ON' : 'OFF'}
+              </button>
+              
+              <FilterPanel />
+              
+              <button
+                onClick={clearLogs}
+                className="p-2 hover:bg-gray-200 rounded"
+                title="Clear logs"
+              >
+                <TrashIcon className="w-4 h-4 text-gray-600" />
+              </button>
+              
+
+              <button
+                onClick={toggleModalMode}
+                className="p-2 hover:bg-gray-200 rounded"
+                title="사이드바 모드로 전환"
+              >
+                <div className="w-4 h-4 flex flex-col space-y-0.5">
+                  <div className="w-full h-0.5 bg-gray-600"></div>
+                  <div className="w-full h-0.5 bg-gray-600"></div>
+                  <div className="w-full h-0.5 bg-gray-600"></div>
+                </div>
+              </button>
+              
+              <button
+                onClick={toggleVisible}
+                className="p-2 hover:bg-gray-200 rounded"
+                title="Close panel"
+              >
+                <XMarkIcon className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* 모달 콘텐츠 */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredLogs.length === 0 ? (
+              <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-50 to-white">
+                <div className="text-center p-8">
+                  <div className="text-6xl mb-4">🌟</div>
+                  <div className="text-lg font-semibold text-gray-800 mb-2">
+                    {!isEnabled ? 'API Monitoring Disabled' : 'No API Calls Yet'}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {!isEnabled 
+                      ? 'Click the toggle above to start monitoring API calls'
+                      : 'Try logging in or searching for places to see API activity'
+                    }
+                  </div>
+                  {!isEnabled && (
+                    <button
+                      onClick={toggleEnabled}
+                      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                    >
+                      Enable Monitoring
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {filteredLogs.map((log, index) => (
+                  <LogItem 
+                    key={`${log.id}-${log.timestamp}`} 
+                    log={log} 
+                    isLatest={index === 0} 
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 사이드바 모드 (기본)
   return (
     <div 
       className="fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col"
@@ -496,6 +641,16 @@ const ApiMonitorPanel: React.FC = () => {
             title="Clear logs"
           >
             <TrashIcon className="w-4 h-4 text-gray-600" />
+          </button>
+
+          <button
+            onClick={toggleModalMode}
+            className="p-1 hover:bg-gray-200 rounded"
+            title="상세 모드로 보기"
+          >
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
           </button>
           
           <button
