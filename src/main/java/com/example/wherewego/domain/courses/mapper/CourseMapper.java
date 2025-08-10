@@ -99,6 +99,14 @@ public class CourseMapper {
 	//	내가 북마크한 코스 목록 조회 (마이페이지)
 	public static UserCourseBookmarkListDto toBookmarkCourseDto(Course course, LocalDateTime bookmarkCreatedAt,
 		List<CoursePlaceInfo> places) {
+		return toBookmarkCourseDto(course, bookmarkCreatedAt, places, null);
+	}
+
+	//	내가 북마크한 코스 목록 조회 (마이페이지) - 소유권 정보 포함
+	public static UserCourseBookmarkListDto toBookmarkCourseDto(Course course, LocalDateTime bookmarkCreatedAt,
+		List<CoursePlaceInfo> places, Long currentUserId) {
+		Boolean isMine = currentUserId != null ? course.getUser().getId().equals(currentUserId) : null;
+		
 		return UserCourseBookmarkListDto.builder()
 			.courseId(course.getId())
 			.title(course.getTitle())
@@ -111,6 +119,7 @@ public class CourseMapper {
 			.createdAt(course.getCreatedAt())
 			.bookmarkCreatedAt(bookmarkCreatedAt)
 			.places(places)
+			.isMine(isMine)
 			.build();
 	}
 

@@ -119,10 +119,11 @@ public class UserController {
 	 * 인증된 사용자가 작성한 모든 댓글을 페이지단위로 조회합니다.
 	 * 댓글은 작성일 내림차순으로 정렬되며, 해당 코스 정보도 함께 제공됩니다.
 	 * 삭제된 댓글이나 비공개 코스의 댓글도 필터링되어 제공됩니다.
+	 * isMine 필드가 포함되어 본인이 작성한 댓글임을 나타냅니다.
 	 *
 	 * @param userDetail 인증된 사용자 정보
 	 * @param pageable 페이지네이션 정보 (기본: 10개씩, 작성일 내림차순)
-	 * @return 페이지네이션된 댓글 목록
+	 * @return 페이지네이션된 댓글 목록 (isMine 필드 포함)
 	 */
 	@GetMapping("/mypage/comments")
 	public ApiResponse<PagedResponse<CommentResponseDto>> getMyComments(
@@ -130,7 +131,7 @@ public class UserController {
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		Long userId = userDetail.getUser().getId();
-		PagedResponse<CommentResponseDto> response = commentService.getCommentsByUser(userId, pageable);
+		PagedResponse<CommentResponseDto> response = commentService.getCommentsByUser(userId, pageable, userId);
 
 		return ApiResponse.ok("내가 작성한 댓글 목록 조회에 성공했습니다.", response);
 	}
@@ -249,11 +250,12 @@ public class UserController {
 	 *
 	 * 인증된 사용자가 북마크한 코스 목록을 조회합니다.
 	 * 각 코스에 대한 기본 정보와 북마크한 날짜를 포함하여 반환합니다.
+	 * isMine 필드가 포함되어 본인이 생성한 코스인지 구분할 수 있습니다.
 	 *
 	 * @param userDetail 인증된 사용자 정보
 	 * @param page 페이지 번호 (기본: 0)
 	 * @param size 페이지당 아이템 수 (기본: 20)
-	 * @return 북마크한 코스 목록과 페이지네이션 정보
+	 * @return 북마크한 코스 목록과 페이지네이션 정보 (isMine 필드 포함)
 	 */
 	@GetMapping("/mypage/coursebookmark")
 	public ApiResponse<PagedResponse<UserCourseBookmarkListDto>> getMyCourseBookmarks(
@@ -265,7 +267,7 @@ public class UserController {
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
 		PagedResponse<UserCourseBookmarkListDto> response =
-			courseBookmarkService.getUserCourseBookmarks(userId, pageable);
+			courseBookmarkService.getUserCourseBookmarks(userId, pageable, userId);
 
 		return ApiResponse.ok("내가 북마크한 코스 목록 조회 성공", response);
 	}

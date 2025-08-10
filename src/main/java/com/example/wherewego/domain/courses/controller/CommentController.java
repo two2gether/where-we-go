@@ -126,17 +126,21 @@ public class CommentController {
 	 * 특정 코스에 달린 모든 댓글을 페이지단위로 조회합니다.
 	 * 댓글은 작성일 내림차순으로 정렬되며, 작성자 정보와 작성/수정 시간이 포함됩니다.
 	 * 인증 없이도 조회 가능하지만, 공개 코스의 댓글만 조회됩니다.
+	 * 인증된 사용자의 경우 isMine 필드가 포함되어 본인이 작성한 댓글을 구분할 수 있습니다.
 	 *
 	 * @param courseId 댓글을 조회할 코스 ID
 	 * @param pageable 페이지네이션 정보 (기본: 10개씩, 작성일 내림차순)
-	 * @return 페이지네이션된 댓글 목록
+	 * @param userDetails 현재 인증된 사용자 정보 (선택적)
+	 * @return 페이지네이션된 댓글 목록 (isMine 필드 포함)
 	 */
 	@GetMapping("/api/courses/{courseId}/comments")
 	public ApiResponse<PagedResponse<CommentResponseDto>> getComments(
 		@PathVariable Long courseId,
-		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
-		PagedResponse<CommentResponseDto> response = commentService.getCommentsByCourse(courseId, pageable);
+		Long currentUserId = userDetails != null ? userDetails.getUser().getId() : null;
+		PagedResponse<CommentResponseDto> response = commentService.getCommentsByCourse(courseId, pageable, currentUserId);
 
 		return ApiResponse.ok("댓글 목록이 조회되었습니다.", response);
 	}

@@ -108,8 +108,27 @@ public class CourseBookmarkService {
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<UserCourseBookmarkListDto> getUserCourseBookmarks(Long userId, Pageable pageable) {
+		return getUserCourseBookmarks(userId, pageable, null);
+	}
+
+	/**
+	 * 내가 북마크한 코스 목록 조회 (소유권 정보 포함)
+	 *
+	 * 사용자가 북마크한 코스 목록을 페이징하여 조회합니다.
+	 * 각 코스에 포함된 장소 정보와 북마크한 시점, 코스 소유권 정보를 함께 제공합니다.
+	 *
+	 * @param userId 사용자 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @param currentUserId 현재 요청한 사용자 ID (소유권 비교용, null 가능)
+	 * @return 북마크한 코스 목록과 페이지네이션 정보 (isMine 필드 포함)
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<UserCourseBookmarkListDto> getUserCourseBookmarks(Long userId, Pageable pageable, Long currentUserId) {
 		// 1. 북마크된 CourseBookmark 엔티티 페이징 조회
-		Page<CourseBookmark> bookmarkPage = courseBookmarkRepository.findByUserId(userId, pageable);
+		// currentUserId가 있으면 N+1 방지를 위해 fetch join 쿼리 사용
+		Page<CourseBookmark> bookmarkPage = currentUserId != null 
+			? courseBookmarkRepository.findByUserIdWithCourseAndUser(userId, pageable)
+			: courseBookmarkRepository.findByUserId(userId, pageable);
 
 		// 2. 북마크된 코스 ID 목록 추출
 		List<Long> courseIds = bookmarkPage.getContent().stream()
@@ -123,7 +142,7 @@ public class CourseBookmarkService {
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		// 5. 북마크 → DTO 변환 (장소 포함)
+		// 5. 북마크 → DTO 변환 (장소 포함, 소유권 정보 포함)
 		List<UserCourseBookmarkListDto> dtoList = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
 				Course course = bookmark.getCourse();
@@ -132,7 +151,7 @@ public class CourseBookmarkService {
 				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
 				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
 
-				return CourseMapper.toBookmarkCourseDto(course, bookmark.getCreatedAt(), places);
+				return CourseMapper.toBookmarkCourseDto(course, bookmark.getCreatedAt(), places, currentUserId);
 			})
 			.toList();
 
