@@ -19,15 +19,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
-import com.example.wherewego.domain.auth.dto.response.LoginResponseDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
+import com.example.wherewego.domain.auth.dto.response.LoginResponseDto;
+import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 

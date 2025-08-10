@@ -11,6 +11,8 @@ import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
+import com.example.wherewego.domain.courses.repository.CourseRepository;
+import com.example.wherewego.domain.notification.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -29,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentService {
 
 	private final CommentRepository commentRepository;
+	private final CourseRepository courseRepository;
 	private final UserService userService;
 	private final CourseService courseService;
 	private final NotificationService notificationService;
@@ -45,7 +48,6 @@ public class CommentService {
 	 */
 	@Transactional
 	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
-		log.debug("댓글 생성 요청 - courseId: {}, userId: {}, content: {}", courseId, userId, requestDto.getContent());
 
 		User user = userService.getUserById(userId);
 
@@ -81,7 +83,6 @@ public class CommentService {
 	 */
 	@Transactional
 	public void deleteComment(Long commentId, Long userId) {
-		log.debug("댓글 삭제 요청 - commentId: {}, userId: {}", commentId, userId);
 
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> {
@@ -96,7 +97,7 @@ public class CommentService {
 		}
 
 		commentRepository.delete(comment);
-		log.debug("댓글 삭제 성공 - commentId: {}", commentId);
+
 	}
 
 	/**
@@ -111,7 +112,6 @@ public class CommentService {
 	 */
 	@Transactional
 	public CommentResponseDto updateComment(Long commentId, Long userId, CommentRequestDto requestDto) {
-		log.debug("댓글 수정 요청 - commentId: {}, userId: {}, newContent: {}", commentId, userId, requestDto.getContent());
 
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> {
@@ -126,7 +126,6 @@ public class CommentService {
 		}
 
 		comment.updateContent(requestDto.getContent());
-		log.debug("댓글 수정 성공 - commentId: {}", commentId);
 
 		return toDto(comment);
 	}
@@ -141,6 +140,10 @@ public class CommentService {
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
+
+		// 코스 존재 여부 확인
+		courseRepository.findById(courseId)
+			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
 		//JPA Repository를 통해 댓글 목록을 조회
 		Page<Comment> commentPage = commentRepository.findAllByCourseIdOrderByCreatedAtDesc(courseId, pageable);

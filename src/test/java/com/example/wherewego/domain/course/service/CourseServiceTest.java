@@ -20,9 +20,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.auth.enums.Provider;
 import com.example.wherewego.domain.courses.dto.request.CourseListFilterDto;
 import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;

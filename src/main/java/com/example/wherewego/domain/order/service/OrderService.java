@@ -32,33 +32,6 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final EventService eventService;
 
-	// @Transactional
-	// public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
-	//
-	// 	// 1. 사용자 조회
-	// 	User user = userRepository.findByIdAndIsDeletedFalse(userId)
-	// 		.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-	//
-	// 	// 2. 상품 조회
-	// 	EventProduct product = eventRepository.findById(requestDto.getProductId())
-	// 		.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
-	//
-	// 	// 3. 총 결제 금액 계산 (단가 × 수량)
-	// 	int totalPrice = product.getPrice() * requestDto.getQuantity();
-	//
-	// 	// 4. 주문 번호 생성
-	// 	String orderNo = UUID.randomUUID().toString();
-	//
-	// 	// 5. 매퍼로 Order 엔티티 생성
-	// 	Order order = OrderMapper.toEntity(requestDto, user, product, orderNo, totalPrice);
-	//
-	// 	// 6. 저장
-	// 	orderRepository.save(order);
-	//
-	// 	// 7. 매퍼로 응답 DTO 변환
-	// 	return OrderMapper.toCreateResponseDto(order);
-	// }
-
 	@Transactional
 	public Order createOrder(OrderCreateRequestDto requestDto, Long userId) {
 
@@ -82,7 +55,7 @@ public class OrderService {
 
 		return orderRepository.save(order);
 	}
-	
+
 	/**
 	 * 내 주문 목록 조회 (상태별 필터링 가능)
 	 * @param userId 사용자 ID
@@ -94,7 +67,7 @@ public class OrderService {
 	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable, OrderStatus status) {
 		// 1. 사용자 검증
 		userService.getUserById(userId);
-		
+
 		// 2. 상태별 주문 조회 (N+1 방지를 위한 JOIN FETCH 사용)
 		Page<Order> orders;
 		if (status != null) {
@@ -104,24 +77,13 @@ public class OrderService {
 			// 모든 상태 조회
 			orders = orderRepository.findOrdersByUserId(userId, pageable);
 		}
-		
+
 		// 3. DTO 변환
 		Page<MyOrderResponseDto> orderDtos = orders.map(OrderMapper::toMyOrderResponseDto);
-		
+
 		return PagedResponse.from(orderDtos);
 	}
-	
-	/**
-	 * 내 주문 목록 조회 (결제 완료된 주문만) - 하위 호환성을 위한 오버로드
-	 * @param userId 사용자 ID
-	 * @param pageable 페이징 정보
-	 * @return 페이징된 내 주문 목록
-	 */
-	@Transactional(readOnly = true)
-	public PagedResponse<MyOrderResponseDto> getMyOrders(Long userId, Pageable pageable) {
-		return getMyOrders(userId, pageable, OrderStatus.DONE);
-	}
-	
+
 	/**
 	 * 주문 상세 조회 (본인 주문만)
 	 * @param orderId 주문 ID
@@ -132,17 +94,23 @@ public class OrderService {
 	public OrderDetailResponseDto getOrderDetail(Long orderId, Long userId) {
 		// 1. 사용자 검증
 		userService.getUserById(userId);
-		
+
 		// 2. 본인 주문만 조회 (N+1 방지를 위한 JOIN FETCH 사용)
 		Order order = orderRepository.findByIdAndUserId(orderId, userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
-		
+
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
 	}
+<<<<<<< HEAD
 	
 	/**
 	 * 주문 번호로 주문 조회 (결제 서비스에서 사용)
+=======
+
+	/**
+	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
+>>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 	 * @param orderNo 주문 번호
 	 * @return 주문 엔티티
 	 * @throws CustomException 주문을 찾을 수 없는 경우
@@ -152,14 +120,47 @@ public class OrderService {
 		return orderRepository.findByOrderNo(orderNo)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 	}
+<<<<<<< HEAD
 	
 	/**
 	 * 주문 상태 업데이트 (결제 완료 처리)
 	 * @param order 업데이트할 주문
 	 * @return 업데이트된 주문
+=======
+
+	/**
+	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
+	 * @param order 업데이트할 주문 엔티티
+	 * @return 저장된 주문 엔티티
+>>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 	 */
 	@Transactional
 	public Order updateOrder(Order order) {
 		return orderRepository.save(order);
 	}
+<<<<<<< HEAD
+=======
+
+	/**
+	 * 주문을 취소(삭제)합니다.
+	 *
+	 * @param orderId 삭제할 주문 ID
+	 * @param userId 삭제를 요청한 사용자 ID
+	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
+	 */
+	@Transactional
+	public void deletedOrderById(Long orderId, Long userId) {
+		// 1. 주문 조회하기
+		Order findOrder = orderRepository.findById(orderId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+
+		// 2. 사용자 권한 체크
+		if (!findOrder.getUser().getId().equals(userId)) {
+			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
+		}
+
+		// 3. 삭제하기 (DB삭제)
+		orderRepository.delete(findOrder);
+	}
+>>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 }

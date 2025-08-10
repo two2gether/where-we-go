@@ -14,5 +14,5 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 	Page<Notification> findByReceiverIdOrderByCreatedAtDesc(Long receiverId, Pageable pageable);
 
 	// 읽지 않은 알림만 조회 (상단 알림뱃지 갯수)
-	// List<Notification> findByUserIdAndIsReadFalse(Long userId);
+	long countByReceiverIdAndIsReadFalse(Long receiverId);
 }

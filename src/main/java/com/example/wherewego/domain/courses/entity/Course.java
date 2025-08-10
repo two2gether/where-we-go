@@ -18,6 +18,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -81,6 +82,12 @@ public class Course extends BaseEntity {
 	@Column(name = "like_count", nullable = false)
 	@Builder.Default
 	private Integer likeCount = 0;
+
+	/**
+	 * 낙관적 락 적용위한 버전 필드
+	 */
+	@Version
+	private Long version;
 
 	/**
 	 * 평균 평점 (0.00 ~ 5.00)

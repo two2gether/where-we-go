@@ -33,12 +33,22 @@ public enum ErrorCode {
 	// 이벤트 상품 에러 정의
 	EVENT_PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 상품입니다."),
 	UNAUTHORIZED_EVENT_PRODUCT_ACCESS(HttpStatus.FORBIDDEN, "해당 상품에 대한 권한이 없습니다."),
+	EVENT_PRODUCT_OUT_OF_STOCK(HttpStatus.NOT_FOUND, "남은 재고가 없습니다."),
 
 	// 토스 결제 관련 에러 정의
 	TOSS_PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "토스 결제 요청에 실패했습니다."),
 
 	// 주문 관련 에러 정의
 	ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문이 존재하지 않습니다."),
+	UNAUTHORIZED_ORDER_ACCESS(HttpStatus.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."),
+	// 결제 관련 에러 정의
+	PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
+
+	// 환불 관련 에러 정의
+	INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "결제 완료된 건만 환불 가능합니다."),
+	REFUND_TIME_EXPIRED(HttpStatus.BAD_REQUEST, "환불 가능 기간이 지났습니다."),
+	REFUND_ALREADY_REQUESTED(HttpStatus.CONFLICT, "이미 환불 요청된 결제입니다."),
+	REFUND_PROCESSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "환불 처리 중 오류가 발생했습니다."),
 
 	// 외부 API 관련 에러 정의
 	EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
@@ -63,6 +73,7 @@ public enum ErrorCode {
 	// 좋아요 관련 에러 정의
 	LIKE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 좋아요를 누른 코스입니다."),
 	LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "좋아요를 누른 적이 없는 코스입니다."),
+	LIKE_CONFLICT(HttpStatus.CONFLICT, "좋아요 처리 중 충돌이 발생했습니다."),
 
 	// 댓글 관련 에러 정의
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글입니다."),
