@@ -26,10 +26,10 @@ import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
-import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -44,9 +44,9 @@ import lombok.RequiredArgsConstructor;
 public class CourseService {
 
 	private final CourseRepository courseRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 	private final PlaceService placeService;
-	private final PlaceRepository placeRepository;
+	private final PlacesOrderRepository placesOrderRepository;
 
 	/**
 	 * 새로운 여행 코스를 생성합니다.
@@ -62,8 +62,7 @@ public class CourseService {
 		Long userId
 	) {
 		// 1. 사용자 조회 - userId로 유저 정보 조회
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 2. 엔티티 만들기[요청 DTO -> 엔티티 변환]
 		// CourseCreateRequestDto + User -> Course 엔티티 생성(Mapper 사용)
@@ -89,7 +88,7 @@ public class CourseService {
 		}
 
 		// 저장하기
-		placeRepository.saveAll(placesOrders);
+		placesOrderRepository.saveAll(placesOrders);
 
 		return CourseMapper.toDto(savedCourse);
 	}
@@ -127,7 +126,8 @@ public class CourseService {
 			.toList();
 
 		// 4-1. 모든 코스의 장소 순서를 한 번에 조회
-		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
+			courseIds);
 
 		// 4-2. 코스 ID별로 장소들 그룹핑
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
@@ -225,7 +225,7 @@ public class CourseService {
 		findCourse.incrementViewCount();
 
 		// 3. 장소 조회
-		List<PlacesOrder> placesOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(courseId);
+		List<PlacesOrder> placesOrders = placesOrderRepository.findByCourseIdOrderByVisitOrderAsc(courseId);
 
 		List<String> placeIds = placesOrders.stream()
 			.map(order -> order.getPlaceId())
@@ -357,7 +357,8 @@ public class CourseService {
 		// 4. [엔티티 -> 응답 dto 변환] - 코스별 장소 조회 및 매핑
 		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
-				List<PlacesOrder> placeOrders = placeRepository.findByCourseIdOrderByVisitOrderAsc(course.getId());
+				List<PlacesOrder> placeOrders = placesOrderRepository.findByCourseIdOrderByVisitOrderAsc(
+					course.getId());
 
 				List<String> placeIds = placeOrders.stream()
 					.map(PlacesOrder::getPlaceId)
@@ -399,7 +400,8 @@ public class CourseService {
 			.toList();
 
 		// 3. 장소 순서 정보 일괄 조회
-		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
+			courseIds);
 
 		// 4. courseId → placeOrders 그룹핑
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()

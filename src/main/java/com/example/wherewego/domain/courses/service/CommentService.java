@@ -11,9 +11,8 @@ import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
-import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -30,8 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentService {
 
 	private final CommentRepository commentRepository;
-	private final UserRepository userRepository;
-	private final CourseRepository courseRepository;
+	private final UserService userService;
+	private final CourseService courseService;
 	private final NotificationService notificationService;
 
 	/**
@@ -48,17 +47,9 @@ public class CommentService {
 	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
 		log.debug("댓글 생성 요청 - courseId: {}, userId: {}, content: {}", courseId, userId, requestDto.getContent());
 
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> {
-				log.warn("댓글 생성 실패 - 사용자 없음: {}", userId);
-				return new CustomException(ErrorCode.USER_NOT_FOUND);
-			});
+		User user = userService.getUserById(userId);
 
-		Course course = courseRepository.findByIdWithThemes(courseId)
-			.orElseThrow(() -> {
-				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
-				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
-			});
+		Course course = courseService.getCourseById(courseId);
 
 		if (isNotCourseOwner(userId, course)) {
 			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",

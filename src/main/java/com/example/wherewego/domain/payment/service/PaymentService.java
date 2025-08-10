@@ -13,7 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.order.entity.Order;
-import com.example.wherewego.domain.order.repository.OrderRepository;
+import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentResponseDto;
@@ -34,7 +34,7 @@ public class PaymentService {
 	private static final String TOSS_PAYMENTS_ENDPOINT = "/api/v2/payments";
 	private final @Qualifier("tossWebClient") WebClient tossWebClient;
 	private final PaymentRepository paymentRepository;
-	private final OrderRepository orderRepository;
+	private final OrderService orderService;
 
 	@Value("${toss.secret.key}")
 	private String tossSecretKey;
@@ -44,15 +44,15 @@ public class PaymentService {
 	 *
 	 * @param tossWebClient 토스 API 호출을 위한 WebClient Bean
 	 * @param paymentRepository 결제 정보 저장용 레포지토리
-	 * @param orderRepository 주문 정보 저장/조회용 레포지토리
+	 * @param orderService 주문 정보 서비스
 	 */
 	public PaymentService(
 		@Qualifier("tossWebClient") WebClient tossWebClient,
 		PaymentRepository paymentRepository,
-		OrderRepository orderRepository) {
+		OrderService orderService) {
 		this.tossWebClient = tossWebClient;
 		this.paymentRepository = paymentRepository;
-		this.orderRepository = orderRepository;
+		this.orderService = orderService;
 	}
 
 	/**
@@ -64,8 +64,7 @@ public class PaymentService {
 	 */
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto) {
 		// 1. orderNo 저장 (결제 전 DB 등록)사용자 조회
-		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
 		Payment payment = Payment.builder()
 			.order(order)
@@ -126,12 +125,11 @@ public class PaymentService {
 		}
 
 		// 1. 주문 조회
-		Order order = orderRepository.findByOrderNo(requestDto.getOrderNo())
-			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
+		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
 		// 2. 주문 상태 변경
 		order.markAsPaid();
-		orderRepository.save(order);
+		orderService.updateOrder(order);
 
 		// 3. DTO → 엔티티 매핑 및 저장
 		Payment payment = PaymentMapper.toEntity(requestDto, order);

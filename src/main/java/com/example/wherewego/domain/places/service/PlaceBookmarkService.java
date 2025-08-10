@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.places.service;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +14,7 @@ import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.entity.PlaceBookmark;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -30,23 +29,19 @@ import lombok.extern.slf4j.Slf4j;
 public class PlaceBookmarkService {
 
 	private final PlaceBookmarkRepository placeBookmarkRepository;
-	private final UserRepository userRepository;
-	private final PlaceSearchService placeSearchService;
+	private final UserService userService;
 	private final PlaceService placeService;
 
 	/**
 	 * PlaceBookmarkService 생성자
 	 *
 	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
-	 * @param userRepository 사용자 관련 데이터베이스 접근 객체  
-	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 * @param userService 사용자 관련 서비스
 	 * @param placeService 장소 서비스 (통계 정보 포함)
 	 */
-	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserRepository userRepository,
-		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService, PlaceService placeService) {
+	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserService userService, PlaceService placeService) {
 		this.placeBookmarkRepository = placeBookmarkRepository;
-		this.userRepository = userRepository;
-		this.placeSearchService = placeSearchService;
+		this.userService = userService;
 		this.placeService = placeService;
 	}
 
@@ -69,8 +64,7 @@ public class PlaceBookmarkService {
 		}
 
 		// 사용자 조회
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 북마크 생성
 		PlaceBookmark bookmark = PlaceBookmark.builder()

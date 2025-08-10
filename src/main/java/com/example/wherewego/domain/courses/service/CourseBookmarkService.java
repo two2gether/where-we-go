@@ -20,7 +20,7 @@ import com.example.wherewego.domain.courses.entity.CourseBookmark;
 import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseBookmarkRepository;
-import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
@@ -38,11 +38,10 @@ import lombok.RequiredArgsConstructor;
 public class CourseBookmarkService {
 
 	private final CourseBookmarkRepository bookmarkRepository;
-	private final CourseBookmarkRepository courseBookmarkRepository;
 	private final CourseService courseService;
 	private final UserService userService;
 	private final PlaceService placeService;
-	private final PlaceRepository placeRepository;
+	private final PlacesOrderRepository placesOrderRepository;
 
 	/**
 	 * 코스에 북마크를 추가합니다.
@@ -109,7 +108,7 @@ public class CourseBookmarkService {
 	@Transactional(readOnly = true)
 	public PagedResponse<UserCourseBookmarkListDto> getUserCourseBookmarks(Long userId, Pageable pageable) {
 		// 1. 북마크된 CourseBookmark 엔티티 페이징 조회
-		Page<CourseBookmark> bookmarkPage = courseBookmarkRepository.findByUserId(userId, pageable);
+		Page<CourseBookmark> bookmarkPage = bookmarkRepository.findByUserId(userId, pageable);
 
 		// 2. 북마크된 코스 ID 목록 추출
 		List<Long> courseIds = bookmarkPage.getContent().stream()
@@ -117,7 +116,8 @@ public class CourseBookmarkService {
 			.toList();
 
 		// 3. 한 번에 장소 순서 조회
-		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
+			courseIds);
 
 		// 4. CourseId 기준으로 그룹핑
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
