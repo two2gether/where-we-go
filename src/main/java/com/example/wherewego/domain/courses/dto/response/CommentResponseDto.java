@@ -39,6 +39,10 @@ public class CommentResponseDto {
 	 * 댓글 작성 일시
 	 */
 	private LocalDateTime createdAt;
+	/**
+	 * 현재 사용자가 작성한 댓글 여부
+	 */
+	private Boolean isMine;
 
 	public static CommentResponseDto of(Comment comment) {
 		return new CommentResponseDto(
@@ -47,7 +51,30 @@ public class CommentResponseDto {
 			comment.getUser().getId(),
 			comment.getUser().getNickname(),
 			comment.getContent(),
-			comment.getCreatedAt()
+			comment.getCreatedAt(),
+			null  // isMine은 설정되지 않음 (기존 호환성 유지)
+		);
+	}
+
+	/**
+	 * 현재 사용자 ID를 포함하여 댓글 응답 DTO를 생성합니다.
+	 * 현재 사용자가 댓글 작성자인지 여부를 포함하여 반환합니다.
+	 *
+	 * @param comment 댓글 엔티티
+	 * @param currentUserId 현재 요청한 사용자 ID (null 가능)
+	 * @return 소유권 정보가 포함된 댓글 응답 DTO
+	 */
+	public static CommentResponseDto of(Comment comment, Long currentUserId) {
+		Boolean isMine = currentUserId != null ? comment.getUser().getId().equals(currentUserId) : null;
+		
+		return new CommentResponseDto(
+			comment.getId(),
+			comment.getCourse().getId(),
+			comment.getUser().getId(),
+			comment.getUser().getNickname(),
+			comment.getContent(),
+			comment.getCreatedAt(),
+			isMine
 		);
 	}
 }

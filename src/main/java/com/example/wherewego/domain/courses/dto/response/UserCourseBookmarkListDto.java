@@ -33,5 +33,6 @@ public class UserCourseBookmarkListDto {
 	private List<CoursePlaceInfo> places;
 	private LocalDateTime createdAt;         // 코스 생성일
 	private LocalDateTime bookmarkCreatedAt; // 북마크한 날짜
+	private Boolean isMine;                  // 현재 사용자가 생성한 코스인지 여부
 
 }
