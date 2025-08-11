@@ -148,4 +148,12 @@ public class NotificationService {
 		return NotificationResponseDto.of(notification);
 	}
 
+	/**
+	 * 현재 사용자 기준 읽은 알림 전체 하드 딜리트
+	 */
+	@Transactional
+	public void deleteAllRead(Long userId) {
+		notificationRepository.deleteByReceiverIdAndIsReadTrue(userId);
+	}
+
 }
