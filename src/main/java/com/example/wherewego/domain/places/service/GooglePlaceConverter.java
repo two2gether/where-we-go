@@ -36,8 +36,6 @@ public class GooglePlaceConverter {
             .placeId(detail.getPlaceId())
             .name(detail.getName())
             .address(detail.getFormattedAddress())
-            .phone(detail.getFormattedPhoneNumber())
-            .placeUrl(detail.getUrl())
             .averageRating(0.0)  // 우리 서비스 평점 (기본값)
             .reviewCount(0)      // 우리 서비스 리뷰 수 (기본값)
             .bookmarkCount(0)    // 북마크 수 (기본값)
@@ -92,13 +90,11 @@ public class GooglePlaceConverter {
             .category(extractMainCategory(result.getTypes()))
             .address(result.getFormattedAddress())
             .roadAddress(null) // 구글은 roadAddress 구분 없음
-            .phone(null) // Text Search에는 전화번호 없음 (Details에서 가져와야 함)
             .latitude(getLatitudeFromGeometry(result))
             .longitude(getLongitudeFromGeometry(result))
             .averageRating(0.0) // 우리 서비스 평점 (추후 계산)
             .reviewCount(0) // 우리 서비스 리뷰 수 (추후 계산)
             .googleRating(result.getRating()) // 구글 평점
-            .placeUrl(null) // Text Search에는 URL 없음
             .bookmarkCount(0) // 추후 계산
             .isBookmarked(false); // 추후 계산
 
