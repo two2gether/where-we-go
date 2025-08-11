@@ -122,13 +122,8 @@ public class NotificationService {
 	@Transactional
 	public NotificationResponseDto markAsRead(Long notificationId, Long userId) {
 		// 1. 알림 조회
-		Notification notification = notificationRepository.findById(notificationId)
+		Notification notification = notificationRepository.findByIdAndReceiverId(notificationId, userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
-
-		// 2. 권한 체크 (알림 수신자가 본인인지)
-		if (!notification.getReceiverId().equals(userId)) {
-			throw new CustomException(ErrorCode.UNAUTHORIZED_NOTIFICATION_ACCESS);
-		}
 
 		// 3. 이미 읽음이면 그냥 반환
 		if (!notification.isRead()) {
