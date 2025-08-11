@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
@@ -44,15 +45,15 @@ public class CommentService {
 	 * 코스에 새로운 댓글을 생성합니다.
 	 * 비공개 코스인 경우 작성자만 댓글을 작성할 수 있습니다.
 	 *
-	 * @param courseId 댓글을 작성할 코스 ID
 	 * @param userId 댓글 작성자 ID
 	 * @param requestDto 댓글 내용을 담은 요청 DTO
 	 * @return 생성된 댓글 정보
 	 * @throws CustomException 사용자/코스를 찾을 수 없거나 비공개 코스에 접근 권한이 없는 경우
 	 */
 	@Transactional
-	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
+	public CommentResponseDto createComment(Long userId, CommentCreateRequestDto requestDto) {
 
+		Long courseId = requestDto.getCourseId();
 		User user = userService.getUserById(userId);
 
 		Course course = courseService.getCourseById(courseId);
@@ -164,7 +165,6 @@ public class CommentService {
 		//조회된 댓글 엔티티들을 DTO로 변환
 		//현재 클래스(CommentService)의 인스턴스(this)인 toDto() 참조
 		Page<CommentResponseDto> dtoPage = commentPage.map(this::toDto);
-		log.debug("댓글 목록 조회 완료 - 조회된 댓글 수: {}", dtoPage.getTotalElements());
 
 		return PagedResponse.from(dtoPage);
 	}

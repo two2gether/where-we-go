@@ -131,14 +131,14 @@ class OrderServiceTest {
 			// given
 			Long orderId = 1L;
 			Long userId = 1L;
-			
+
 			User mockUser = mock(User.class);
 			EventProduct mockProduct = mock(EventProduct.class);
 			Order mockOrder = mock(Order.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
 			given(orderRepository.findByIdAndUserId(orderId, userId)).willReturn(Optional.of(mockOrder));
-			
+
 			given(mockOrder.getId()).willReturn(orderId);
 			given(mockOrder.getOrderNo()).willReturn("ORDER123");
 			given(mockOrder.getQuantity()).willReturn(2);
@@ -164,7 +164,7 @@ class OrderServiceTest {
 			// given
 			Long orderId = 1L;
 			Long userId = 1L;
-			
+
 			User mockUser = mock(User.class);
 			given(userService.getUserById(userId)).willReturn(mockUser);
 			given(orderRepository.findByIdAndUserId(orderId, userId)).willReturn(Optional.empty());
@@ -186,18 +186,18 @@ class OrderServiceTest {
 			// given
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
-			
+
 			User mockUser = mock(User.class);
 			Order order1 = mock(Order.class);
 			Order order2 = mock(Order.class);
 			EventProduct product1 = mock(EventProduct.class);
 			EventProduct product2 = mock(EventProduct.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
-			
+
 			Page<Order> orderPage = new PageImpl<>(Arrays.asList(order1, order2), pageable, 2);
 			given(orderRepository.findOrdersByUserId(userId, pageable)).willReturn(orderPage);
-			
+
 			// Mock order1
 			given(order1.getId()).willReturn(1L);
 			given(order1.getOrderNo()).willReturn("ORDER001");
@@ -208,7 +208,7 @@ class OrderServiceTest {
 			given(product1.getProductName()).willReturn("상품1");
 			given(product1.getProductImage()).willReturn("image1.jpg");
 			given(order1.getCreatedAt()).willReturn(LocalDateTime.now().minusDays(1));
-			
+
 			// Mock order2
 			given(order2.getId()).willReturn(2L);
 			given(order2.getOrderNo()).willReturn("ORDER002");
@@ -238,16 +238,16 @@ class OrderServiceTest {
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
 			OrderStatus status = OrderStatus.DONE;
-			
+
 			User mockUser = mock(User.class);
 			Order order1 = mock(Order.class);
 			EventProduct product1 = mock(EventProduct.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
-			
+
 			Page<Order> orderPage = new PageImpl<>(Arrays.asList(order1), pageable, 1);
 			given(orderRepository.findOrdersByUserIdAndStatus(userId, status, pageable)).willReturn(orderPage);
-			
+
 			// Mock order1
 			given(order1.getId()).willReturn(1L);
 			given(order1.getOrderNo()).willReturn("ORDER001");
@@ -276,7 +276,7 @@ class OrderServiceTest {
 			// given
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
-			
+
 			given(userService.getUserById(userId)).willThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
 			// when & then
