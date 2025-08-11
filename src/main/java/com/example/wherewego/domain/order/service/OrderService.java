@@ -137,15 +137,9 @@ public class OrderService {
 		// 3. DTO 변환
 		return OrderMapper.toOrderDetailResponseDto(order);
 	}
-<<<<<<< HEAD
-	
-	/**
-	 * 주문 번호로 주문 조회 (결제 서비스에서 사용)
-=======
 
 	/**
 	 * 주문 번호로 주문 조회 (Payment 도메인에서 사용)
->>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 	 * @param orderNo 주문 번호
 	 * @return 주문 엔티티
 	 * @throws CustomException 주문을 찾을 수 없는 경우
@@ -155,26 +149,17 @@ public class OrderService {
 		return orderRepository.findByOrderNo(orderNo)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
 	}
-<<<<<<< HEAD
-	
-	/**
-	 * 주문 상태 업데이트 (결제 완료 처리)
-	 * @param order 업데이트할 주문
-	 * @return 업데이트된 주문
-=======
 
 	/**
 	 * 주문 상태 업데이트 (Payment 도메인에서 사용)
 	 * @param order 업데이트할 주문 엔티티
 	 * @return 저장된 주문 엔티티
->>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 	 */
 	@Transactional
 	public Order updateOrder(Order order) {
 		return orderRepository.save(order);
 	}
-<<<<<<< HEAD
-=======
+
 
 	/**
 	 * 주문을 취소(삭제)합니다.
@@ -197,5 +182,4 @@ public class OrderService {
 		// 3. 삭제하기 (DB삭제)
 		orderRepository.delete(findOrder);
 	}
->>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 }

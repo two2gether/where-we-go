@@ -73,11 +73,6 @@ public class PaymentService {
 	 * @return 결제 URL과 토큰 등을 담은 응답 DTO
 	 * @throws CustomException 결제 실패 시 예외 발생
 	 */
-<<<<<<< HEAD
-	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto) {
-		// 1. orderNo 저장 (결제 전 DB 등록)사용자 조회
-		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
-=======
 	@Transactional
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto, Long userId) {
 		// 1. 주문 조회
@@ -87,7 +82,6 @@ public class PaymentService {
 		if (!order.getUser().getId().equals(userId)) {
 			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
 		}
->>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 
 		Payment payment = Payment.builder()
 			.order(order)
@@ -148,11 +142,7 @@ public class PaymentService {
 			return; // 중복 콜백은 정상 시나리오로 처리
 		}
 
-<<<<<<< HEAD
-		// 1. 주문 조회
-=======
 		// 2. 주문 조회
->>>>>>> c6f1ff300ee190a28ffd2ae545d49219e6645be5
 		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
 		// 3. 재고 확인 + 감소 처리
