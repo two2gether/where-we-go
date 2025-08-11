@@ -114,7 +114,7 @@ class CourseServiceTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.content()).hasSize(1);
+		assertThat(result.getContent()).hasSize(1);
 		verify(courseRepository).findByExactRegionAndIsPublicTrue("서울", pageable);
 	}
 
@@ -137,7 +137,7 @@ class CourseServiceTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.content()).hasSize(1);
+		assertThat(result.getContent()).hasSize(1);
 	}
 
 	@Test
