@@ -28,14 +28,12 @@ import lombok.NoArgsConstructor;
  *   },
  *   "address": "대한민국 서울특별시 강남구 학동로 419",
  *   "roadAddress": null,
- *   "phone": "1522-3232",
  *   "latitude": 37.5182675,
  *   "longitude": 127.0459628,
  *   "distance": 123,
  *   "averageRating": 4.2,     // 우리 서비스 내부 평점
  *   "reviewCount": 156,       // 우리 서비스 리뷰 수
  *   "googleRating": 4.3,      // 구글 평점 (참고용)
- *   "placeUrl": "https://maps.google.com/?cid=10405541606252947222",
  *   "bookmarkCount": 89,
  *   "isBookmarked": false,
  *   "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=CmRaAAAA...&key=API_KEY"
@@ -76,10 +74,6 @@ public class PlaceDetailResponseDto {
 	 */
 	private String roadAddress;        // 도로명 주소
 	/**
-	 * 장소 전화번호
-	 */
-	private String phone;              // 전화번호
-	/**
 	 * 장소의 위도
 	 */
 	private Double latitude;           // 위도
@@ -103,10 +97,6 @@ public class PlaceDetailResponseDto {
 	 * Google에서 제공하는 평점 (1.0~5.0, 참고용)
 	 */
 	private Double googleRating;       // 구글 평점 (1.0~5.0, 참고용)
-	/**
-	 * Google Maps에서 장소를 볼 수 있는 URL
-	 */
-	private String placeUrl;           // 구글 맵스 URL
 	/**
 	 * 장소의 총 북마크 수
 	 */
