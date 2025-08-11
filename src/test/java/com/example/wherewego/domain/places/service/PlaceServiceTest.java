@@ -86,7 +86,7 @@ class PlaceServiceTest {
 				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 5L}));
 
 			// when
-			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+			PlaceStatsDto result = placeService.getPlaceStats(placeId, null);
 
 			// then
 			assertThat(result).isNotNull();
@@ -110,7 +110,7 @@ class PlaceServiceTest {
 				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
 
 			// when
-			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+			PlaceStatsDto result = placeService.getPlaceStats(placeId, null);
 
 			// then
 			assertThat(result.getAverageRating()).isEqualTo(0.0);
@@ -128,7 +128,7 @@ class PlaceServiceTest {
 				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
 
 			// when
-			PlaceStatsDto result = placeService.getPlaceStats(placeId);
+			PlaceStatsDto result = placeService.getPlaceStats(placeId, null);
 
 			// then
 			assertThat(result.getAverageRating()).isEqualTo(4.67);
@@ -221,7 +221,7 @@ class PlaceServiceTest {
 				));
 
 			// when
-			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds);
+			Map<String, PlaceStatsDto> result = placeService.getPlaceStatsMap(placeIds, null);
 
 			// then
 			assertThat(result).hasSize(3);
