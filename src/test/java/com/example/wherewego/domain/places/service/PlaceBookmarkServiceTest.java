@@ -28,7 +28,7 @@ import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.entity.PlaceBookmark;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +39,7 @@ class PlaceBookmarkServiceTest {
 	private PlaceBookmarkRepository placeBookmarkRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private UserService userService;
 
 	@Mock
 	private PlaceSearchService placeSearchService;
@@ -72,7 +72,7 @@ class PlaceBookmarkServiceTest {
 		void shouldAddBookmark() {
 			// given
 			given(placeBookmarkRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.of(testUser));
+			given(userService.getUserById(userId)).willReturn(testUser);
 
 			PlaceBookmark savedBookmark = PlaceBookmark.builder()
 				.id(1L)
@@ -108,7 +108,7 @@ class PlaceBookmarkServiceTest {
 		@DisplayName("존재하지 않는 사용자로 북마크를 추가하려고 하면 예외가 발생한다")
 		void shouldThrowExceptionWhenUserNotFound() {
 			// given
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.empty());
+			given(userService.getUserById(userId)).willThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> placeBookmarkService.addBookmark(userId, placeId))

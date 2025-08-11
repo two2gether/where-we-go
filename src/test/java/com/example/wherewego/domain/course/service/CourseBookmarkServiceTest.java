@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.wherewego.domain.auth.enums.Provider;
@@ -21,8 +22,10 @@ import com.example.wherewego.domain.courses.dto.response.CourseBookmarkResponseD
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseBookmark;
 import com.example.wherewego.domain.courses.repository.CourseBookmarkRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -37,6 +40,12 @@ class CourseBookmarkServiceTest {
 	CourseService courseService;
 	@Mock
 	private CourseBookmarkRepository bookmarkRepository;
+	@Mock
+	private PlaceService placeService;
+	@Mock
+	private PlacesOrderRepository placesOrderRepository;
+	@Mock
+	private RedisTemplate<String, Object> redisTemplate;
 
 	@InjectMocks
 	private CourseBookmarkService bookmarkService;

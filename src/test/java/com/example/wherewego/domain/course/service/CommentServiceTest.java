@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
@@ -28,6 +29,7 @@ import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.service.CommentService;
+import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.courses.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
@@ -52,6 +54,12 @@ class CommentServiceTest {
 
 	@Mock
 	private NotificationService notificationService;
+	
+	@Mock
+	private CourseService courseService;
+	
+	@Mock
+	private RedisTemplate<String, Object> redisTemplate;
 
 	private User user;
 	private Course course;
@@ -81,7 +89,7 @@ class CommentServiceTest {
 			CommentCreateRequestDto requestDto = new CommentCreateRequestDto(10L, "댓글 내용");
 
 			given(userService.getUserById(1L)).willReturn(user);
-			given(courseRepository.findByIdWithThemes(10L)).willReturn(Optional.of(course));
+			given(courseService.getCourseById(10L)).willReturn(course);
 			given(commentRepository.save(any(Comment.class)))
 				.willAnswer(invocation -> invocation.getArgument(0));
 
@@ -107,7 +115,7 @@ class CommentServiceTest {
 			CommentCreateRequestDto requestDto = new CommentCreateRequestDto(20L, "비공개 댓글");
 
 			given(userService.getUserById(1L)).willReturn(user); //현재 로그인된 사용자는 id=1
-			given(courseRepository.findByIdWithThemes(20L)).willReturn(Optional.of(privateCourse));
+			given(courseService.getCourseById(20L)).willReturn(privateCourse);
 
 			// when & then
 			assertThatThrownBy(() -> commentService.createComment(1L, requestDto))

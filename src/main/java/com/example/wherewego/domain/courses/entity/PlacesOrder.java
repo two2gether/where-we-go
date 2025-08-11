@@ -39,7 +39,7 @@ public class PlacesOrder {
 	private Long courseId;
 
 	/**
-	 * 카카오 API 장소 ID
+	 * Google API 장소 ID
 	 */
 	@Column(name = "place_id", nullable = false, length = 30)
 	private String placeId;

@@ -29,6 +29,9 @@ import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.courses.service.NotificationService;
+import com.example.wherewego.domain.common.enums.OrderStatus;
+import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.dto.response.UserBookmarkListDto;
 import com.example.wherewego.domain.places.service.PlaceBookmarkService;
@@ -64,6 +67,7 @@ public class UserController {
 	private final CourseBookmarkService courseBookmarkService;
 	private final CourseLikeService courseLikeService;
 	private final NotificationService notificationService;
+	private final OrderService orderService;
 
 	/**
 	 * 회원 탈퇴 API
@@ -192,7 +196,7 @@ public class UserController {
 	/**
 	 * 내가 작성한 모든 리뷰 목록 조회 API
 	 *
-	 * GET /api/users/me/reviews
+	 * GET /api/users/mypage/reviews
 	 *
 	 * 인증된 사용자가 작성한 모든 장소 리뷰를 페이지 단위로 조회합니다.
 	 * 리뷰는 작성일 내림차순으로 정렬되며, 각 리뷰에는 장소 정보도 함께 제공됩니다.
@@ -296,6 +300,36 @@ public class UserController {
 			return ApiResponse.ok("좋아요한 코스가 없습니다.", null);
 		}
 		return ApiResponse.ok("내가 좋아요한 코스 목록 조회 성공", response);
+	}
+
+	/**
+	 * 내 주문 목록 조회 API
+	 *
+	 * GET /api/users/mypage/orders
+	 *
+	 * 인증된 사용자의 주문 목록을 조회합니다. 상태별 필터링이 가능합니다.
+	 * 모든 주문 정보와 주문 상품 정보를 포함하여 반환합니다.
+	 *
+	 * @param userDetail 인증된 사용자 정보
+	 * @param pageable 페이징 정보 (기본 10개, 최대 100개)
+	 * @param status 주문 상태 (선택사항: PENDING, DONE, FAILED 등. null이면 모든 상태)
+	 * @return 페이징된 내 주문 목록
+	 */
+	@GetMapping("/mypage/orders")
+	public ApiResponse<PagedResponse<MyOrderResponseDto>> getMyOrders(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@PageableDefault(size = 10) Pageable pageable,
+		@RequestParam(required = false) OrderStatus status
+	) {
+		Long userId = userDetail.getUser().getId();
+
+		PagedResponse<MyOrderResponseDto> orders = orderService.getMyOrders(userId, pageable, status);
+
+		String message = status != null
+			? String.format("내 주문 목록을 조회했습니다. (상태: %s)", status)
+			: "내 주문 목록을 조회했습니다. (모든 상태)";
+
+		return ApiResponse.ok(message, orders);
 	}
 
 	/**

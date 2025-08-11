@@ -23,7 +23,7 @@ import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
 import com.example.wherewego.domain.eventproduct.service.AdminEventService;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +34,7 @@ class AdminEventServiceTest {
 	private EventRepository eventRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private UserService userService;
 
 	@InjectMocks
 	private AdminEventService adminEventService;
@@ -68,7 +68,7 @@ class AdminEventServiceTest {
 				.stock(100)
 				.build();
 
-			given(userRepository.findByIdAndIsDeletedFalse(adminId)).willReturn(Optional.of(admin));
+			given(userService.getUserById(adminId)).willReturn(admin);
 			given(eventRepository.save(any(EventProduct.class))).willReturn(saved);
 
 			// when
@@ -91,7 +91,7 @@ class AdminEventServiceTest {
 				.role(UserRole.USER)
 				.build();
 
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.of(normalUser));
+			given(userService.getUserById(userId)).willReturn(normalUser);
 
 			// when & then
 			assertThatThrownBy(() -> adminEventService.createEvent(requestDto, userId))
@@ -131,7 +131,7 @@ class AdminEventServiceTest {
 				.build();
 
 			given(eventRepository.findById(productId)).willReturn(Optional.of(existing));
-			given(userRepository.findById(adminId)).willReturn(Optional.of(admin));
+			given(userService.getUserById(adminId)).willReturn(admin);
 			given(existing.updateEventInfoFromRequest(
 				any(), any(), any(), any(), any())).willReturn(updated);
 
@@ -179,7 +179,7 @@ class AdminEventServiceTest {
 			EventProduct existing = mock(EventProduct.class);
 
 			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
-			given(userRepository.findById(adminId)).willReturn(Optional.of(admin));
+			given(userService.getUserById(adminId)).willReturn(admin);
 
 			// when
 			adminEventService.deleteEventById(productId, adminId);
@@ -203,7 +203,7 @@ class AdminEventServiceTest {
 			EventProduct existing = mock(EventProduct.class);
 
 			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
-			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(userService.getUserById(userId)).willReturn(user);
 
 			// when & then
 			assertThatThrownBy(() -> adminEventService.deleteEventById(productId, userId))

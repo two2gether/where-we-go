@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,11 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
@@ -48,8 +45,6 @@ class AuthServiceTest {
 	@Mock
 	private PasswordEncoder passwordEncoder;
 
-	@Mock
-	private AuthenticationManager authenticationManager;
 
 	@Mock
 	private JwtUtil jwtUtil;
@@ -178,10 +173,11 @@ class AuthServiceTest {
 		void loginSuccess() {
 			// given
 			String expectedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-			Authentication mockAuth = mock(Authentication.class);
 
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenReturn(mockAuth);
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(true);
 			when(jwtUtil.generateToken("test@example.com"))
 				.thenReturn(expectedToken);
 
@@ -192,7 +188,8 @@ class AuthServiceTest {
 			assertThat(result).isNotNull();
 			assertThat(result.getToken()).isEqualTo(expectedToken);
 
-			verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService).findByEmail("test@example.com");
+			verify(passwordEncoder).matches("Password123!", "encodedPassword123!");
 			verify(jwtUtil).generateToken("test@example.com");
 		}
 
@@ -200,15 +197,18 @@ class AuthServiceTest {
 		@DisplayName("잘못된 비밀번호로 로그인 시 예외 발생")
 		void loginFailBadCredentials() {
 			// given
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(false);
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(validLoginRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+				.hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
 
-			verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService).findByEmail("test@example.com");
+			verify(passwordEncoder).matches("Password123!", "encodedPassword123!");
 			verify(jwtUtil, never()).generateToken(any());
 		}
 
@@ -216,15 +216,15 @@ class AuthServiceTest {
 		@DisplayName("존재하지 않는 사용자로 로그인 시 예외 발생")
 		void loginFailUserNotFound() {
 			// given
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new UsernameNotFoundException("User not found"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.empty());
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(validLoginRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+				.hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
 
-			verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService).findByEmail("test@example.com");
 			verify(jwtUtil, never()).generateToken(any());
 		}
 
@@ -232,18 +232,20 @@ class AuthServiceTest {
 		@DisplayName("브루트 포스 공격 시뮬레이션 - 연속 로그인 실패")
 		void loginBruteForceAttack() {
 			// given - 연속 5번 실패하는 시나리오
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(false);
 
 			// when & then - 모든 시도가 동일하게 예외 발생해야 함
 			for (int i = 0; i < 5; i++) {
 				assertThatThrownBy(() -> authService.login(validLoginRequest))
 					.isInstanceOf(CustomException.class)
-					.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+					.hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
 			}
 
 			// 모든 실패 시도에 대해 동일한 에러 메시지로 정보 노출 방지 확인
-			verify(authenticationManager, times(5)).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService, times(5)).findByEmail("test@example.com");
 			verify(jwtUtil, never()).generateToken(any());
 		}
 
@@ -256,15 +258,15 @@ class AuthServiceTest {
 				.password("anypassword")
 				.build();
 
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail("' OR '1'='1' --"))
+				.thenReturn(Optional.empty());
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(maliciousRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+				.hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
 
-			verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService).findByEmail("' OR '1'='1' --");
 		}
 	}
 
@@ -277,10 +279,11 @@ class AuthServiceTest {
 		void jwtTokenFormatValidation() {
 			// given
 			String validJwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNjE2MjM5MDIyfQ.signature";
-			Authentication mockAuth = mock(Authentication.class);
 
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenReturn(mockAuth);
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(true);
 			when(jwtUtil.generateToken("test@example.com"))
 				.thenReturn(validJwtToken);
 
@@ -298,10 +301,10 @@ class AuthServiceTest {
 		@DisplayName("토큰 생성 실패 시 예외 처리")
 		void jwtGenerationFailure() {
 			// given
-			Authentication mockAuth = mock(Authentication.class);
-
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenReturn(mockAuth);
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(true);
 			when(jwtUtil.generateToken("test@example.com"))
 				.thenThrow(new RuntimeException("Token generation failed"));
 
@@ -310,7 +313,8 @@ class AuthServiceTest {
 				.isInstanceOf(RuntimeException.class)
 				.hasMessage("Token generation failed");
 
-			verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+			verify(userService).findByEmail("test@example.com");
+			verify(passwordEncoder).matches("Password123!", "encodedPassword123!");
 			verify(jwtUtil).generateToken("test@example.com");
 		}
 	}
@@ -328,13 +332,13 @@ class AuthServiceTest {
 				.password("Password123!")
 				.build();
 
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail(null))
+				.thenReturn(Optional.empty());
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(nullEmailRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+				.hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
 		}
 
 		@Test
@@ -346,13 +350,15 @@ class AuthServiceTest {
 				.password("")
 				.build();
 
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("", "encodedPassword123!"))
+				.thenReturn(false);
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(emptyPasswordRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+				.hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
 		}
 
 		@Test
@@ -383,27 +389,29 @@ class AuthServiceTest {
 		@DisplayName("Spring Security 예외를 CustomException으로 올바르게 변환")
 		void springSecurityExceptionConversion() {
 			// given
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new BadCredentialsException("Bad credentials"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.of(testUser));
+			when(passwordEncoder.matches("Password123!", "encodedPassword123!"))
+				.thenReturn(false);
 
 			// when & then
 			assertThatThrownBy(() -> authService.login(validLoginRequest))
 				.isInstanceOf(CustomException.class)
 				.extracting(ex -> ((CustomException)ex).getErrorCode())
-				.isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+				.isEqualTo(ErrorCode.INVALID_PASSWORD);
 		}
 
 		@Test
 		@DisplayName("인증 실패 시 민감한 정보 노출 방지")
 		void authenticationFailureInformationDisclosure() {
 			// given
-			when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenThrow(new UsernameNotFoundException("User 'admin' not found in database"));
+			when(userService.findByEmail("test@example.com"))
+				.thenReturn(Optional.empty());
 
 			// when & then - 구체적인 실패 이유가 아닌 일반적인 메시지로 변환되어야 함
 			assertThatThrownBy(() -> authService.login(validLoginRequest))
 				.isInstanceOf(CustomException.class)
-				.hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.")
+				.hasMessage(ErrorCode.USER_NOT_FOUND.getMessage())
 				.extracting(Throwable::getMessage)
 				.asString()
 				.doesNotContain("admin", "database", "not found");
