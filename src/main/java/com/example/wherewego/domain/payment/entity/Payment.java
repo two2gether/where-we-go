@@ -28,10 +28,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "payments", 
-       uniqueConstraints = {
-           @UniqueConstraint(name = "uk_payments_order_no", columnNames = "order_no")
-       })
+@Table(name = "payments",
+	uniqueConstraints = {
+		@UniqueConstraint(name = "uk_payments_order_no", columnNames = "order_no")
+	})
 public class Payment extends BaseEntity {
 
 	/**
@@ -109,47 +109,56 @@ public class Payment extends BaseEntity {
 	/**
 	 * 결제 상태 (예: PAY_COMPLETE → DONE)
 	 */
+	@Builder.Default
 	@Enumerated(EnumType.STRING)
-	private PaymentStatus paymentStatus;
+	@Column(name = "payment_status", nullable = false)
+	private PaymentStatus paymentStatus = PaymentStatus.READY;
 
 	// ========== 환불 관련 필드 ==========
-	
+
 	/**
 	 * 환불 사유 (환불 시에만 사용)
 	 */
 	private String refundReason;
-	
+
 	/**
 	 * 환불 완료 시간
 	 */
 	private LocalDateTime refundedAt;
-	
+
 	/**
 	 * TOSS 환불 거래 키 (환불 완료 시 설정)
 	 */
 	private String refundTransactionKey;
-	
+
 	/**
 	 * 환불 요청자 ID (감사용)
 	 */
 	private Long refundRequestedBy;
 
 	// ========== 비즈니스 메서드 ==========
-	
+
+	/**
+	 * 결제 완료 처리
+	 */
+	public void markAsDone() {
+		this.paymentStatus = PaymentStatus.DONE;
+	}
+
 	/**
 	 * 결제 토큰 업데이트
 	 */
 	public void updatePayToken(String payToken) {
 		this.payToken = payToken;
 	}
-	
+
 	/**
 	 * 결제 상태 업데이트
 	 */
 	public void updatePaymentStatus(PaymentStatus paymentStatus) {
 		this.paymentStatus = paymentStatus;
 	}
-	
+
 	/**
 	 * 환불 요청 상태로 변경
 	 */
@@ -158,7 +167,7 @@ public class Payment extends BaseEntity {
 		this.refundReason = refundReason;
 		this.refundRequestedBy = requestedBy;
 	}
-	
+
 	/**
 	 * 환불 처리 완료
 	 */

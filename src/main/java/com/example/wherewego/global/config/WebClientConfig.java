@@ -52,6 +52,14 @@ public class WebClientConfig {
 			.build();
 	}
 
+	/**
+	 * 토스로 내용 바꾸기
+	 * 구글 Maps Places API 호출을 위한 WebClient Bean을 생성합니다.
+	 * 구글 API 키 검증과 기본 설정을 포함합니다.
+	 *
+	 * @return 구글 API 전용 WebClient 인스턴스
+	 * @throws CustomException 구글 API 키가 설정되지 않은 경우
+	 */
 	@Bean(name = "tossWebClient")
 	public WebClient tossWebClient() {
 		return WebClient.builder()

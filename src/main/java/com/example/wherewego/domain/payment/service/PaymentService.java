@@ -77,7 +77,7 @@ public class PaymentService {
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto, Long userId) {
 		// 1. 주문 조회
 		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
-		
+
 		// 2. 주문 소유권 검증 - 본인의 주문인지 확인
 		if (!order.getUser().getId().equals(userId)) {
 			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
@@ -137,9 +137,9 @@ public class PaymentService {
 	@Transactional
 	public void processPaymentApproval(CallbackRequestDto requestDto) {
 		// 1. 중복 결제 콜백 체크 (원자적 처리)
-		if (paymentRepository.existsByOrderNo(requestDto.getOrderNo())) {
-			log.info("중복 결제 콜백 감지 - 주문번호: {}, 이미 처리된 결제입니다.", requestDto.getOrderNo());
-			return; // 중복 콜백은 정상 시나리오로 처리
+		if (!paymentRepository.existsByOrderNoAndPaymentStatus(requestDto.getOrderNo(), PaymentStatus.READY)) {
+			log.info("READY 상태인 결제 건이 없어 중복 콜백으로 간주, 주문번호: {}", requestDto.getOrderNo());
+			return;
 		}
 
 		// 2. 주문 조회
@@ -161,7 +161,10 @@ public class PaymentService {
 		orderService.updateOrder(order);
 
 		// 5. DTO → 엔티티 매핑 및 저장
-		Payment payment = PaymentMapper.toEntity(requestDto, order);
+		Payment payment = paymentRepository.findById(requestDto.getPaymentId())
+			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+		payment.markAsDone(); // 결제 상태 변경
+		log.info("결제 상태 - {}", payment.getPaymentStatus());
 		paymentRepository.save(payment);
 
 		log.info("결제 승인 완료 - 주문번호: {}, 금액: {}", requestDto.getOrderNo(), requestDto.getPaidAmount());
