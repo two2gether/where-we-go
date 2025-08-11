@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
+import com.example.wherewego.global.util.CacheKeyUtil;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +35,8 @@ public class PlaceService {
 	private final PlaceReviewRepository placeReviewRepository;
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final PlaceSearchService placeSearchService;
+	private final CacheManager cacheManager;
+	private final CacheKeyUtil cacheKeyUtil;
 
 	/**
 	 * PlaceService 생성자
@@ -40,16 +44,22 @@ public class PlaceService {
 	 * @param placeReviewRepository 장소 리뷰 관련 데이터베이스 접근 객체
 	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
 	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 * @param cacheManager 캐시 관리자 (Search 결과를 Detail 캐시에 저장용)
+	 * @param cacheKeyUtil 캐시 키 생성 유틸리티
 	 */
 	public PlaceService(PlaceReviewRepository placeReviewRepository, PlaceBookmarkRepository placeBookmarkRepository,
-		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService) {
+		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService, CacheManager cacheManager,
+		CacheKeyUtil cacheKeyUtil) {
 		this.placeReviewRepository = placeReviewRepository;
 		this.placeBookmarkRepository = placeBookmarkRepository;
 		this.placeSearchService = placeSearchService;
+		this.cacheManager = cacheManager;
+		this.cacheKeyUtil = cacheKeyUtil;
 	}
 
 	/**
 	 * 거리 계산과 북마크 상태를 포함한 장소 검색
+	 * Search 결과를 Detail 캐시에 저장하여 후속 detail API 호출 완전히 생략
 	 *
 	 * @param request 검색 요청 정보
 	 * @param userId 사용자 ID (null 가능)
@@ -59,10 +69,40 @@ public class PlaceService {
 		// 외부 API로 검색
 		List<PlaceDetailResponseDto> searchResults = placeSearchService.searchPlaces(request);
 
+		// Search 결과를 Detail 캐시에 직접 저장 (Detail API 호출 완전 생략)
+		cacheSearchResultsAsDetailCache(searchResults);
+
 		// 각 장소에 대해 거리 정보와 북마크/통계 정보 추가
 		return searchResults.stream()
 			.map(place -> enrichPlaceWithDistanceAndStats(place, request, userId))
 			.toList();
+	}
+
+	/**
+	 * Search 결과를 Detail 캐시에 저장
+	 * Search와 Detail API 응답이 동일하므로 Detail 캐시 키로 직접 저장
+	 * 이후 detail API 호출 시 캐시된 Search 결과를 그대로 사용
+	 *
+	 * @param searchResults 검색 결과 목록
+	 */
+	private void cacheSearchResultsAsDetailCache(List<PlaceDetailResponseDto> searchResults) {
+		if (searchResults == null || searchResults.isEmpty()) {
+			return;
+		}
+
+		var detailCache = cacheManager.getCache("google-place-details");
+		if (detailCache == null) {
+			log.warn("google-place-details 캐시가 존재하지 않습니다");
+			return;
+		}
+
+		searchResults.forEach(place -> {
+			if (place.getPlaceId() != null) {
+				String cacheKey = cacheKeyUtil.generateGooglePlaceDetailKey(place.getPlaceId());
+				detailCache.put(cacheKey, place);
+				log.debug("Search 결과를 Detail 캐시에 저장: {} → {}", place.getPlaceId(), cacheKey);
+			}
+		});
 	}
 
 	/**
@@ -126,6 +166,7 @@ public class PlaceService {
 
 	/**
 	 * 통계 정보가 포함된 장소 상세 조회
+	 * Search 결과가 Detail 캐시에 저장되어 있어 detail API 호출 최적화됨
 	 * 장소 상세 정보와 통계 정보를 캐싱하여 성능을 최적화합니다.
 	 *
 	 * @param placeId 장소 ID
@@ -133,7 +174,7 @@ public class PlaceService {
 	 * @return 통계 정보가 포함된 장소 상세 정보
 	 */
 	public PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId) {
-		// 외부 API에서 기본 장소 정보 조회
+		// @Cacheable 덕분에 Search 결과가 캐시되어 있으면 Detail API 호출 생략됨
 		PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(placeId);
 
 		if (placeDetail == null) {
@@ -163,22 +204,12 @@ public class PlaceService {
 	 */
 	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
 	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
-		// 🚀 배치 쿼리 재활용으로 N+1 문제 해결
+		// 배치 쿼리 재활용으로 N+1 문제 해결
 		// 단일 장소도 기존 배치 쿼리 메서드를 활용하여 효율성 확보
 		Map<String, PlaceStatsDto> statsMap = getPlaceStatsMap(List.of(placeId), userId);
 		return statsMap.get(placeId);
 	}
 
-	/**
-	 * 로그인하지 않은 게스트 사용자를 위한 장소 통계 조회 메서드입니다.
-	 * 개인화 정보(북마크, 리뷰 상태) 없이 기본 통계만 제공합니다.
-	 *
-	 * @param placeId 통계를 조회할 장소 ID
-	 * @return 기본 통계 정보 (개인화 정보 제외)
-	 */
-	public PlaceStatsDto getPlaceStats(String placeId) {
-		return getPlaceStats(placeId, null);
-	}
 
 	/**
 	 * 여러 장소의 통계 정보를 일괄 조회하여 Map 형태로 반환합니다.
@@ -194,7 +225,7 @@ public class PlaceService {
 			return Map.of();
 		}
 
-		// 🚀 배치 쿼리로 N+1 문제 해결 (기존: N개 쿼리 → 최적화: 3개 쿼리)
+		// 배치 쿼리로 N+1 문제 해결 (기존: N개 쿼리 → 최적화: 3개 쿼리)
 
 		// 1. 리뷰 통계 배치 조회
 		Map<String, Long> reviewCountMap = placeReviewRepository.getReviewCountsByPlaceIds(placeIds)
@@ -248,16 +279,6 @@ public class PlaceService {
 			));
 	}
 
-	/**
-	 * 게스트 사용자를 위한 여러 장소 통계 일괄 조회 메서드입니다.
-	 * 개인화 정보 없이 기본 통계만 제공합니다.
-	 *
-	 * @param placeIds 통계를 조회할 장소 ID 목록
-	 * @return 장소 ID를 키로 하는 기본 통계 정보 맵
-	 */
-	public Map<String, PlaceStatsDto> getPlaceStatsMap(List<String> placeIds) {
-		return getPlaceStatsMap(placeIds, null);
-	}
 
 	/**
 	 * 평점 값을 일관된 형식으로 포맷팅합니다.
@@ -451,6 +472,7 @@ public class PlaceService {
 
 	/**
 	 * 개별 장소 정보를 코스용 데이터 구조로 변환합니다.
+	 * 🚀 Search 결과가 Detail 캐시에 저장되어 있어 detail API 호출 최적화됨
 	 * 방문 순서, 사용자로부터의 거리, 이전 장소로부터의 거리를 포함한 완전한 코스 정보를 생성합니다.
 	 *
 	 * @param placeId 변환할 장소 ID
@@ -465,6 +487,7 @@ public class PlaceService {
 		CoursePlaceInfo previousPlace) {
 
 		try {
+			// 🚀 @Cacheable 덕분에 Search 결과가 캐시되어 있으면 Detail API 호출 생략됨
 			PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(placeId);
 
 			if (placeDetail == null) {
