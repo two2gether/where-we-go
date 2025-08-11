@@ -37,6 +37,7 @@ public class CommentService {
 	private final CommentRepository commentRepository;
 	private final CourseRepository courseRepository;
 	private final UserService userService;
+	private final CourseService courseService;
 	private final NotificationService notificationService;
 	private final RedisTemplate<String, Object> redisTemplate;
 
@@ -55,11 +56,7 @@ public class CommentService {
 		Long courseId = requestDto.getCourseId();
 		User user = userService.getUserById(userId);
 
-		Course course = courseRepository.findByIdWithThemes(courseId)
-			.orElseThrow(() -> {
-				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
-				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
-			});
+		Course course = courseService.getCourseById(courseId);
 
 		if (isNotCourseOwner(userId, course)) {
 			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",

@@ -186,5 +186,33 @@ public class UserService {
 				return userRepository.save(newUser);
 			});
 	}
+	
+	/**
+	 * 이메일로 사용자 존재 여부 확인 (인증 서비스에서 사용)
+	 * @param email 확인할 이메일
+	 * @return 사용자 존재 여부
+	 */
+	public boolean existsByEmail(String email) {
+		return userRepository.existsByEmailAndIsDeletedFalse(email);
+	}
+	
+	/**
+	 * 이메일로 사용자 조회 (인증 서비스에서 사용)
+	 * @param email 조회할 이메일
+	 * @return 사용자 엔티티 (Optional)
+	 */
+	public Optional<User> findByEmail(String email) {
+		return userRepository.findByEmailAndIsDeletedFalse(email);
+	}
+	
+	/**
+	 * 사용자 생성 및 저장 (인증 서비스에서 사용)
+	 * @param user 저장할 사용자 엔티티
+	 * @return 저장된 사용자 엔티티
+	 */
+	@Transactional
+	public User saveUser(User user) {
+		return userRepository.save(user);
+	}
 
 }

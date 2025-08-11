@@ -27,7 +27,6 @@ import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
@@ -44,13 +43,10 @@ import com.example.wherewego.global.exception.CustomException;
 class AuthServiceTest {
 
 	@Mock
-	private UserRepository userRepository;
+	private UserService userService;
 
 	@Mock
 	private PasswordEncoder passwordEncoder;
-
-	@Mock
-	private UserService userService;
 
 	@Mock
 	private AuthenticationManager authenticationManager;
@@ -105,11 +101,11 @@ class AuthServiceTest {
 				.profileImage("profile.jpg")
 				.build();
 
-			when(userRepository.existsByEmailAndIsDeletedFalse("test@example.com"))
+			when(userService.existsByEmail("test@example.com"))
 				.thenReturn(false);
 			when(passwordEncoder.encode("Password123!"))
 				.thenReturn("encodedPassword123!");
-			when(userRepository.save(any(User.class)))
+			when(userService.saveUser(any(User.class)))
 				.thenReturn(testUser);
 			when(userService.convertUserToDto(testUser))
 				.thenReturn(expectedResponse);
@@ -123,9 +119,9 @@ class AuthServiceTest {
 			assertThat(result.getNickname()).isEqualTo("테스터");
 			assertThat(result.getProfileImage()).isEqualTo("profile.jpg");
 
-			verify(userRepository).existsByEmailAndIsDeletedFalse("test@example.com");
+			verify(userService).existsByEmail("test@example.com");
 			verify(passwordEncoder).encode("Password123!");
-			verify(userRepository).save(any(User.class));
+			verify(userService).saveUser(any(User.class));
 			verify(userService).convertUserToDto(testUser);
 		}
 
@@ -133,7 +129,7 @@ class AuthServiceTest {
 		@DisplayName("중복 이메일로 회원가입 시 예외 발생")
 		void signupFailDuplicateEmail() {
 			// given
-			when(userRepository.existsByEmailAndIsDeletedFalse("test@example.com"))
+			when(userService.existsByEmail("test@example.com"))
 				.thenReturn(true);
 
 			// when & then
@@ -141,9 +137,9 @@ class AuthServiceTest {
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.DUPLICATE_EMAIL.getMessage());
 
-			verify(userRepository).existsByEmailAndIsDeletedFalse("test@example.com");
+			verify(userService).existsByEmail("test@example.com");
 			verify(passwordEncoder, never()).encode(any());
-			verify(userRepository, never()).save(any());
+			verify(userService, never()).saveUser(any());
 		}
 
 		@Test
@@ -156,11 +152,11 @@ class AuthServiceTest {
 				.nickname("해커")
 				.build();
 
-			when(userRepository.existsByEmailAndIsDeletedFalse(contains("DROP TABLE")))
+			when(userService.existsByEmail(contains("DROP TABLE")))
 				.thenReturn(false);
 			when(passwordEncoder.encode(any()))
 				.thenReturn("encoded");
-			when(userRepository.save(any(User.class)))
+			when(userService.saveUser(any(User.class)))
 				.thenReturn(testUser);
 			when(userService.convertUserToDto(any()))
 				.thenReturn(UserResponseDto.builder().build());
@@ -169,7 +165,7 @@ class AuthServiceTest {
 			assertThatCode(() -> authService.signup(maliciousRequest))
 				.doesNotThrowAnyException();
 
-			verify(userRepository).existsByEmailAndIsDeletedFalse(contains("DROP TABLE"));
+			verify(userService).existsByEmail(contains("DROP TABLE"));
 		}
 	}
 
@@ -370,7 +366,7 @@ class AuthServiceTest {
 				.nickname("테스터")
 				.build();
 
-			when(userRepository.existsByEmailAndIsDeletedFalse(longEmail))
+			when(userService.existsByEmail(longEmail))
 				.thenReturn(false);
 
 			// when & then - 정상 처리되어야 함 (DB 제약조건에서 처리)

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,6 @@ import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
-import com.example.wherewego.global.util.CacheKeyUtil;
-
-import org.springframework.cache.annotation.Cacheable;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -197,13 +195,13 @@ public class PlaceService {
 		}
 
 		// 🚀 배치 쿼리로 N+1 문제 해결 (기존: N개 쿼리 → 최적화: 3개 쿼리)
-		
+
 		// 1. 리뷰 통계 배치 조회
 		Map<String, Long> reviewCountMap = placeReviewRepository.getReviewCountsByPlaceIds(placeIds)
 			.stream()
 			.collect(Collectors.toMap(
-				arr -> (String) arr[0],
-				arr -> (Long) arr[1]
+				arr -> (String)arr[0],
+				arr -> (Long)arr[1]
 			));
 
 		// 2. 평점 통계 배치 조회
@@ -211,27 +209,27 @@ public class PlaceService {
 			.stream()
 			.filter(arr -> arr[1] != null) // null 값 필터링
 			.collect(Collectors.toMap(
-				arr -> (String) arr[0],
-				arr -> (Double) arr[1]
+				arr -> (String)arr[0],
+				arr -> (Double)arr[1]
 			));
 
 		// 3. 북마크 통계 배치 조회
 		Map<String, Long> bookmarkCountMap = placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds)
 			.stream()
 			.collect(Collectors.toMap(
-				arr -> (String) arr[0],
-				arr -> (Long) arr[1]
+				arr -> (String)arr[0],
+				arr -> (Long)arr[1]
 			));
 
 		// 4. 사용자별 개인화 정보 배치 조회
 		List<String> userBookmarkedPlaces = List.of();
 		List<String> userReviewedPlaces = List.of();
-		
+
 		if (userId != null) {
 			userBookmarkedPlaces = placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds);
 			userReviewedPlaces = placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds);
 		}
-		
+
 		final List<String> bookmarkedPlaces = userBookmarkedPlaces;
 		final List<String> reviewedPlaces = userReviewedPlaces;
 
