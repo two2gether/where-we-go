@@ -30,7 +30,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -42,10 +42,10 @@ class PlaceReviewServiceTest {
 	private PlaceReviewRepository placeReviewRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private PlaceSearchService placeSearchService;
 
 	@Mock
-	private PlaceSearchService placeSearchService;
+	private UserService userService;
 
 	@InjectMocks
 	private PlaceReviewService placeReviewService;
@@ -89,7 +89,7 @@ class PlaceReviewServiceTest {
 
 			given(placeSearchService.getPlaceDetail(placeId)).willReturn(placeDetail);
 			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.of(testUser));
+			given(userService.getUserById(userId)).willReturn(testUser);
 
 			PlaceReview savedReview = PlaceReview.builder()
 				.id(1L)
@@ -155,7 +155,7 @@ class PlaceReviewServiceTest {
 
 			given(placeSearchService.getPlaceDetail(placeId)).willReturn(placeDetail);
 			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.empty());
+			given(userService.getUserById(userId)).willThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> placeReviewService.createReview(placeId, createRequest, userId))

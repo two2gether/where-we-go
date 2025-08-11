@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.payment.entity.Payment;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -44,4 +45,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 		""")
 	int markExpiredIfReady(@Param("orderId") Long orderId);
 
+	Optional<Payment> findFirstByPaymentStatus(PaymentStatus paymentStatus);
+
+	boolean existsByOrderNoAndPaymentStatus(String orderNo, PaymentStatus paymentStatus);
 }

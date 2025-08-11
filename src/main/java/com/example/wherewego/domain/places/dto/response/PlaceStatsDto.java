@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 장소 통계 정보 DTO
- * - place_id(카카오 API ID) 기준 리뷰/북마크 통계 제공
+ * - place_id(Google API ID) 기준 리뷰/북마크 통계 제공
  *
  * 응답 예시:
  * {
@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 public class PlaceStatsDto {
 
 	/**
-	 * 카카오 장소 ID
+	 * Google 장소 ID
 	 */
 	private String placeId;
 
