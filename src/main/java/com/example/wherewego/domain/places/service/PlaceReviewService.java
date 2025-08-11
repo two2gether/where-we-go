@@ -192,7 +192,6 @@ public class PlaceReviewService {
 	private PlaceReviewResponseDto convertToResponseDto(PlaceReview review, Long currentUserId) {
 		return PlaceReviewResponseDto.builder()
 			.reviewId(review.getId())
-			.placeId(review.getPlaceId())
 			.reviewer(PlaceReviewResponseDto.ReviewerInfo.builder()
 				.userId(review.getUser().getId())
 				.nickname(review.getUser().getNickname())

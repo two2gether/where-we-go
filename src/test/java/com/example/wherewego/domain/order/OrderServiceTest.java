@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
+import com.example.wherewego.domain.eventproduct.repository.EventRepository;
 import com.example.wherewego.domain.eventproduct.service.EventService;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
@@ -47,6 +48,9 @@ class OrderServiceTest {
 	@Mock
 	private OrderRepository orderRepository;
 
+	@Mock
+	private EventRepository eventRepository;
+
 	@InjectMocks
 	private OrderService orderService;
 
@@ -70,6 +74,7 @@ class OrderServiceTest {
 			given(userService.getUserById(userId)).willReturn(user);
 			given(eventService.getEventProductById(productId)).willReturn(product);
 			given(product.getPrice()).willReturn(price);
+			given(eventRepository.decreaseStockIfAvailable(productId, quantity)).willReturn(1);
 
 			Order expectedOrder = mock(Order.class);
 			given(orderRepository.save(any(Order.class))).willReturn(expectedOrder);
@@ -98,8 +103,8 @@ class OrderServiceTest {
 		}
 
 		@Test
-		@DisplayName("상품이 존재하지 않으면 예외가 발생한다")
-		void shouldThrowIfProductNotFound() {
+		@DisplayName("재고 부족으로 주문을 생성할 수 없으면 예외가 발생한다")
+		void shouldThrowIfOutOfStock() {
 			// given
 			Long userId = 1L;
 			Long productId = 10L;
@@ -107,12 +112,12 @@ class OrderServiceTest {
 
 			User user = mock(User.class);
 			given(userService.getUserById(userId)).willReturn(user);
-			given(eventService.getEventProductById(productId)).willThrow(new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+			given(eventRepository.decreaseStockIfAvailable(productId, 1)).willReturn(0);
 
 			// when & then
 			assertThatThrownBy(() -> orderService.createOrder(requestDto, userId))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.EVENT_PRODUCT_NOT_FOUND.getMessage());
+				.hasMessage(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK.getMessage());
 		}
 	}
 
@@ -220,8 +225,8 @@ class OrderServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(2);
-			assertThat(result.totalElements()).isEqualTo(2);
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getTotalElements()).isEqualTo(2);
 			verify(userService).getUserById(userId);
 			verify(orderRepository).findOrdersByUserId(userId, pageable);
 		}
@@ -259,8 +264,8 @@ class OrderServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(1);
-			assertThat(result.totalElements()).isEqualTo(1);
+			assertThat(result.getContent()).hasSize(1);
+			assertThat(result.getTotalElements()).isEqualTo(1);
 			verify(userService).getUserById(userId);
 			verify(orderRepository).findOrdersByUserIdAndStatus(userId, status, pageable);
 		}

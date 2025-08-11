@@ -67,9 +67,9 @@ class EventServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			List<EventListResponseDto> content = result.content();
+			List<EventListResponseDto> content = result.getContent();
 			assertThat(content).hasSize(2);
-			assertThat(result.content().get(0).getProductId()).isEqualTo(1L);
+			assertThat(result.getContent().get(0).getProductId()).isEqualTo(1L);
 		}
 	}
 

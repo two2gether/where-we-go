@@ -22,10 +22,6 @@ public class PlaceReviewResponseDto {
      */
     private Long reviewId;
 
-    /**
-     * 장소 ID
-     */
-    private String placeId;
 
     /**
      * 작성자 정보

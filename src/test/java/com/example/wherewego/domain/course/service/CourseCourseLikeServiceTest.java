@@ -13,14 +13,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.courses.dto.response.CourseLikeResponseDto;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.CourseLike;
 import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
+import com.example.wherewego.domain.courses.repository.CourseRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.domain.courses.service.CourseService;
+import com.example.wherewego.domain.courses.service.NotificationService;
+import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -35,6 +40,16 @@ public class CourseCourseLikeServiceTest {
 	CourseService courseService;
 	@Mock
 	CourseLikeRepository likeRepository;
+	@Mock
+	CourseRepository courseRepository;
+	@Mock
+	PlacesOrderRepository placesOrderRepository;
+	@Mock
+	PlaceService placeService;
+	@Mock
+	NotificationService notificationService;
+	@Mock
+	RedisTemplate<String, Object> redisTemplate;
 
 	@InjectMocks
 	CourseLikeService likeService;
