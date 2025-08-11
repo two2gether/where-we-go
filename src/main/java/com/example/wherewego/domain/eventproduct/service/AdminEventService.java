@@ -14,7 +14,7 @@ import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
 import com.example.wherewego.domain.eventproduct.repository.EventRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class AdminEventService {
 
 	private final EventRepository eventRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	/**
 	 * 새로운 이벤트 상품을 생성합니다.
@@ -45,8 +45,7 @@ public class AdminEventService {
 		Long userId
 	) {
 		// 1. 사용자 조회 - userId로 사용자 정보 조회
-		User user = userRepository.findByIdAndIsDeletedFalse(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 2. 관리자 권한 확인
 		if (!user.getRole().equals(UserRole.ADMIN)) {
@@ -83,8 +82,7 @@ public class AdminEventService {
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 사용자 조회
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 3. 사용자 권한 체크 - 관리자만 수정 가능.
 		if (!user.getRole().equals(UserRole.ADMIN)) {
@@ -122,8 +120,7 @@ public class AdminEventService {
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 사용자 조회
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		User user = userService.getUserById(userId);
 
 		// 3. 사용자 권한 체크 - 관리자만 삭제 가능.
 		if (!user.getRole().equals(UserRole.ADMIN)) {

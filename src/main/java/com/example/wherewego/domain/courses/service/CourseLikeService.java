@@ -26,8 +26,9 @@ import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
-import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
+import com.example.wherewego.domain.courses.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -50,7 +51,7 @@ public class CourseLikeService {
 	private final CourseLikeRepository likeRepository;
 	private final UserService userService;
 	private final CourseService courseService;
-	private final PlaceRepository placeRepository;
+	private final PlacesOrderRepository placesOrderRepository;
 	private final PlaceService placeService;
     private final NotificationService notificationService;
 	private final RedisTemplate<String, Object> redisTemplate;
@@ -170,7 +171,8 @@ public class CourseLikeService {
 			.map(CourseLike::getId)
 			.toList();
 
-		List<PlacesOrder> allPlaceOrders = placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(courseIds);
+		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
+			courseIds);
 
 		Map<Long, List<PlacesOrder>> mappedPlaceOrders = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));

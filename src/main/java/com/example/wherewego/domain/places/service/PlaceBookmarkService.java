@@ -1,6 +1,5 @@
 package com.example.wherewego.domain.places.service;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,22 +30,18 @@ public class PlaceBookmarkService {
 
 	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final UserService userService;
-	private final PlaceSearchService placeSearchService;
 	private final PlaceService placeService;
 
 	/**
 	 * PlaceBookmarkService 생성자
 	 *
 	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
-	 * @param userService 사용자 관련 서비스 
-	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 * @param userService 사용자 관련 서비스
 	 * @param placeService 장소 서비스 (통계 정보 포함)
 	 */
-	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserService userService,
-		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService, PlaceService placeService) {
+	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserService userService, PlaceService placeService) {
 		this.placeBookmarkRepository = placeBookmarkRepository;
 		this.userService = userService;
-		this.placeSearchService = placeSearchService;
 		this.placeService = placeService;
 	}
 
