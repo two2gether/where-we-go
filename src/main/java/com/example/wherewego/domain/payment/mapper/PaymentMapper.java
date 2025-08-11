@@ -38,7 +38,7 @@ public class PaymentMapper {
 			.accountBankName(dto.getAccountBankName())
 			.accountNumber(dto.getAccountNumber())
 
-			.paymentStatus(PaymentStatus.DONE) // 결제 완료로 고정
+			.paymentStatus(PaymentStatus.DONE)
 			.build();
 	}
 

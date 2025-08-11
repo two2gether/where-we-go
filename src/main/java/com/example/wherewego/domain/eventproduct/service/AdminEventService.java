@@ -35,7 +35,6 @@ public class AdminEventService {
 	 *
 	 * @param requestDto 이벤트 상품 생성 요청 데이터 (상품명, 이미지, 설명, 가격, 상품 재고 수)
 	 * @param userId 상품을 생성하는 사용자 ID (관리자)
-	 * FIXME: 나중에 관리자 ID로 수정해야함
 	 * @return 생성된 이벤트 정보를 담은 응답 DTO
 	 * @throws EventException 관리자가 아닌 경우 또는 사용자를 찾을 수 없는 경우
 	 */
