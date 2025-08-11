@@ -3,15 +3,16 @@ package com.example.wherewego.domain.courses.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +54,7 @@ public class CourseLikeService {
 	private final PlacesOrderRepository placesOrderRepository;
 	private final PlaceService placeService;
     private final NotificationService notificationService;
+	private final RedisTemplate<String, Object> redisTemplate;
 	
 	/**
 	 * 코스에 좋아요를 추가합니다.
@@ -66,8 +68,8 @@ public class CourseLikeService {
 	 *
 	 */
 	@Transactional
-	@CacheEvict(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId)")
 	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
+
 		int retries = 3;
 		while (true) {
 			try {
@@ -86,6 +88,14 @@ public class CourseLikeService {
 				course.incrementLikeCount();
 				courseRepository.save(course);
 				notificationService.triggerLikeNotification(user, course);
+
+				// 캐시 삭제
+				String pattern = "course-like-list::userId:" + userId + ":*";
+
+				Set<String> keysToDelete = redisTemplate.keys(pattern);
+				if (keysToDelete != null && !keysToDelete.isEmpty()) {
+					redisTemplate.delete(keysToDelete);
+				}
 
 				// 4) 결과 반환
 				return new CourseLikeResponseDto(
@@ -116,7 +126,6 @@ public class CourseLikeService {
 	 * @throws CustomException 좋아요가 존재하지 않는 경우
 	 */
 	@Transactional
-	@CacheEvict(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId)")
 	public void deleteCourseLike(Long userId, Long courseId) {
 		// 좋아요 존재 검사
 		CourseLike courseLike = likeRepository.findByUserIdAndCourseId(userId, courseId)
@@ -126,6 +135,14 @@ public class CourseLikeService {
 		// 코스 테이블의 좋아요 수(like_count) -1
 		Course course = courseService.getCourseById(courseId);
 		course.decrementLikeCount();
+
+		// 캐시 삭제
+		String pattern = "course-like-list::userId:" + userId + ":*";
+
+		Set<String> keysToDelete = redisTemplate.keys(pattern);
+		if (keysToDelete != null && !keysToDelete.isEmpty()) {
+			redisTemplate.delete(keysToDelete);
+		}
 	}
 
 	/**

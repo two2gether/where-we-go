@@ -3,11 +3,14 @@ package com.example.wherewego.domain.courses.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,7 @@ public class CourseBookmarkService {
 	private final UserService userService;
 	private final PlaceService placeService;
 	private final PlacesOrderRepository placesOrderRepository;
+	private final RedisTemplate<String, Object> redisTemplate;
 
 	/**
 	 * 코스에 북마크를 추가합니다.
@@ -66,6 +70,12 @@ public class CourseBookmarkService {
 		CourseBookmark savedBookmark = bookmarkRepository.save(bookmark);
 		// 북마크 수 +1
 		course.incrementBookmarkCount();
+		// 캐시 삭제
+		String pattern = "user-course-bookmark-list::userId:" + userId + ":*";
+		Set<String> keysToDelete = redisTemplate.keys(pattern);
+		if (keysToDelete != null && !keysToDelete.isEmpty()) {
+			redisTemplate.delete(keysToDelete);
+		}
 		// 반환
 		return new CourseBookmarkResponseDto(
 			savedBookmark.getId(),
@@ -93,6 +103,13 @@ public class CourseBookmarkService {
 		bookmarkRepository.delete(bookmark);
 		// 북마크 수 -1
 		course.decrementBookmarkCount();
+
+		// 캐시 삭제
+		String pattern = "user-course-bookmark-list::userId:" + userId + ":*";
+		Set<String> keysToDelete = redisTemplate.keys(pattern);
+		if (keysToDelete != null && !keysToDelete.isEmpty()) {
+			redisTemplate.delete(keysToDelete);
+		}
 	}
 
 	/**
@@ -106,6 +123,7 @@ public class CourseBookmarkService {
 	 * @return 북마크한 코스 목록과 페이지네이션 정보
 	 */
 	@Transactional(readOnly = true)
+	@Cacheable(value = "user-course-bookmark-list", key = "@cacheKeyUtil.generateCourseBookmarkListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<UserCourseBookmarkListDto> getUserCourseBookmarks(Long userId, Pageable pageable) {
 		// 1. 북마크된 CourseBookmark 엔티티 페이징 조회
 		Page<CourseBookmark> bookmarkPage = bookmarkRepository.findByUserId(userId, pageable);

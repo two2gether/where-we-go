@@ -1,7 +1,9 @@
 package com.example.wherewego.domain.courses.service;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,8 @@ import com.example.wherewego.global.response.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Set;
+
 /**
  * 댓글 관리 서비스
  * 코스에 대한 댓글의 생성, 수정, 삭제, 조회 기능을 제공합니다.
@@ -35,6 +39,7 @@ public class CommentService {
 	private final UserService userService;
 	private final CourseService courseService;
 	private final NotificationService notificationService;
+	private final RedisTemplate<String, Object> redisTemplate;
 
 	/**
 	 * 코스에 새로운 댓글을 생성합니다.
@@ -70,6 +75,9 @@ public class CommentService {
 		//알림 생성
 		notificationService.triggerCommentNotification(user, course);
 
+		// 캐시 삭제
+		deleteCache(courseId, userId);
+
 		return toDto(comment);
 	}
 
@@ -98,6 +106,8 @@ public class CommentService {
 
 		commentRepository.delete(comment);
 
+		// 캐시 삭제
+		deleteCache(comment.getCourse().getId(), userId);
 	}
 
 	/**
@@ -127,6 +137,9 @@ public class CommentService {
 
 		comment.updateContent(requestDto.getContent());
 
+		// 캐시 삭제
+		deleteCache(comment.getCourse().getId(), userId);
+
 		return toDto(comment);
 	}
 
@@ -139,6 +152,7 @@ public class CommentService {
 	 * @return 페이징된 댓글 목록
 	 */
 	@Transactional(readOnly = true)
+	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 
 		// 코스 존재 여부 확인
@@ -164,6 +178,7 @@ public class CommentService {
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
 	 * @return 페이징된 댓글 목록
 	 */
+	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
 		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
 		Page<CommentResponseDto> dtoPage = page.map(this::toDto);
@@ -189,6 +204,28 @@ public class CommentService {
 	 */
 	private boolean isNotCourseOwner(Long userId, Course course) {
 		return !course.getIsPublic() && !course.getUser().getId().equals(userId);
+	}
+
+	/**
+	 * Redis 캐시에서 특정 코스와 사용자의 댓글 목록 캐시를 삭제합니다.
+	 *
+	 * @param courseId 캐시를 삭제할 코스 ID
+	 * @param userId   캐시를 삭제할 사용자 ID
+	 */
+	private void deleteCache(Long courseId, Long userId) {
+		// 캐시 삭제
+		String coursePattern = "course-comment-list::courseId:" + courseId + ":*";
+		String userPattern = "user-comment-list::userId:" + userId + ":*";
+
+		Set<String> couresKeysToDelete = redisTemplate.keys(coursePattern);
+		Set<String> userKeysToDelete = redisTemplate.keys(userPattern);
+
+		if (couresKeysToDelete != null && !couresKeysToDelete.isEmpty()) {
+			redisTemplate.delete(couresKeysToDelete);
+		}
+		if (userKeysToDelete != null && !userKeysToDelete.isEmpty()) {
+			redisTemplate.delete(userKeysToDelete);
+		}
 	}
 
 }
