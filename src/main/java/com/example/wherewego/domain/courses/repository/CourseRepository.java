@@ -7,11 +7,15 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.wherewego.domain.common.enums.CourseTheme;
 import com.example.wherewego.domain.courses.entity.Course;
+
+import jakarta.persistence.LockModeType;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
 	// Fetch Join - 테마 조건 있음
@@ -127,5 +131,17 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		      AND c.isDeleted = false
 		""")
 	Page<Course> findByUserIdAndIsDeletedFalse(@Param("userId") Long userId, Pageable pageable);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select c from Course c where c.id = :id")
+	Optional<Course> findByIdForUpdate(@Param("id") Long id);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update Course c set c.likeCount = c.likeCount + 1 where c.id = :courseId")
+	int incrementLikeCount(@Param("courseId") Long courseId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update Course c set c.likeCount = c.likeCount - 1 where c.id = :courseId and c.likeCount > 0")
+	int decrementLikeCount(@Param("courseId") Long courseId);
 
 }

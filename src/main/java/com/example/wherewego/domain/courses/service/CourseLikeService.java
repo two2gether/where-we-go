@@ -3,10 +3,10 @@ package com.example.wherewego.domain.courses.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +33,6 @@ import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
-import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,99 +48,90 @@ public class CourseLikeService {
 	private final CourseRepository courseRepository;
 	private final CourseLikeRepository likeRepository;
 	private final UserService userService;
-	private final CourseService courseService;
 	private final PlacesOrderRepository placesOrderRepository;
 	private final PlaceService placeService;
-    private final NotificationService notificationService;
+	private final NotificationService notificationService;
 	private final RedisTemplate<String, Object> redisTemplate;
-	
-	/**
-	 * 코스에 좋아요를 추가합니다.
-	 * 중복 좋아요를 방지하고 코스의 좋아요 수를 증가시킵니다.
-	 * 낙관적 락 적용 3번까지 재시도
-	 *
-	 * @param userId 좋아요를 추가할 사용자 ID
-	 * @param courseId 좋아요를 추가할 코스 ID
-	 * @return 생성된 좋아요 정보
-	 * @throws CustomException 코스/사용자를 찾을 수 없거나 이미 좋아요가 존재하는 경우
-	 *
-	 */
-	@Transactional
-	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
 
-		int retries = 3;
-		while (true) {
-			try {
-				// 1) 사용자·코스 조회 및 중복 검사
-				User user = userService.getUserById(userId);
-				Course course = courseService.getCourseById(courseId);
-
-				if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
-					throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
-				}
-
-				// 2) 좋아요 저장
-				CourseLike savedCourseLike = likeRepository.save(new CourseLike(user, course));
-
-				// 3) 좋아요 수 증가 및 저장 (낙관적 락 적용)
-				course.incrementLikeCount();
-				courseRepository.save(course);
-				notificationService.triggerLikeNotification(user, course);
-
-				// 캐시 삭제
-				String pattern = "course-like-list::userId:" + userId + ":*";
-
-				Set<String> keysToDelete = redisTemplate.keys(pattern);
-				if (keysToDelete != null && !keysToDelete.isEmpty()) {
-					redisTemplate.delete(keysToDelete);
-				}
-
-				// 4) 결과 반환
-				return new CourseLikeResponseDto(
-					savedCourseLike.getId(),
-					savedCourseLike.getUser().getId(),
-					savedCourseLike.getCourse().getId()
-				);
-			} catch (OptimisticLockException ex) {
-				// 충돌 발생 시 재시도
-				if (--retries == 0) {
-					throw new CustomException(ErrorCode.LIKE_CONFLICT);  // 적절한 에러코드로 변경
-				}
-				// 잠깐 대기 후 재시도(optional)
-				try {
-					Thread.sleep(50);
-				} catch (InterruptedException ignored) {
-				}
-			}
+	private void safeBumpCacheVersion(Long userId) {
+		try {
+			redisTemplate.opsForValue().increment("course-like-list:ver:" + userId);
+		} catch (Exception e) {
+			log.warn("Cache evict skipped (redis issue): {}", e.getMessage());
 		}
 	}
 
 	/**
-	 * 코스에서 좋아요를 삭제합니다.
-	 * 좋아요를 완전히 삭제하고 코스의 좋아요 수를 감소시킵니다.
 	 *
-	 * @param userId 좋아요를 삭제할 사용자 ID
-	 * @param courseId 좋아요를 삭제할 코스 ID
-	 * @throws CustomException 좋아요가 존재하지 않는 경우
+	 * @param userId 요청 사용자 ID
+	 * @param courseId 좋아요 대상 코스 ID
+	 * @return 생성된 좋아요 정보
+	 */
+	@Transactional
+	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
+		User user = userService.getUserById(userId);
+
+		final int MAX_RETRY = 4;
+		for (int i = 0; i < MAX_RETRY; i++) {
+			try {
+				Course course = courseRepository.findByIdForUpdate(courseId)
+					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+
+				int affected = likeRepository.upsertActive(userId, courseId);
+
+				if (affected > 0) {
+					courseRepository.incrementLikeCount(courseId);
+					notificationService.triggerLikeNotification(user, course);
+					safeBumpCacheVersion(userId);
+				}
+				Long likeId = likeRepository.findActiveId(userId, courseId);
+				if (likeId == null) {
+					return new CourseLikeResponseDto(null, userId, courseId); // id 없어도 클라이언트 기능엔 영향 없음
+				}
+				return new CourseLikeResponseDto(likeId, userId, courseId);
+
+			} catch (org.springframework.dao.PessimisticLockingFailureException e) {
+				if (i == MAX_RETRY - 1)
+					throw e;
+				try {
+					Thread.sleep(20L * (i + 1));
+				} catch (InterruptedException ignored) {
+				}
+			}
+		}
+		throw new IllegalStateException("unreachable");
+	}
+
+	/**
+	 *
+	 * @param userId    요청 사용자 ID
+	 * @param courseId  좋아요 대상 코스 ID
 	 */
 	@Transactional
 	public void deleteCourseLike(Long userId, Long courseId) {
-		// 좋아요 존재 검사
-		CourseLike courseLike = likeRepository.findByUserIdAndCourseId(userId, courseId)
-			.orElseThrow(() -> new CustomException(ErrorCode.LIKE_NOT_FOUND));
-		// hard delete
-		likeRepository.delete(courseLike);
-		// 코스 테이블의 좋아요 수(like_count) -1
-		Course course = courseService.getCourseById(courseId);
-		course.decrementLikeCount();
+		final int MAX_RETRY = 5;
+		for (int i = 0; i < MAX_RETRY; i++) {
+			try {
+				courseRepository.findByIdForUpdate(courseId)
+					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
-		// 캐시 삭제
-		String pattern = "course-like-list::userId:" + userId + ":*";
+				int deleted = likeRepository.deleteByUserIdAndCourseId(userId, courseId);
+				if (deleted == 1) {
+					courseRepository.decrementLikeCount(courseId);
+					safeBumpCacheVersion(userId);
+				}
+				return;
 
-		Set<String> keysToDelete = redisTemplate.keys(pattern);
-		if (keysToDelete != null && !keysToDelete.isEmpty()) {
-			redisTemplate.delete(keysToDelete);
+			} catch (PessimisticLockingFailureException e) {
+				if (i == MAX_RETRY - 1)
+					throw e;
+				try {
+					Thread.sleep(20L * (i + 1));
+				} catch (InterruptedException ignored) {
+				}
+			}
 		}
+		throw new IllegalStateException("unreachable");
 	}
 
 	/**
@@ -155,7 +145,7 @@ public class CourseLikeService {
 	 */
 	@Transactional(readOnly = true)
 	@Cacheable(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId, #page, #size)", unless = "#result == null")
-    public PagedResponse<CourseLikeListResponseDto> getCourseLikeList(Long userId, int page, int size) {
+	public PagedResponse<CourseLikeListResponseDto> getCourseLikeList(Long userId, int page, int size) {
 		//Page<CourseLike> ->  List<CoureseLike> -> List<Dto>  -> PageResponse<Dto>
 		// 해당 유저의 좋아요 목록 가져오기
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -189,4 +179,5 @@ public class CourseLikeService {
 
 		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalPages()));
 	}
+
 }
