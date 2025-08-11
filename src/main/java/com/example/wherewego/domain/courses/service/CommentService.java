@@ -152,7 +152,7 @@ public class CommentService {
 	 * @return 페이징된 댓글 목록
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)")
+	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)", unless = "#result == null")
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 
 		// 코스 존재 여부 확인
@@ -177,7 +177,7 @@ public class CommentService {
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
 	 * @return 페이징된 댓글 목록
 	 */
-	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
+	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)", unless = "#result == null")
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
 		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
 		Page<CommentResponseDto> dtoPage = page.map(this::toDto);

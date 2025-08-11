@@ -123,7 +123,7 @@ public class CourseBookmarkService {
 	 * @return 북마크한 코스 목록과 페이지네이션 정보
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable(value = "user-course-bookmark-list", key = "@cacheKeyUtil.generateCourseBookmarkListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
+	@Cacheable(value = "user-course-bookmark-list", key = "@cacheKeyUtil.generateCourseBookmarkListKey(#userId, #pageable.pageNumber, #pageable.pageSize)", unless = "#result == null")
 	public PagedResponse<UserCourseBookmarkListDto> getUserCourseBookmarks(Long userId, Pageable pageable) {
 		// 1. 북마크된 CourseBookmark 엔티티 페이징 조회
 		Page<CourseBookmark> bookmarkPage = bookmarkRepository.findByUserId(userId, pageable);

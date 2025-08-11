@@ -71,24 +71,4 @@ public class CacheConfig {
 			.build();
 	}
 
-	/**
-	 * RedisTemplate Bean 설정
-	 *
-	 * @param connectionFactory Redis 연결 팩토리
-	 * @return RedisTemplate<String, Object> 인스턴스
-	 */
-	@Bean
-	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-		RedisTemplate<String, Object> template = new RedisTemplate<>();
-		template.setConnectionFactory(connectionFactory);
-
-		// key, value 직렬화 방식 설정 (필요시)
-		template.setKeySerializer(new StringRedisSerializer());
-		template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-
-		template.setHashKeySerializer(new StringRedisSerializer());
-		template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-
-		return template;
-	}
 }

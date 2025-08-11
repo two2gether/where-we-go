@@ -28,7 +28,6 @@ import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
-import com.example.wherewego.domain.courses.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -155,7 +154,7 @@ public class CourseLikeService {
 	 * @return 페이징된 좋아요 코스 목록 응답 DTO
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId, #page, #size)")
+	@Cacheable(value = "course-like-list", key = "@cacheKeyUtil.generateCourseLikeListKey(#userId, #page, #size)", unless = "#result == null")
     public PagedResponse<CourseLikeListResponseDto> getCourseLikeList(Long userId, int page, int size) {
 		//Page<CourseLike> ->  List<CoureseLike> -> List<Dto>  -> PageResponse<Dto>
 		// 해당 유저의 좋아요 목록 가져오기
