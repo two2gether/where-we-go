@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.util.Set;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +16,6 @@ import com.example.wherewego.domain.courses.entity.Comment;
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.repository.CommentRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
-import com.example.wherewego.domain.notification.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -22,8 +23,6 @@ import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Set;
 
 /**
  * 댓글 관리 서비스
