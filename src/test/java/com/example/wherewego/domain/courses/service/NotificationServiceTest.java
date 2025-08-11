@@ -87,8 +87,8 @@ class NotificationServiceTest {
 		var response = notificationService.getUserNotifications(userId, pageable);
 
 		// then
-		assertThat(response.content()).hasSize(2);
-		assertThat(response.content().get(0).getReceiverId()).isEqualTo(userId);
+		assertThat(response.getContent()).hasSize(2);
+		assertThat(response.getContent().get(0).getReceiverId()).isEqualTo(userId);
 	}
 
 	@Test
@@ -96,7 +96,7 @@ class NotificationServiceTest {
 		// given
 		Long notiId = 100L;
 		Long userId = 200L;
-		
+
 		Notification notification = Notification.builder()
 			.id(notiId)
 			.receiverId(userId)

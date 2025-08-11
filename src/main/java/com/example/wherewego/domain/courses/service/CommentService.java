@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.util.Set;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
@@ -21,8 +24,6 @@ import com.example.wherewego.global.response.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Set;
 
 /**
  * 댓글 관리 서비스
@@ -43,15 +44,15 @@ public class CommentService {
 	 * 코스에 새로운 댓글을 생성합니다.
 	 * 비공개 코스인 경우 작성자만 댓글을 작성할 수 있습니다.
 	 *
-	 * @param courseId 댓글을 작성할 코스 ID
 	 * @param userId 댓글 작성자 ID
 	 * @param requestDto 댓글 내용을 담은 요청 DTO
 	 * @return 생성된 댓글 정보
 	 * @throws CustomException 사용자/코스를 찾을 수 없거나 비공개 코스에 접근 권한이 없는 경우
 	 */
 	@Transactional
-	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
+	public CommentResponseDto createComment(Long userId, CommentCreateRequestDto requestDto) {
 
+		Long courseId = requestDto.getCourseId();
 		User user = userService.getUserById(userId);
 
 		Course course = courseRepository.findByIdWithThemes(courseId)

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
@@ -42,26 +43,25 @@ public class CommentController {
 	/**
 	 * 코스 댓글 생성 API
 	 *
-	 * POST /api/courses/{courseId}/comments
+	 * POST /api/comments
 	 *
 	 * 인증된 사용자가 특정 코스에 댓글을 작성합니다.
 	 * 댓글 내용은 유효성 검증을 거쳐 저장되며, 작성 시간과 작성자 정보가 함께 기록됩니다.
 	 *
-	 * @param courseId 댓글을 작성할 코스 ID
-	 * @param requestDto 댓글 작성 요청 데이터 (내용 포함)
+	 * @param requestDto 댓글 작성 요청 데이터 (courseId, 내용 포함)
 	 * @param userDetails 인증된 사용자 정보
 	 * @return 생성된 댓글 정보
 	 */
-	@PostMapping("/api/courses/{courseId}/comments")
+	@PostMapping("/api/comments")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<CommentResponseDto> createComment(
-		@PathVariable Long courseId,
-		@RequestBody @Valid CommentRequestDto requestDto,
+		@RequestBody @Valid CommentCreateRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
 		Long userId = userDetails.getUser().getId();
 
-		CommentResponseDto responseDto = commentService.createComment(courseId, userId, requestDto);
+		CommentResponseDto responseDto = commentService.createComment(userId, requestDto);
+
 		return ApiResponse.created("댓글이 생성되었습니다.", responseDto);
 	}
 
