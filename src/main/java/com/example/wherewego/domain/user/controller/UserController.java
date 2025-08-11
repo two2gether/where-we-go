@@ -196,7 +196,7 @@ public class UserController {
 	/**
 	 * 내가 작성한 모든 리뷰 목록 조회 API
 	 *
-	 * GET /api/users/me/reviews
+	 * GET /api/users/mypage/reviews
 	 *
 	 * 인증된 사용자가 작성한 모든 장소 리뷰를 페이지 단위로 조회합니다.
 	 * 리뷰는 작성일 내림차순으로 정렬되며, 각 리뷰에는 장소 정보도 함께 제공됩니다.

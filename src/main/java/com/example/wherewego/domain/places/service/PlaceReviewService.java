@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewCreateRequestDto;
 import com.example.wherewego.domain.places.dto.request.PlaceReviewUpdateRequestDto;
+import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewCreateResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.entity.PlaceReview;
@@ -190,8 +191,14 @@ public class PlaceReviewService {
 	 * PlaceReview 엔티티를 ResponseDto로 변환
 	 */
 	private PlaceReviewResponseDto convertToResponseDto(PlaceReview review, Long currentUserId) {
+		// 장소 정보 조회
+		PlaceDetailResponseDto placeDetail = placeSearchService.getPlaceDetail(review.getPlaceId());
+		String placeName = placeDetail != null ? placeDetail.getName() : "알 수 없는 장소";
+
 		return PlaceReviewResponseDto.builder()
 			.reviewId(review.getId())
+			.placeId(review.getPlaceId())
+			.placeName(placeName)
 			.reviewer(PlaceReviewResponseDto.ReviewerInfo.builder()
 				.userId(review.getUser().getId())
 				.nickname(review.getUser().getNickname())
