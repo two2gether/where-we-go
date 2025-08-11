@@ -1,5 +1,8 @@
 package com.example.wherewego.global.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -10,14 +13,16 @@ import java.util.List;
  *
  * @param <T> 페이지에 담길 개별 요소 타입
  */
-public record PagedResponse<T> (
-        List<T> content,       // 현재 페이지에 포함된 데이터 리스트
-        long totalElements,     // 전체 항목 수
-        int totalPages,         // 전체 페이지 수
-        int size,               // 페이지 크기
-        int number              // 현재 페이지 번호 (0부터 시작)
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+public class PagedResponse<T> {
+        private List<T> content;        // 현재 페이지에 포함된 데이터 리스트
+        private long totalElements;     // 전체 항목 수
+        private int totalPages;         // 전체 페이지 수
+        private int size;               // 페이지 크기
+        private int number;             // 현재 페이지 번호 (0부터 시작)
 
-) {
     /**
      * Spring Data의 Page 객체로부터 PagedResponse 객체를 생성합니다.
      *
@@ -35,3 +40,4 @@ public record PagedResponse<T> (
         );
     }
 }
+
