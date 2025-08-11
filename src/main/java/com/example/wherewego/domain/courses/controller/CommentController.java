@@ -135,7 +135,6 @@ public class CommentController {
 	@GetMapping("/api/comments")
 	public ApiResponse<PagedResponse<CommentResponseDto>> getComments(
 		@RequestParam Long courseId,
-		@AuthenticationPrincipal CustomUserDetail userDetails,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
 		PagedResponse<CommentResponseDto> response = commentService.getCommentsByCourse(courseId, pageable);
