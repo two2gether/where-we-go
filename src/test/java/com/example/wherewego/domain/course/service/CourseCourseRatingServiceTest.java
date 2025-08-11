@@ -88,7 +88,7 @@ class CourseCourseRatingServiceTest {
 			.build();
 
 		// 유효한 평점 등록 요청
-		validRatingRequest = new CourseRatingRequestDto(4);
+		validRatingRequest = new CourseRatingRequestDto(1L, 4);
 
 		// 테스트용 평점 엔티티
 		testCourseRating = new CourseRating(testUser, testCourse, 4);
@@ -286,7 +286,7 @@ class CourseCourseRatingServiceTest {
 			// given
 			Long userId = 1L;
 			Long courseId = 1L;
-			CourseRatingRequestDto invalidRequest = new CourseRatingRequestDto(0);  // 1점 미만
+			CourseRatingRequestDto invalidRequest = new CourseRatingRequestDto(1L, 0);  // 1점 미만
 
 			// when & then
 			assertThatThrownBy(() -> courseRatingService.createCourseRating(userId, courseId, invalidRequest))
@@ -303,7 +303,7 @@ class CourseCourseRatingServiceTest {
 			// given
 			Long userId = 1L;
 			Long courseId = 1L;
-			CourseRatingRequestDto invalidRequest = new CourseRatingRequestDto(6);  // 5점 초과
+			CourseRatingRequestDto invalidRequest = new CourseRatingRequestDto(1L,6);  // 5점 초과
 
 			// when & then
 			assertThatThrownBy(() -> courseRatingService.createCourseRating(userId, courseId, invalidRequest))
@@ -320,7 +320,7 @@ class CourseCourseRatingServiceTest {
 			// given
 			Long userId = 1L;
 			Long courseId = 1L;
-			CourseRatingRequestDto minRatingRequest = new CourseRatingRequestDto(1);
+			CourseRatingRequestDto minRatingRequest = new CourseRatingRequestDto(1L, 1);
 
 			when(courseService.getCourseById(courseId)).thenReturn(testCourse);
 			when(userService.getUserById(userId)).thenReturn(testUser);
@@ -340,7 +340,7 @@ class CourseCourseRatingServiceTest {
 			// given
 			Long userId = 1L;
 			Long courseId = 1L;
-			CourseRatingRequestDto maxRatingRequest = new CourseRatingRequestDto(5);
+			CourseRatingRequestDto maxRatingRequest = new CourseRatingRequestDto(courseId, 5);
 
 			when(courseService.getCourseById(courseId)).thenReturn(testCourse);
 			when(userService.getUserById(userId)).thenReturn(testUser);
