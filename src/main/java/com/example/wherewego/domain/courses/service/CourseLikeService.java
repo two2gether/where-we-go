@@ -28,7 +28,6 @@ import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
-import com.example.wherewego.domain.courses.service.NotificationService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;

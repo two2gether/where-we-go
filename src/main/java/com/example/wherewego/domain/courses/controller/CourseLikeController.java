@@ -1,20 +1,15 @@
 package com.example.wherewego.domain.courses.controller;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.request.CourseLikeRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CourseLikeResponseDto;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.global.response.ApiResponse;
-
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 코스 좋아요 관리 REST API 컨트롤러
