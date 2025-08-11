@@ -6,6 +6,7 @@ import com.example.wherewego.domain.courses.entity.Comment;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * 댓글 응답 DTO
@@ -13,6 +14,7 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class CommentResponseDto {
 
 	/**
