@@ -12,7 +12,6 @@ import com.example.wherewego.domain.auth.security.JwtUtil;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
@@ -26,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthService {
 
-	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final UserService userService;
 	private final JwtUtil jwtUtil;
@@ -40,7 +38,7 @@ public class AuthService {
 	 * @throws CustomException 이미 사용 중인 이메일인 경우
 	 */
 	public UserResponseDto signup(SignupRequestDto request) {
-		if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
+		if (userService.existsByEmail(request.getEmail())) {
 			throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
 		}
 
@@ -53,7 +51,7 @@ public class AuthService {
 			.role(UserRole.USER) // 관리자 계정 직접 추가할때 -> UserRole.ADMIN
 			.build();
 
-		User saved = userRepository.save(user);
+		User saved = userService.saveUser(user);
 		return userService.convertUserToDto(saved);
 
 	}
@@ -68,7 +66,7 @@ public class AuthService {
 	 */
 	public LoginResponseDto login(LoginRequestDto request) {
 		// 사용자 존재 여부 확인
-		User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
+		User user = userService.findByEmail(request.getEmail())
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		// 비밀번호 검증

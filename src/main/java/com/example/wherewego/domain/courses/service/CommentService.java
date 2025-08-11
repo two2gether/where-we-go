@@ -1,5 +1,7 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.util.Set;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,8 +24,6 @@ import com.example.wherewego.global.response.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Set;
-
 /**
  * 댓글 관리 서비스
  * 코스에 대한 댓글의 생성, 수정, 삭제, 조회 기능을 제공합니다.
@@ -36,6 +36,7 @@ public class CommentService {
 	private final CommentRepository commentRepository;
 	private final CourseRepository courseRepository;
 	private final UserService userService;
+	private final CourseService courseService;
 	private final NotificationService notificationService;
 	private final RedisTemplate<String, Object> redisTemplate;
 
@@ -54,11 +55,7 @@ public class CommentService {
 
 		User user = userService.getUserById(userId);
 
-		Course course = courseRepository.findByIdWithThemes(courseId)
-			.orElseThrow(() -> {
-				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
-				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
-			});
+		Course course = courseService.getCourseById(courseId);
 
 		if (isNotCourseOwner(userId, course)) {
 			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",
