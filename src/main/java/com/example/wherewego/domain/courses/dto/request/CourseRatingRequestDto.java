@@ -14,6 +14,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public class CourseRatingRequestDto {
 
+	@NotNull
+	private Long courseId;
+
 	/**
 	 * 코스 평점 (1~5점)
 	 */
