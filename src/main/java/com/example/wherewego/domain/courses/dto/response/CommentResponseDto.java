@@ -38,7 +38,7 @@ public class CommentResponseDto {
 	 */
 	private String content;
 	/**
-	 * 댓글 작성 일시
+	 * 댓글 작성/수정 일시
 	 */
 	private LocalDateTime createdAt;
 

@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
@@ -77,7 +78,7 @@ class CommentServiceTest {
 		@DisplayName("댓글을 정상적으로 생성한다")
 		void shouldCreateComment() {
 			// given
-			CommentRequestDto requestDto = new CommentRequestDto("댓글 내용");
+			CommentCreateRequestDto requestDto = new CommentCreateRequestDto(10L, "댓글 내용");
 
 			given(userService.getUserById(1L)).willReturn(user);
 			given(courseRepository.findByIdWithThemes(10L)).willReturn(Optional.of(course));
@@ -85,7 +86,7 @@ class CommentServiceTest {
 				.willAnswer(invocation -> invocation.getArgument(0));
 
 			// when
-			CommentResponseDto result = commentService.createComment(10L, 1L, requestDto);
+			CommentResponseDto result = commentService.createComment(1L, requestDto);
 
 			// then
 			assertThat(result).isNotNull();
@@ -103,13 +104,13 @@ class CommentServiceTest {
 				.isPublic(false)  //비공개코스 생성
 				.build();
 
-			CommentRequestDto requestDto = new CommentRequestDto("비공개 댓글");
+			CommentCreateRequestDto requestDto = new CommentCreateRequestDto(20L, "비공개 댓글");
 
 			given(userService.getUserById(1L)).willReturn(user); //현재 로그인된 사용자는 id=1
 			given(courseRepository.findByIdWithThemes(20L)).willReturn(Optional.of(privateCourse));
 
 			// when & then
-			assertThatThrownBy(() -> commentService.createComment(20L, 1L, requestDto))
+			assertThatThrownBy(() -> commentService.createComment(1L, requestDto))
 				.isInstanceOf(CustomException.class)
 				.hasMessageContaining(ErrorCode.CANNOT_COMMENT_ON_PRIVATE_COURSE.getMessage());
 		}
@@ -190,8 +191,8 @@ class CommentServiceTest {
 			PagedResponse<CommentResponseDto> result = commentService.getCommentsByCourse(10L, pageable);
 
 			// then
-			assertThat(result.content()).hasSize(2);
-			assertThat(result.content().get(0).getContent()).isEqualTo("댓글1");
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getContent().get(0).getContent()).isEqualTo("댓글1");
 		}
 	}
 }
