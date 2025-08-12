@@ -3,12 +3,9 @@ package com.example.wherewego.domain.places.service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,8 +14,6 @@ import com.example.wherewego.domain.courses.dto.response.CourseRouteSummary;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
 import com.example.wherewego.domain.places.dto.response.PlaceDetailResponseDto;
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
-import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
-import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.global.util.CacheKeyUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -32,27 +27,24 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class PlaceService {
 
-	private final PlaceReviewRepository placeReviewRepository;
-	private final PlaceBookmarkRepository placeBookmarkRepository;
 	private final PlaceSearchService placeSearchService;
+	private final PlaceStatsService placeStatsService;
 	private final CacheManager cacheManager;
 	private final CacheKeyUtil cacheKeyUtil;
 
 	/**
 	 * PlaceService 생성자
 	 *
-	 * @param placeReviewRepository 장소 리뷰 관련 데이터베이스 접근 객체
-	 * @param placeBookmarkRepository 장소 북마크 관련 데이터베이스 접근 객체
 	 * @param placeSearchService 장소 검색 서비스 (구글 Places API 사용)
+	 * @param placeStatsService 장소 통계 서비스 (캐시 처리 포함)
 	 * @param cacheManager 캐시 관리자 (Search 결과를 Detail 캐시에 저장용)
 	 * @param cacheKeyUtil 캐시 키 생성 유틸리티
 	 */
-	public PlaceService(PlaceReviewRepository placeReviewRepository, PlaceBookmarkRepository placeBookmarkRepository,
-		@Qualifier("googlePlaceService") PlaceSearchService placeSearchService, CacheManager cacheManager,
-		CacheKeyUtil cacheKeyUtil) {
-		this.placeReviewRepository = placeReviewRepository;
-		this.placeBookmarkRepository = placeBookmarkRepository;
+	public PlaceService(@Qualifier("googlePlaceService") PlaceSearchService placeSearchService,
+		PlaceStatsService placeStatsService,
+		CacheManager cacheManager, CacheKeyUtil cacheKeyUtil) {
 		this.placeSearchService = placeSearchService;
+		this.placeStatsService = placeStatsService;
 		this.cacheManager = cacheManager;
 		this.cacheKeyUtil = cacheKeyUtil;
 	}
@@ -133,35 +125,13 @@ public class PlaceService {
 		}
 
 		// 북마크/통계 정보 추가
-		PlaceStatsDto stats = getPlaceStats(place.getPlaceId(), userId);
+		PlaceStatsDto stats = placeStatsService.getPlaceStats(place.getPlaceId(), userId);
 		builder.averageRating(stats.getAverageRating())
 			.reviewCount(stats.getReviewCount().intValue())
 			.bookmarkCount(stats.getBookmarkCount().intValue())
 			.isBookmarked(stats.getIsBookmarked());
 
 		return builder.build();
-	}
-
-	/**
-	 * 기존 호환성을 위한 거리 계산 메서드입니다.
-	 * 사용자 위치와 장소 좌표 간의 직선거리를 계산하여 장소 정보에 추가합니다.
-	 *
-	 * @param place 기본 장소 정보
-	 * @param userLat 사용자 위치 위도
-	 * @param userLon 사용자 위치 경도
-	 * @return 거리 정보가 추가된 장소 응답
-	 */
-	private PlaceDetailResponseDto enrichPlaceWithDistance(PlaceDetailResponseDto place, Double userLat,
-		Double userLon) {
-		if (place.getLatitude() == null || place.getLongitude() == null) {
-			return place;
-		}
-
-		Integer distance = calculateHaversineDistance(userLat, userLon, place.getLatitude(), place.getLongitude());
-
-		return place.toBuilder()
-			.distance(distance)
-			.build();
 	}
 
 	/**
@@ -182,7 +152,7 @@ public class PlaceService {
 		}
 
 		// 통계 정보 조회
-		PlaceStatsDto stats = getPlaceStats(placeId, userId);
+		PlaceStatsDto stats = placeStatsService.getPlaceStats(placeId, userId);
 
 		// 통계 정보를 포함한 응답 생성
 		return placeDetail.toBuilder()
@@ -191,107 +161,6 @@ public class PlaceService {
 			.bookmarkCount(stats.getBookmarkCount().intValue())
 			.isBookmarked(stats.getIsBookmarked())
 			.build();
-	}
-
-	/**
-	 * 특정 장소의 통계 정보를 조회하며, 사용자별 북마크 및 리뷰 상태를 포함합니다.
-	 * 리뷰 수, 평균 평점, 북마크 수 등의 통계와 개인화된 정보를 제공합니다.
-	 * 통계 정보를 캐싱하여 데이터베이스 부하를 줄입니다.
-	 *
-	 * @param placeId 통계를 조회할 장소 ID
-	 * @param userId 사용자 ID (개인화 정보용, null 가능)
-	 * @return 장소 통계 및 사용자별 상태 정보
-	 */
-	@Cacheable(value = "place-stats", key = "@cacheKeyUtil.generatePlaceStatsKey(#placeId, #userId)")
-	public PlaceStatsDto getPlaceStats(String placeId, Long userId) {
-		// 배치 쿼리 재활용으로 N+1 문제 해결
-		// 단일 장소도 기존 배치 쿼리 메서드를 활용하여 효율성 확보
-		Map<String, PlaceStatsDto> statsMap = getPlaceStatsMap(List.of(placeId), userId);
-		return statsMap.get(placeId);
-	}
-
-
-	/**
-	 * 여러 장소의 통계 정보를 일괄 조회하여 Map 형태로 반환합니다.
-	 * 배치 쿼리를 사용하여 N+1 문제를 해결하고 성능을 대폭 향상시킵니다.
-	 * 일괄 조회 결과를 캐싱하여 반복 요청 시 성능을 최적화합니다.
-	 *
-	 * @param placeIds 통계를 조회할 장소 ID 목록
-	 * @param userId 사용자 ID (개인화 정보용, null 가능)
-	 * @return 장소 ID를 키로 하는 통계 정보 맵
-	 */
-	public Map<String, PlaceStatsDto> getPlaceStatsMap(List<String> placeIds, Long userId) {
-		if (placeIds == null || placeIds.isEmpty()) {
-			return Map.of();
-		}
-
-		// 배치 쿼리로 N+1 문제 해결 (기존: N개 쿼리 → 최적화: 3개 쿼리)
-
-		// 1. 리뷰 통계 배치 조회
-		Map<String, Long> reviewCountMap = placeReviewRepository.getReviewCountsByPlaceIds(placeIds)
-			.stream()
-			.collect(Collectors.toMap(
-				arr -> (String)arr[0],
-				arr -> (Long)arr[1]
-			));
-
-		// 2. 평점 통계 배치 조회
-		Map<String, Double> averageRatingMap = placeReviewRepository.getAverageRatingsByPlaceIds(placeIds)
-			.stream()
-			.filter(arr -> arr[1] != null) // null 값 필터링
-			.collect(Collectors.toMap(
-				arr -> (String)arr[0],
-				arr -> (Double)arr[1]
-			));
-
-		// 3. 북마크 통계 배치 조회
-		Map<String, Long> bookmarkCountMap = placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds)
-			.stream()
-			.collect(Collectors.toMap(
-				arr -> (String)arr[0],
-				arr -> (Long)arr[1]
-			));
-
-		// 4. 사용자별 개인화 정보 배치 조회
-		List<String> userBookmarkedPlaces = List.of();
-		List<String> userReviewedPlaces = List.of();
-
-		if (userId != null) {
-			userBookmarkedPlaces = placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds);
-			userReviewedPlaces = placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds);
-		}
-
-		final List<String> bookmarkedPlaces = userBookmarkedPlaces;
-		final List<String> reviewedPlaces = userReviewedPlaces;
-
-		// 5. 결과 조합 (메모리 기반 처리, DB 호출 없음)
-		return placeIds.stream()
-			.collect(Collectors.toMap(
-				placeId -> placeId,
-				placeId -> PlaceStatsDto.builder()
-					.placeId(placeId)
-					.reviewCount(reviewCountMap.getOrDefault(placeId, 0L))
-					.averageRating(formatRating(averageRatingMap.get(placeId)))
-					.bookmarkCount(bookmarkCountMap.getOrDefault(placeId, 0L))
-					.isBookmarked(userId != null ? bookmarkedPlaces.contains(placeId) : null)
-					.hasUserReview(userId != null ? reviewedPlaces.contains(placeId) : null)
-					.build()
-			));
-	}
-
-
-	/**
-	 * 평점 값을 일관된 형식으로 포맷팅합니다.
-	 * null 값은 0.0으로 처리하고, 소수점 2자리까지 반올림합니다.
-	 *
-	 * @param rating 원본 평점 값 (null 가능)
-	 * @return 포맷팅된 평점 (null인 경우 0.0)
-	 */
-	private Double formatRating(Double rating) {
-		if (rating == null) {
-			return 0.0;
-		}
-		return Math.round(rating * 100.0) / 100.0;
 	}
 
 	// ====================== 코스용 메서드 ==========================
@@ -355,22 +224,17 @@ public class PlaceService {
 		}
 
 		int totalDistance = 0;
-		int calculatedSegments = 0;
 
 		// 1. 사용자 위치 → 첫 번째 장소 거리
 		CoursePlaceInfo firstPlace = places.get(0);
 		if (firstPlace.getDistanceFromUser() != null) {
 			totalDistance += firstPlace.getDistanceFromUser();
-			calculatedSegments++;
-			// 사용자에서 첫 장소로의 거리 추가
 		}
 
 		// 2. 장소 간 순차 이동 거리 합계
 		for (CoursePlaceInfo place : places) {
 			if (place.getDistanceFromPrevious() != null) {
 				totalDistance += place.getDistanceFromPrevious();
-				calculatedSegments++;
-				// 장소 간 이동 거리 추가
 			}
 		}
 
