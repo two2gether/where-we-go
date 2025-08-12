@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,12 +24,11 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/orders")
 public class OrderController {
 
 	private final OrderService orderService;
 
-	@PostMapping
+	@PostMapping("/api/orders")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<OrderCreateResponseDto> registerOrder(
 		@RequestBody @Valid OrderCreateRequestDto requestDto,
@@ -53,7 +51,7 @@ public class OrderController {
 	 * @param userDetail 인증된 사용자 정보
 	 * @return 주문 상세 정보
 	 */
-	@GetMapping("/{orderId}")
+	@GetMapping("/api/orders/{orderId}")
 	public ApiResponse<OrderDetailResponseDto> getOrderDetail(
 		@PathVariable Long orderId,
 		@AuthenticationPrincipal CustomUserDetail userDetail
@@ -75,14 +73,14 @@ public class OrderController {
 	 * @param userDetail 인증된 사용자 정보
 	 * @return 빈 응답과 성공 메시지
 	 */
-	@DeleteMapping("/{orderId}")
+	@DeleteMapping("/api/orders/{orderId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public ApiResponse<Void> deleteOrder(
+	public ApiResponse<Void> cancelOrder(
 		@PathVariable Long orderId,
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
-		orderService.deletedOrderById(orderId, userId);
+		orderService.cancelOrder(orderId, userId);
 
 		return ApiResponse.noContent("주문이 취소되었습니다.");
 	}
