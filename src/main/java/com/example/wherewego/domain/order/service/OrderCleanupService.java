@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.OrderStatus;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
 import com.example.wherewego.domain.payment.repository.PaymentRepository;
@@ -17,14 +17,14 @@ import com.example.wherewego.domain.payment.repository.PaymentRepository;
 public class OrderCleanupService {
 
 	private final OrderRepository orderRepository;
-	private final EventRepository eventRepository;
+	private final EventProductRepository eventProductRepository;
 	private final PaymentRepository paymentRepository;
 
 	public OrderCleanupService(OrderRepository orderRepository,
-		EventRepository eventRepository,
+		EventProductRepository eventProductRepository,
 		PaymentRepository paymentRepository) {
 		this.orderRepository = orderRepository;
-		this.eventRepository = eventRepository;
+		this.eventProductRepository = eventProductRepository;
 		this.paymentRepository = paymentRepository;
 	}
 
@@ -52,7 +52,7 @@ public class OrderCleanupService {
 
 			// 2) 상태가 실제로 CANCELED 로 바뀐 경우에만 재고 복구 + 결제 만료
 			if (updated == 1) {
-				eventRepository.increaseStock(productId, quantity);
+				eventProductRepository.increaseStock(productId, quantity);
 				paymentRepository.markExpiredIfReady(orderId);
 			}
 			// updated == 0 이면 이미 다른 상태(DONE 등)로 처리된 건이므로 건너뜀

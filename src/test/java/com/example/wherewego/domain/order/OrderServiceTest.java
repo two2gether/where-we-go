@@ -22,10 +22,11 @@ import org.springframework.data.domain.Pageable;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
-import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
+import com.example.wherewego.domain.eventproduct.service.EventProductService;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
@@ -43,13 +44,13 @@ class OrderServiceTest {
 	private UserService userService;
 
 	@Mock
-	private EventService eventService;
+	private EventProductService eventProductService;
 
 	@Mock
 	private OrderRepository orderRepository;
 
 	@Mock
-	private EventRepository eventRepository;
+	private EventProductRepository eventProductRepository;
 
 	@InjectMocks
 	private OrderService orderService;
@@ -72,15 +73,15 @@ class OrderServiceTest {
 			OrderCreateRequestDto requestDto = new OrderCreateRequestDto(productId, quantity);
 
 			given(userService.getUserById(userId)).willReturn(user);
-			given(eventService.getEventProductById(productId)).willReturn(product);
+			given(eventProductService.getEventProductById(productId)).willReturn(product);
 			given(product.getPrice()).willReturn(price);
-			given(eventRepository.decreaseStockIfAvailable(productId, quantity)).willReturn(1);
+			given(eventProductRepository.decreaseStockIfAvailable(productId, quantity)).willReturn(1);
 
 			Order expectedOrder = mock(Order.class);
 			given(orderRepository.save(any(Order.class))).willReturn(expectedOrder);
 
 			// when
-			Order result = orderService.createOrder(requestDto, userId);
+			OrderCreateResponseDto result = orderService.createOrder(requestDto, userId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -112,7 +113,7 @@ class OrderServiceTest {
 
 			User user = mock(User.class);
 			given(userService.getUserById(userId)).willReturn(user);
-			given(eventRepository.decreaseStockIfAvailable(productId, 1)).willReturn(0);
+			given(eventProductRepository.decreaseStockIfAvailable(productId, 1)).willReturn(0);
 
 			// when & then
 			assertThatThrownBy(() -> orderService.createOrder(requestDto, userId))

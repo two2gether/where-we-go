@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EventCreateRequestDto {
+public class EventProductCreateRequestDto {
 	/**
 	 * 상품명
 	 */

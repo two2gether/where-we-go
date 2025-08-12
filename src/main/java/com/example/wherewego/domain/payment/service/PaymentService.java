@@ -88,13 +88,24 @@ public class PaymentService {
 			.orderNo(requestDto.getOrderNo())
 			.amount(requestDto.getAmount())
 			.build();
-		paymentRepository.save(payment); // ✅ DB에 저장
+		paymentRepository.save(payment); // DB에 저장
 
-		// 2. Basic 인증 헤더 생성 (API 키 base64 인코딩)
+		// 3. 재고 확인 + 감소 처리
+		EventProduct product = order.getEventProduct(); // 주문한 상품
+		int quantity = order.getQuantity(); // 주문 수량
+
+		if (product.getStock() < quantity) {
+			log.error("재고 부족 - productId: {}, 남은 재고: {}, 요청 수량: {}",
+				product.getId(), product.getStock(), quantity);
+			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
+		}
+		product.decreaseStock(quantity); // 재고 감소 (엔티티 내부 로직)
+
+		// 4. Basic 인증 헤더 생성 (API 키 base64 인코딩)
 		String encodedAuth = Base64.getEncoder()
 			.encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
 
-		// 3. WebClient로 토스 결제 API POST 요청
+		// 5. WebClient로 토스 결제 API POST 요청
 		PaymentResponseDto responseDto = tossWebClient.post()
 			.uri(TOSS_PAYMENTS_ENDPOINT) // API 경로 설정(/api/v2/payments)
 			.header(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth) // 인증 헤더
@@ -111,18 +122,18 @@ public class PaymentService {
 
 		log.info("결제페이지: {}", responseDto.getCheckoutPage());
 
-		// 4. 응답 본문의 code가 0이 아닌 경우 (토스 자체 실패 응답)
+		// 6. 응답 본문의 code가 0이 아닌 경우 (토스 자체 실패 응답)
 		if (responseDto.getCode() != 0) {
 			log.error("토스 결제 실패: code={}, msg={}, errorCode={}",
 				responseDto.getCode(), responseDto.getMsg(), responseDto.getErrorCode());
 			throw new CustomException(ErrorCode.TOSS_PAYMENT_FAILED);
 		}
 
-		// 5. 결제 토큰 저장 (응답 성공 시)
+		// 7. 결제 토큰 저장 (응답 성공 시)
 		payment.updatePayToken(responseDto.getPayToken());
-		paymentRepository.save(payment); // ✅ 다시 저장
+		paymentRepository.save(payment); // 다시 저장
 
-		// 6. 성공 응답인 경우 응답 DTO 리턴 (checkoutPage, payToken 포함)
+		// 8. 성공 응답인 경우 응답 DTO 리턴 (checkoutPage, payToken 포함)
 		return responseDto;
 	}
 
@@ -145,22 +156,11 @@ public class PaymentService {
 		// 2. 주문 조회
 		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
-		// 3. 재고 확인 + 감소 처리
-		EventProduct product = order.getEventProduct(); // 주문한 상품
-		int quantity = order.getQuantity(); // 주문 수량
-
-		if (product.getStock() < quantity) {
-			log.error("재고 부족 - productId: {}, 남은 재고: {}, 요청 수량: {}",
-				product.getId(), product.getStock(), quantity);
-			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
-		}
-		product.decreaseStock(quantity); // 재고 감소 (엔티티 내부 로직)
-
-		// 4. 주문 상태 변경
+		// 3. 주문 상태 변경
 		order.markAsPaid();
 		orderService.updateOrder(order);
 
-		// 5. DTO → 엔티티 매핑 및 저장
+		// 4. DTO → 엔티티 매핑 및 저장
 		Payment payment = paymentRepository.findById(requestDto.getPaymentId())
 			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 		payment.markAsDone(); // 결제 상태 변경
