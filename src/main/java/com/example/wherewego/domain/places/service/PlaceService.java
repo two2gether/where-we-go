@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,7 +83,7 @@ public class PlaceService {
 			return;
 		}
 
-		var detailCache = cacheManager.getCache("google-place-details");
+		Cache detailCache = cacheManager.getCache("google-place-details");
 		if (detailCache == null) {
 			log.warn("google-place-details 캐시가 존재하지 않습니다");
 			return;
