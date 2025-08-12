@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 
@@ -20,7 +19,6 @@ public interface EventRepository extends JpaRepository<EventProduct, Long> {
 
 	// 재고 즉시 차감
 	@Modifying
-	@Transactional
 	@Query("""
 		UPDATE EventProduct e
 		   SET e.stock = e.stock - :quantity
@@ -34,7 +32,6 @@ public interface EventRepository extends JpaRepository<EventProduct, Long> {
 
 	// 재고 복구
 	@Modifying
-	@Transactional
 	@Query("""
 		UPDATE EventProduct e
 		   SET e.stock = e.stock + :quantity

@@ -1,6 +1,7 @@
 package com.example.wherewego.domain.order.service;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,12 +29,14 @@ public class OrderCleanupService {
 		this.paymentRepository = paymentRepository;
 	}
 
-	@Scheduled(fixedRate = 60_000)
+	private final int SECOND = 1000;
+
+	@Scheduled(fixedRate = 60 * SECOND)
 	@Transactional
 	public void removeStalePendingOrders() {
 		LocalDateTime cutoff = LocalDateTime.now().minusMinutes(5);
 
-		var targetStatuses = java.util.EnumSet.of(OrderStatus.PENDING, OrderStatus.READY);
+		EnumSet<OrderStatus> targetStatuses = java.util.EnumSet.of(OrderStatus.PENDING, OrderStatus.READY);
 
 		List<Order> stale = orderRepository
 			.findAllByStatusInAndCreatedAtBefore(targetStatuses, cutoff);
