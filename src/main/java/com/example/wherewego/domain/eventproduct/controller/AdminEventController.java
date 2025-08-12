@@ -72,7 +72,7 @@ public class AdminEventController {
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
-		EventUpdateResponseDto response = adminEventService.updateEventInto(productId, requestDto, userId);
+		EventUpdateResponseDto response = adminEventService.updateEventInfo(productId, requestDto, userId);
 
 		return ApiResponse.ok("상품이 수정되었습니다.", response);
 	}

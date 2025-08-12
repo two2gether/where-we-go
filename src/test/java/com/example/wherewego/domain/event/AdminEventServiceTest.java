@@ -136,7 +136,7 @@ class AdminEventServiceTest {
 				any(), any(), any(), any(), any())).willReturn(updated);
 
 			// when
-			EventUpdateResponseDto result = adminEventService.updateEventInto(productId, requestDto, adminId);
+			EventUpdateResponseDto result = adminEventService.updateEventInfo(productId, requestDto, adminId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -154,7 +154,7 @@ class AdminEventServiceTest {
 			given(eventRepository.findById(productId)).willReturn(Optional.empty());
 
 			// when & then
-			assertThatThrownBy(() -> adminEventService.updateEventInto(productId, requestDto, userId))
+			assertThatThrownBy(() -> adminEventService.updateEventInfo(productId, requestDto, userId))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.EVENT_PRODUCT_NOT_FOUND.getMessage());
 		}

@@ -71,7 +71,8 @@ public class AdminEventService {
 	 * @return 수정된 이벤트 상품 정보
 	 * @throws CustomException 상품를 찾을 수 없거나 수정 권한이 없는 경우
 	 */
-	public EventUpdateResponseDto updateEventInto(
+	@Transactional
+	public EventUpdateResponseDto updateEventInfo(
 		Long productId,
 		EventUpdateRequestDto requestDto,
 		Long userId

@@ -45,7 +45,5 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 		""")
 	int markExpiredIfReady(@Param("orderId") Long orderId);
 
-	Optional<Payment> findFirstByPaymentStatus(PaymentStatus paymentStatus);
-
 	boolean existsByOrderNoAndPaymentStatus(String orderNo, PaymentStatus paymentStatus);
 }
