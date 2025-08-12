@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 public class EventService {
 
 	private final EventRepository eventRepository;
+	private final RedisTemplate<String, String> redisTemplate;
+	private static final String VIEW_COUNT_KEY_PREFIX = "view_count:eventProduct:";
 
 	/**
 	 * 이벤트 상품 목록을 페이징하여 조회합니다.(삭제되지 않은 상품만)
@@ -63,8 +66,9 @@ public class EventService {
 		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
-		// 2. 조회수 증가
-		findProduct.incrementViewCount();
+		// 2. 조회수 증가 (Redis)
+		String viewCountKey = VIEW_COUNT_KEY_PREFIX + productId;
+		redisTemplate.opsForValue().increment(viewCountKey);
 
 		// 3. [조회된 엔티티 -> 응답 DTO 변환]
 		return EventMapper.toDetailDto(findProduct);
