@@ -10,11 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductDetailResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductListResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
+import com.example.wherewego.domain.eventproduct.mapper.EventProductMapper;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -26,11 +26,12 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
-public class EventService {
+public class EventProductService {
 
 	private final EventRepository eventRepository;
 	private final RedisTemplate<String, String> redisTemplate;
 	private static final String VIEW_COUNT_KEY_PREFIX = "view_count:eventProduct:";
+	private final EventProductRepository eventProductRepository;
 
 	/**
 	 * 이벤트 상품 목록을 페이징하여 조회합니다.(삭제되지 않은 상품만)
@@ -38,17 +39,18 @@ public class EventService {
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
 	 * @return 페이징된 상품 목록 DTO
 	 */
-	public PagedResponse<EventListResponseDto> findAllEvents(Pageable pageable) {
+	public PagedResponse<EventProductListResponseDto> findAllEvents(Pageable pageable) {
 		// 1. 리스트 조회 - 삭제되지 않은 상품만
-		Page<EventProduct> eventPage = eventRepository.findAllByIsDeletedFalse(pageable);
+		Page<EventProduct> eventPage = eventProductRepository.findAllByIsDeletedFalse(pageable);
 
 		// 2. [엔티티 -> 응답 dto 변환]
-		List<EventListResponseDto> eventListDto = eventPage.getContent().stream()
-			.map(EventMapper::toListDto)
+		List<EventProductListResponseDto> eventListDto = eventPage.getContent().stream()
+			.map(EventProductMapper::toListDto)
 			.toList();
 
 		// 3. PageImpl 로 Page 객체 생성
-		Page<EventListResponseDto> dtoPage = new PageImpl<>(eventListDto, pageable, eventPage.getTotalElements());
+		Page<EventProductListResponseDto> dtoPage = new PageImpl<>(eventListDto, pageable,
+			eventPage.getTotalElements());
 
 		return PagedResponse.from(dtoPage);
 	}
@@ -61,9 +63,9 @@ public class EventService {
 	 * @throws CustomException 상품을 찾을 수 없는 경우
 	 */
 	@Transactional
-	public EventDetailResponseDto findEventById(Long productId) {
+	public EventProductDetailResponseDto findEventById(Long productId) {
 		// 1. 상품 조회
-		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
+		EventProduct findProduct = eventProductRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 조회수 증가 (Redis)
@@ -71,9 +73,9 @@ public class EventService {
 		redisTemplate.opsForValue().increment(viewCountKey);
 
 		// 3. [조회된 엔티티 -> 응답 DTO 변환]
-		return EventMapper.toDetailDto(findProduct);
+		return EventProductMapper.toDetailDto(findProduct);
 	}
-	
+
 	/**
 	 * 상품 존재 여부를 검증합니다. (조회수 증가 없음)
 	 * 주문 생성 등에서 사용하는 내부 메서드입니다.
@@ -83,7 +85,7 @@ public class EventService {
 	 * @throws CustomException 상품을 찾을 수 없는 경우
 	 */
 	public EventProduct getEventProductById(Long productId) {
-		return eventRepository.findByIdAndIsDeletedFalse(productId)
+		return eventProductRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 	}
 }

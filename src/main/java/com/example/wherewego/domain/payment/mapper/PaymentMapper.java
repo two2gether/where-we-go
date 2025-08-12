@@ -6,6 +6,10 @@ import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentDetailResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PaymentMapper {
 
 	// 결제 응답 콜백 DTO → 결제 엔티티

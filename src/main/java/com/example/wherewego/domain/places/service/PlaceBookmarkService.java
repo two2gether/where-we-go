@@ -1,11 +1,13 @@
 package com.example.wherewego.domain.places.service;
 
+import java.util.List;
+
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.cache.annotation.CacheEvict;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.places.dto.response.BookmarkCreateResponseDto;
@@ -39,7 +41,8 @@ public class PlaceBookmarkService {
 	 * @param userService 사용자 관련 서비스
 	 * @param placeService 장소 서비스 (통계 정보 포함)
 	 */
-	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserService userService, PlaceService placeService) {
+	public PlaceBookmarkService(PlaceBookmarkRepository placeBookmarkRepository, UserService userService,
+		PlaceService placeService) {
 		this.placeBookmarkRepository = placeBookmarkRepository;
 		this.userService = userService;
 		this.placeService = placeService;
@@ -98,7 +101,7 @@ public class PlaceBookmarkService {
 		Page<PlaceBookmark> bookmarkPage = placeBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
 
 		// 북마크된 장소들의 상세 정보를 통계 정보와 함께 조회
-		var bookmarkItems = bookmarkPage.getContent().stream()
+		List<UserBookmarkListDto.BookmarkItem> bookmarkItems = bookmarkPage.getContent().stream()
 			.map(bookmark -> {
 				// PlaceService를 통해 통계 정보가 포함된 장소 정보 조회 (캐시 활용)
 				PlaceDetailResponseDto place = getPlaceDetailWithStats(bookmark.getPlaceId(), userId, userLatitude,
@@ -133,7 +136,8 @@ public class PlaceBookmarkService {
 	 * @return 통계 정보와 북마크 상태가 설정된 장소 상세 정보
 	 * @throws CustomException 장소를 찾을 수 없는 경우
 	 */
-	private PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId, Double userLatitude, Double userLongitude) {
+	private PlaceDetailResponseDto getPlaceDetailWithStats(String placeId, Long userId, Double userLatitude,
+		Double userLongitude) {
 
 		// PlaceService를 통해 통계 정보가 포함된 장소 정보 조회 (캐시 활용)
 		PlaceDetailResponseDto place = placeService.getPlaceDetailWithStats(placeId, userId);

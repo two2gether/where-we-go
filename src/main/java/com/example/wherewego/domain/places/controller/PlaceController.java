@@ -4,16 +4,13 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.validation.Valid;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.places.dto.request.PlaceSearchRequestDto;
@@ -24,6 +21,7 @@ import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.response.ApiResponse;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/places")
 @RequiredArgsConstructor
 public class PlaceController {
 
@@ -55,7 +52,7 @@ public class PlaceController {
 	 * @param userDetail 인증된 사용자 정보 (북마크 상태 확인용, null 가능)
 	 * @return 검색된 장소 목록과 부가 정보
 	 */
-	@PostMapping("/search")
+	@PostMapping("/api/places/search")
 	public ApiResponse<List<PlaceDetailResponseDto>> searchPlaces(
 		@Valid @RequestBody PlaceSearchRequestDto request,
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
@@ -81,7 +78,7 @@ public class PlaceController {
 	 * @param userDetail 인증된 사용자 정보 (필수)
 	 * @return 북마크 생성 결과 (북마크 ID, 상태 포함)
 	 */
-	@PostMapping("/{placeId}/bookmark")
+	@PostMapping("/api/places/{placeId}/bookmark")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<BookmarkCreateResponseDto> addBookmark(
 		@PathVariable String placeId,
@@ -107,7 +104,7 @@ public class PlaceController {
 	 * @param userDetail 인증된 사용자 정보 (필수)
 	 * @return 빈 응답과 성공 메시지
 	 */
-	@DeleteMapping("/{placeId}/bookmark")
+	@DeleteMapping("/api/places/{placeId}/bookmark")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public ApiResponse<Void> removeBookmark(
 		@PathVariable String placeId,
@@ -132,15 +129,14 @@ public class PlaceController {
 	 * @param userDetail 인증된 사용자 정보 (개인화 정보용, null 가능)
 	 * @return 장소 상세 정보와 통계 데이터
 	 */
-	@GetMapping("/{placeId}/details")
+	@GetMapping("/api/places/{placeId}/details")
 	public ApiResponse<PlaceDetailResponseDto> getPlaceDetails(
 		@PathVariable String placeId,
 		@AuthenticationPrincipal CustomUserDetail userDetail) {
 
 		// PlaceService에서 장소 정보 조회 (통계 정보 포함)
-		User user = userDetail != null ? userDetail.getUser() : null;
-		PlaceDetailResponseDto placeDetail = placeService.getPlaceDetailWithStats(placeId,
-			user != null ? user.getId() : null);
+		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
+		PlaceDetailResponseDto placeDetail = placeService.getPlaceDetailWithStats(placeId, userId);
 
 		return ApiResponse.ok("장소 상세 정보 조회 성공", placeDetail);
 	}

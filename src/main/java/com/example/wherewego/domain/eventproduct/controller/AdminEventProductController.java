@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
-import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
-import com.example.wherewego.domain.eventproduct.service.AdminEventService;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductCreateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductUpdateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductUpdateResponseDto;
+import com.example.wherewego.domain.eventproduct.service.AdminEventProductService;
 import com.example.wherewego.global.response.ApiResponse;
 
 import jakarta.validation.Valid;
@@ -31,9 +31,9 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/event-products")
-public class AdminEventController {
+public class AdminEventProductController {
 
-	private final AdminEventService adminEventService;
+	private final AdminEventProductService adminEventProductService;
 
 	/**
 	 * 이벤트 상품을 생성합니다.
@@ -45,13 +45,13 @@ public class AdminEventController {
 	 */
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<EventCreateResponseDto> registerEvent(
-		@RequestBody @Valid EventCreateRequestDto requestDto,
+	public ApiResponse<EventProductCreateResponseDto> registerEvent(
+		@RequestBody @Valid EventProductCreateRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
 
-		EventCreateResponseDto response = adminEventService.createEvent(requestDto, userId);
+		EventProductCreateResponseDto response = adminEventProductService.createEvent(requestDto, userId);
 
 		return ApiResponse.created("이벤트 상품이 등록되었습니다.", response);
 	}
@@ -66,13 +66,14 @@ public class AdminEventController {
 	 * @return 수정된 상품 정보를 포함한 API 응답
 	 */
 	@PatchMapping("/{productId}")
-	public ApiResponse<EventUpdateResponseDto> updateEvent(
+	public ApiResponse<EventProductUpdateResponseDto> updateEvent(
 		@PathVariable Long productId,
-		@RequestBody @Valid EventUpdateRequestDto requestDto,
+		@RequestBody @Valid EventProductUpdateRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
-		EventUpdateResponseDto response = adminEventService.updateEventInto(productId, requestDto, userId);
+		EventProductUpdateResponseDto response = adminEventProductService.updateEventInfo(productId, requestDto,
+			userId);
 
 		return ApiResponse.ok("상품이 수정되었습니다.", response);
 	}
@@ -95,7 +96,7 @@ public class AdminEventController {
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
-		adminEventService.deleteEventById(productId, userId);
+		adminEventProductService.deleteEventById(productId, userId);
 
 		return ApiResponse.noContent("이벤트 상품이 삭제되었습니다.");
 	}
