@@ -6,13 +6,13 @@ import org.w3c.dom.events.EventException;
 
 import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductCreateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductUpdateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.mapper.EventMapper;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
+import com.example.wherewego.domain.eventproduct.mapper.EventProductMapper;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -25,9 +25,9 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
-public class AdminEventService {
+public class AdminEventProductService {
 
-	private final EventRepository eventRepository;
+	private final EventProductRepository eventProductRepository;
 	private final UserService userService;
 
 	/**
@@ -39,8 +39,8 @@ public class AdminEventService {
 	 * @throws EventException 관리자가 아닌 경우 또는 사용자를 찾을 수 없는 경우
 	 */
 	@Transactional
-	public EventCreateResponseDto createEvent(
-		EventCreateRequestDto requestDto,
+	public EventProductCreateResponseDto createEvent(
+		EventProductCreateRequestDto requestDto,
 		Long userId
 	) {
 		// 1. 사용자 조회 - userId로 사용자 정보 조회
@@ -52,13 +52,13 @@ public class AdminEventService {
 		}
 
 		// 3. [요청 DTO -> 엔티티 변환] - mapper 사용
-		EventProduct product = EventMapper.toEntity(requestDto, user);
+		EventProduct product = EventProductMapper.toEntity(requestDto, user);
 
 		// 4. 엔티티 DB에 저장
-		EventProduct savedProduct = eventRepository.save(product);
+		EventProduct savedProduct = eventProductRepository.save(product);
 
 		// 5. [저장된 엔티티 -> 응답 DTO 변환]
-		return EventMapper.toDto(savedProduct);
+		return EventProductMapper.toDto(savedProduct);
 	}
 
 	/**
@@ -71,13 +71,14 @@ public class AdminEventService {
 	 * @return 수정된 이벤트 상품 정보
 	 * @throws CustomException 상품를 찾을 수 없거나 수정 권한이 없는 경우
 	 */
-	public EventUpdateResponseDto updateEventInto(
+	@Transactional
+	public EventProductUpdateResponseDto updateEventInfo(
 		Long productId,
-		EventUpdateRequestDto requestDto,
+		EventProductUpdateRequestDto requestDto,
 		Long userId
 	) {
 		// 1. 수정할 상품 DB 에서 조회.
-		EventProduct findProduct = eventRepository.findById(productId)
+		EventProduct findProduct = eventProductRepository.findById(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 사용자 조회
@@ -98,7 +99,7 @@ public class AdminEventService {
 		);
 
 		// 5. [저장된 엔티티 -> 응답 DTO 변환]
-		return EventMapper.toUpdateDto(updatedProduct);
+		return EventProductMapper.toUpdateDto(updatedProduct);
 	}
 
 	/**
@@ -115,7 +116,7 @@ public class AdminEventService {
 		Long userId
 	) {
 		// 1. 상품 조회하기
-		EventProduct findProduct = eventRepository.findByIdAndIsDeletedFalse(productId)
+		EventProduct findProduct = eventProductRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 사용자 조회

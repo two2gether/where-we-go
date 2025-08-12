@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 
-public interface EventRepository extends JpaRepository<EventProduct, Long> {
+public interface EventProductRepository extends JpaRepository<EventProduct, Long> {
 
 	Optional<EventProduct> findByIdAndIsDeletedFalse(@Param("productId") Long productId);
 

@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
-import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductDetailResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductListResponseDto;
+import com.example.wherewego.domain.eventproduct.service.EventProductService;
 import com.example.wherewego.global.response.ApiResponse;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -25,9 +25,9 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/event-products")
-public class EventController {
+public class EventProductController {
 
-	private final EventService eventService;
+	private final EventProductService eventProductService;
 
 	/**
 	 * 이벤트 상품 목록을 페이징하여 조회합니다.
@@ -36,10 +36,10 @@ public class EventController {
 	 * @return 페이징된 핫딜 상품 목록과 메타데이터
 	 */
 	@GetMapping
-	public ApiResponse<PagedResponse<EventListResponseDto>> getEventList(
+	public ApiResponse<PagedResponse<EventProductListResponseDto>> getEventList(
 		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
-		PagedResponse<EventListResponseDto> response = eventService.findAllEvents(pageable);
+		PagedResponse<EventProductListResponseDto> response = eventProductService.findAllEvents(pageable);
 
 		return ApiResponse.ok("이벤트 상품 목록 조회를 성공했습니다.", response);
 	}
@@ -51,9 +51,9 @@ public class EventController {
 	 * @return 이벤트 상품 상세 정보
 	 */
 	@GetMapping("/{productId}")
-	public ApiResponse<EventDetailResponseDto> getEventDetail(@PathVariable Long productId) {
+	public ApiResponse<EventProductDetailResponseDto> getEventDetail(@PathVariable Long productId) {
 
-		EventDetailResponseDto response = eventService.findEventById(productId);
+		EventProductDetailResponseDto response = eventProductService.findEventById(productId);
 
 		return ApiResponse.ok("이벤트 상품 상세 조회를 성공했습니다.", response);
 	}

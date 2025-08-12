@@ -91,11 +91,22 @@ public class EventProduct extends BaseEntity {
 	 */
 	public EventProduct updateEventInfoFromRequest(String productName, String productImage, String description,
 		Integer price, Integer stock) {
-		this.productName = productName;
-		this.productImage = productImage;
-		this.description = description;
-		this.price = price;
-		this.stock = stock;
+
+		if (productName != null) {
+			this.productName = productName;
+		}
+		if (productImage != null) {
+			this.productImage = productImage;
+		}
+		if (description != null) {
+			this.description = description;
+		}
+		if (price != null) {
+			this.price = price;
+		}
+		if (stock != null) {
+			this.stock = stock;
+		}
 
 		return this;
 	}

@@ -1,16 +1,20 @@
 package com.example.wherewego.domain.eventproduct.mapper;
 
-import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductCreateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductDetailResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductListResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.user.entity.User;
 
-public class EventMapper {
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public class EventProductMapper {
 	// DTO → Entity
-	public static EventProduct toEntity(EventCreateRequestDto request, User user) {
+	public static EventProduct toEntity(EventProductCreateRequestDto request, User user) {
 		return EventProduct.builder()
 			.productName(request.getProductName())
 			.productImage(request.getProductImage())
@@ -22,16 +26,16 @@ public class EventMapper {
 	}
 
 	// Entity → Response DTO
-	public static EventCreateResponseDto toDto(EventProduct entity) {
-		return EventCreateResponseDto.builder()
+	public static EventProductCreateResponseDto toDto(EventProduct entity) {
+		return EventProductCreateResponseDto.builder()
 			.productId(entity.getId())
 			.createdAt(entity.getCreatedAt())
 			.build();
 	}
 
 	// Update Entity -> Response DTO
-	public static EventUpdateResponseDto toUpdateDto(EventProduct eventProduct) {
-		return EventUpdateResponseDto.builder()
+	public static EventProductUpdateResponseDto toUpdateDto(EventProduct eventProduct) {
+		return EventProductUpdateResponseDto.builder()
 			.productId(eventProduct.getId())
 			.productName(eventProduct.getProductName())
 			.productImage(eventProduct.getProductImage())
@@ -43,8 +47,8 @@ public class EventMapper {
 	}
 
 	// List Response DTO
-	public static EventListResponseDto toListDto(EventProduct eventProduct) {
-		return EventListResponseDto.builder()
+	public static EventProductListResponseDto toListDto(EventProduct eventProduct) {
+		return EventProductListResponseDto.builder()
 			.productId(eventProduct.getId())
 			.productName(eventProduct.getProductName())
 			.productImage(eventProduct.getProductImage())
@@ -55,8 +59,8 @@ public class EventMapper {
 	}
 
 	// 상품 상세 조회 응답 DTO로 변환
-	public static EventDetailResponseDto toDetailDto(EventProduct eventProduct) {
-		return EventDetailResponseDto.builder()
+	public static EventProductDetailResponseDto toDetailDto(EventProduct eventProduct) {
+		return EventProductDetailResponseDto.builder()
 			.productId(eventProduct.getId())
 			.productName(eventProduct.getProductName())
 			.productImage(eventProduct.getProductImage())

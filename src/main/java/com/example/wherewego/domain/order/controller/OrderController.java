@@ -14,8 +14,6 @@ import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
-import com.example.wherewego.domain.order.entity.Order;
-import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.global.response.ApiResponse;
 
@@ -36,11 +34,7 @@ public class OrderController {
 	) {
 		Long userId = userDetail.getUser().getId();
 
-		// 주문 생성 (엔티티 반환)
-		Order order = orderService.createOrder(requestDto, userId);
-
-		// 응답 DTO 변환
-		OrderCreateResponseDto response = OrderMapper.toCreateResponseDto(order);
+		OrderCreateResponseDto response = orderService.createOrder(requestDto, userId);
 
 		return ApiResponse.created("주문이 생성되었습니다.", response);
 	}

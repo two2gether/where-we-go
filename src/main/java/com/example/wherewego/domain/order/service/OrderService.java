@@ -12,15 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
-import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
+import com.example.wherewego.domain.eventproduct.service.EventProductService;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.repository.OrderRepository;
-import com.example.wherewego.domain.payment.repository.PaymentRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -34,12 +34,11 @@ public class OrderService {
 
 	private final UserService userService;
 	private final OrderRepository orderRepository;
-	private final EventService eventService;
-	private final EventRepository eventRepository;
-	private final PaymentRepository paymentRepository;
+	private final EventProductService eventProductService;
+	private final EventProductRepository eventProductRepository;
 
 	@Transactional
-	public Order createOrder(OrderCreateRequestDto requestDto, Long userId) {
+	public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
 
 		// 재주문 금지 대상
 		Set<OrderStatus> blockedStatus = EnumSet.of(
@@ -58,13 +57,13 @@ public class OrderService {
 		int quantity = requestDto.getQuantity();
 
 		// 2. Atomic Update 호출
-		int updated = eventRepository.decreaseStockIfAvailable(productId, quantity);
+		int updated = eventProductRepository.decreaseStockIfAvailable(productId, quantity);
 		if (updated == 0) {
 			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
 		}
 
 		// 3. 차감된 후 최신 상태 엔티티 조회
-		EventProduct product = eventService.getEventProductById(productId);
+		EventProduct product = eventProductService.getEventProductById(productId);
 
 		// 4. 주문 번호 생성
 		String orderNo = UUID.randomUUID().toString(); // 고유 주문번호 생성
@@ -79,7 +78,10 @@ public class OrderService {
 			.status(OrderStatus.PENDING)
 			.build();
 
-		return orderRepository.save(order);
+		orderRepository.save(order);
+
+		// 응답 DTO 변환
+		return OrderMapper.toCreateResponseDto(order);
 	}
 
 	/**
@@ -170,7 +172,7 @@ public class OrderService {
 	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
 	 */
 	@Transactional
-	public void cancelOrder(Long orderId, Long userId) {
+	public void deletedOrderById(Long orderId, Long userId) {
 		// 1. 주문 조회하기
 		Order findOrder = orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
@@ -180,14 +182,7 @@ public class OrderService {
 			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
 		}
 
-		Long productId = findOrder.getEventProduct().getId();
-		int quantity = findOrder.getQuantity();
-
-		eventRepository.increaseStock(productId, quantity);
-		paymentRepository.markExpiredIfReady(orderId);
-
 		// 3. 삭제하기 (DB삭제)
 		orderRepository.delete(findOrder);
-
 	}
 }

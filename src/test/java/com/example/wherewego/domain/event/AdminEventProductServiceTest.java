@@ -15,29 +15,29 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.wherewego.domain.auth.enums.UserRole;
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.eventproduct.dto.request.EventCreateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.request.EventUpdateRequestDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventCreateResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventUpdateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductCreateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.request.EventProductUpdateRequestDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductCreateResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
-import com.example.wherewego.domain.eventproduct.service.AdminEventService;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
+import com.example.wherewego.domain.eventproduct.service.AdminEventProductService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AdminEventService 테스트")
-class AdminEventServiceTest {
+class AdminEventProductServiceTest {
 
 	@Mock
-	private EventRepository eventRepository;
+	private EventProductRepository eventProductRepository;
 
 	@Mock
 	private UserService userService;
 
 	@InjectMocks
-	private AdminEventService adminEventService;
+	private AdminEventProductService adminEventProductService;
 
 	@Nested
 	@DisplayName("이벤트 상품 생성")
@@ -48,7 +48,7 @@ class AdminEventServiceTest {
 		void shouldCreateEventSuccessfully() {
 			// given
 			Long adminId = 1L;
-			EventCreateRequestDto requestDto = EventCreateRequestDto.builder()
+			EventProductCreateRequestDto requestDto = EventProductCreateRequestDto.builder()
 				.productName("한정판 티셔츠")
 				.productImage("https://image.com/tshirt.jpg")
 				.description("멋진 한정판 티셔츠")
@@ -69,10 +69,10 @@ class AdminEventServiceTest {
 				.build();
 
 			given(userService.getUserById(adminId)).willReturn(admin);
-			given(eventRepository.save(any(EventProduct.class))).willReturn(saved);
+			given(eventProductRepository.save(any(EventProduct.class))).willReturn(saved);
 
 			// when
-			EventCreateResponseDto result = adminEventService.createEvent(requestDto, adminId);
+			EventProductCreateResponseDto result = adminEventProductService.createEvent(requestDto, adminId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -84,7 +84,7 @@ class AdminEventServiceTest {
 		void shouldThrowExceptionForNonAdmin() {
 			// given
 			Long userId = 2L;
-			EventCreateRequestDto requestDto = EventCreateRequestDto.builder().build();
+			EventProductCreateRequestDto requestDto = EventProductCreateRequestDto.builder().build();
 
 			User normalUser = User.builder()
 				.id(userId)
@@ -94,7 +94,7 @@ class AdminEventServiceTest {
 			given(userService.getUserById(userId)).willReturn(normalUser);
 
 			// when & then
-			assertThatThrownBy(() -> adminEventService.createEvent(requestDto, userId))
+			assertThatThrownBy(() -> adminEventProductService.createEvent(requestDto, userId))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS.getMessage());
 		}
@@ -111,7 +111,7 @@ class AdminEventServiceTest {
 			Long adminId = 1L;
 			Long productId = 100L;
 
-			EventUpdateRequestDto requestDto = EventUpdateRequestDto.builder()
+			EventProductUpdateRequestDto requestDto = EventProductUpdateRequestDto.builder()
 				.productName("수정된 상품")
 				.productImage("https://image.com/new.jpg")
 				.description("설명")
@@ -130,13 +130,14 @@ class AdminEventServiceTest {
 				.productName("수정된 상품")
 				.build();
 
-			given(eventRepository.findById(productId)).willReturn(Optional.of(existing));
+			given(eventProductRepository.findById(productId)).willReturn(Optional.of(existing));
 			given(userService.getUserById(adminId)).willReturn(admin);
 			given(existing.updateEventInfoFromRequest(
 				any(), any(), any(), any(), any())).willReturn(updated);
 
 			// when
-			EventUpdateResponseDto result = adminEventService.updateEventInto(productId, requestDto, adminId);
+			EventProductUpdateResponseDto result = adminEventProductService.updateEventInfo(productId, requestDto,
+				adminId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -149,12 +150,12 @@ class AdminEventServiceTest {
 			// given
 			Long productId = 100L;
 			Long userId = 1L;
-			EventUpdateRequestDto requestDto = EventUpdateRequestDto.builder().build();
+			EventProductUpdateRequestDto requestDto = EventProductUpdateRequestDto.builder().build();
 
-			given(eventRepository.findById(productId)).willReturn(Optional.empty());
+			given(eventProductRepository.findById(productId)).willReturn(Optional.empty());
 
 			// when & then
-			assertThatThrownBy(() -> adminEventService.updateEventInto(productId, requestDto, userId))
+			assertThatThrownBy(() -> adminEventProductService.updateEventInfo(productId, requestDto, userId))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.EVENT_PRODUCT_NOT_FOUND.getMessage());
 		}
@@ -178,11 +179,11 @@ class AdminEventServiceTest {
 
 			EventProduct existing = mock(EventProduct.class);
 
-			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
+			given(eventProductRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
 			given(userService.getUserById(adminId)).willReturn(admin);
 
 			// when
-			adminEventService.deleteEventById(productId, adminId);
+			adminEventProductService.deleteEventById(productId, adminId);
 
 			// then
 			verify(existing, times(1)).softDelete();
@@ -202,11 +203,11 @@ class AdminEventServiceTest {
 
 			EventProduct existing = mock(EventProduct.class);
 
-			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
+			given(eventProductRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(existing));
 			given(userService.getUserById(userId)).willReturn(user);
 
 			// when & then
-			assertThatThrownBy(() -> adminEventService.deleteEventById(productId, userId))
+			assertThatThrownBy(() -> adminEventProductService.deleteEventById(productId, userId))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.UNAUTHORIZED_EVENT_PRODUCT_ACCESS.getMessage());
 		}
