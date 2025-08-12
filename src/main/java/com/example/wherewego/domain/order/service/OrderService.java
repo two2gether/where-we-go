@@ -21,6 +21,7 @@ import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.repository.OrderRepository;
+import com.example.wherewego.domain.payment.repository.PaymentRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -36,6 +37,7 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final EventProductService eventProductService;
 	private final EventProductRepository eventProductRepository;
+	private final PaymentRepository paymentRepository;
 
 	@Transactional
 	public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
@@ -172,7 +174,7 @@ public class OrderService {
 	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
 	 */
 	@Transactional
-	public void deletedOrderById(Long orderId, Long userId) {
+	public void cancelOrder(Long orderId, Long userId) {
 		// 1. 주문 조회하기
 		Order findOrder = orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
@@ -181,6 +183,11 @@ public class OrderService {
 		if (!findOrder.getUser().getId().equals(userId)) {
 			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
 		}
+		Long productId = findOrder.getEventProduct().getId();
+		int quantity = findOrder.getQuantity();
+
+		eventProductRepository.increaseStock(productId, quantity);
+		paymentRepository.markExpiredIfReady(orderId);
 
 		// 3. 삭제하기 (DB삭제)
 		orderRepository.delete(findOrder);
