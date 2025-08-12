@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EventDetailResponseDto {
+public class EventProductDetailResponseDto {
 	/**
 	 * 수정된 상품의 고유 식별자
 	 */
