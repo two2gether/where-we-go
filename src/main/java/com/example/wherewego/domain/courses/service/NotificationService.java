@@ -153,7 +153,7 @@ public class NotificationService {
 	 */
 	@Transactional
 	public void deleteAllRead(Long userId) {
-		notificationRepository.deleteByReceiverIdAndIsReadTrue(userId);
+		notificationRepository.deleteByReceiverIdAndIsRead(userId, true);
 	}
 
 }
