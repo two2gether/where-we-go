@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseLikeListResponseDto;
 import com.example.wherewego.domain.courses.dto.response.CourseListResponseDto;
@@ -29,7 +30,6 @@ import com.example.wherewego.domain.courses.service.CourseBookmarkService;
 import com.example.wherewego.domain.courses.service.CourseLikeService;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.courses.service.NotificationService;
-import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
 import com.example.wherewego.domain.order.service.OrderService;
 import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
@@ -358,6 +358,21 @@ public class UserController {
 		Long userId = userDetail.getUser().getId();
 		NotificationResponseDto response = notificationService.markAsRead(notificationId, userId);
 		return ApiResponse.ok("알림이 읽음 처리되었습니다.", response);
+	}
+
+	/**
+	 * 읽은 알림 전체 삭제 API
+	 * DELETE /api/users/mypage/notifications/read
+	 */
+	@DeleteMapping("/mypage/notifications/read")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public ApiResponse<Void> deleteReadNotifications(
+		@AuthenticationPrincipal CustomUserDetail userDetail) {
+
+		Long userId = userDetail.getUser().getId();
+		notificationService.deleteAllRead(userId);
+
+		return ApiResponse.noContent("읽은 알림이 전체 삭제 되었습니다.");
 	}
 
 }

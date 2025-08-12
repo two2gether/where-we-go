@@ -5,6 +5,9 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.wherewego.domain.courses.entity.Notification;
@@ -20,4 +23,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
 	// 읽지 않은 알림만 조회 (상단 알림뱃지 갯수)
 	long countByReceiverIdAndIsReadFalse(Long receiverId);
+
+	// 읽은 알림 전체 삭제
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		    DELETE FROM Notification n
+		    WHERE n.receiverId = :userId
+		      AND n.isRead = true
+		""")
+	int deleteByReceiverIdAndIsReadTrue(@Param("userId") Long userId);
 }
