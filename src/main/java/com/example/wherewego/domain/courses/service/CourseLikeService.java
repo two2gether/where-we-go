@@ -69,6 +69,10 @@ public class CourseLikeService {
 	 */
 	@Transactional
 	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
+		if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
+			throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
+		}
+
 		User user = userService.getUserById(userId);
 
 		final int MAX_RETRY = 4;
@@ -77,20 +81,18 @@ public class CourseLikeService {
 				Course course = courseRepository.findByIdForUpdate(courseId)
 					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
-				int affected = likeRepository.upsertActive(userId, courseId);
+				int affected = likeRepository.insertIgnoreLike(userId, courseId);
 
-				if (affected > 0) {
+				if (affected == 1) {
 					courseRepository.incrementLikeCount(courseId);
 					notificationService.triggerLikeNotification(user, course);
 					safeBumpCacheVersion(userId);
 				}
-				Long likeId = likeRepository.findActiveId(userId, courseId);
-				if (likeId == null) {
-					return new CourseLikeResponseDto(null, userId, courseId); // id 없어도 클라이언트 기능엔 영향 없음
-				}
+
+				Long likeId = likeRepository.findId(userId, courseId);
 				return new CourseLikeResponseDto(likeId, userId, courseId);
 
-			} catch (org.springframework.dao.PessimisticLockingFailureException e) {
+			} catch (PessimisticLockingFailureException e) {
 				if (i == MAX_RETRY - 1)
 					throw e;
 				try {
@@ -109,13 +111,17 @@ public class CourseLikeService {
 	 */
 	@Transactional
 	public void deleteCourseLike(Long userId, Long courseId) {
-		final int MAX_RETRY = 5;
+		final int MAX_RETRY = 4;
 		for (int i = 0; i < MAX_RETRY; i++) {
 			try {
 				courseRepository.findByIdForUpdate(courseId)
 					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+				// 좋아요 존재 여부 확인
+				if (!likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
+					throw new CustomException(ErrorCode.LIKE_NOT_FOUND);
+				}
 
-				int deleted = likeRepository.deleteByUserIdAndCourseId(userId, courseId);
+				int deleted = likeRepository.deleteLike(userId, courseId);
 				if (deleted == 1) {
 					courseRepository.decrementLikeCount(courseId);
 					safeBumpCacheVersion(userId);
@@ -156,9 +162,7 @@ public class CourseLikeService {
 		}
 
 		//place가져오기
-		List<Long> courseIds = pagedLikeList.getContent().stream()
-			.map(CourseLike::getId)
-			.toList();
+		List<Long> courseIds = pagedLikeList.getContent().stream().map(CourseLike::getId).toList();
 
 		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
 			courseIds);
@@ -166,16 +170,14 @@ public class CourseLikeService {
 		Map<Long, List<PlacesOrder>> mappedPlaceOrders = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream()
-			.map(courseLike -> {
-				Course course = courseLike.getCourse();
-				List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(),
-					new ArrayList<>());
-				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
-				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
-				return CourseMapper.toCourseLikeDto(course, courseLike, places);
-			})
-			.toList();
+		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream().map(courseLike -> {
+			Course course = courseLike.getCourse();
+			List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(),
+				new ArrayList<>());
+			List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
+			List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
+			return CourseMapper.toCourseLikeDto(course, courseLike, places);
+		}).toList();
 
 		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalPages()));
 	}
