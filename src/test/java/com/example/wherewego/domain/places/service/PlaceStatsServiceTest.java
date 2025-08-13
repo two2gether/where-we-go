@@ -17,8 +17,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
+import com.example.wherewego.domain.places.entity.PlaceBookmark;
+import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
+import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.global.util.CacheKeyUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,21 +50,42 @@ class PlaceStatsServiceTest {
 			// given
 			String placeId = "test-place-id";
 			Long userId = 1L;
+			
+			User user = User.builder()
+				.id(userId)
+				.email("test@example.com")
+				.build();
+			
+			User otherUser = User.builder()
+				.id(2L)
+				.email("other@example.com")
+				.build();
 
-			given(placeReviewRepository.getReviewCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 5L}));
+			// 리뷰 엔티티 생성 (총 5개, 평균 4.6점)
+			List<PlaceReview> mockReviews = Arrays.asList(
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(4).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(5).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(4).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(5).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(5).build()
+			);
 
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.5}));
+			// 북마크 엔티티 생성 (총 10개, 그 중 userId=1인 북마크 1개 포함)
+			List<PlaceBookmark> mockBookmarks = Arrays.asList(
+				PlaceBookmark.builder().placeId(placeId).user(user).build(), // userId 북마크
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build()
+			);
 
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 10L}));
-
-			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, List.of(placeId)))
-				.willReturn(Arrays.asList(placeId));
-
-			given(placeReviewRepository.findPlaceIdsWithUserReviews(userId, List.of(placeId)))
-				.willReturn(List.of());
+			given(placeReviewRepository.findAllByPlaceIdIn(anyList())).willReturn(mockReviews);
+			given(placeBookmarkRepository.findAllByPlaceIdIn(anyList())).willReturn(mockBookmarks);
 
 			// when
 			PlaceStatsDto result = placeStatsService.getPlaceStats(placeId, userId);
@@ -70,7 +94,7 @@ class PlaceStatsServiceTest {
 			assertThat(result).isNotNull();
 			assertThat(result.getPlaceId()).isEqualTo(placeId);
 			assertThat(result.getReviewCount()).isEqualTo(5L);
-			assertThat(result.getAverageRating()).isEqualTo(4.5);
+			assertThat(result.getAverageRating()).isEqualTo(4.6);
 			assertThat(result.getBookmarkCount()).isEqualTo(10L);
 			assertThat(result.getIsBookmarked()).isTrue();
 			assertThat(result.getHasUserReview()).isFalse();
@@ -81,15 +105,34 @@ class PlaceStatsServiceTest {
 		void getPlaceStats_WithoutUserId_Success() {
 			// given
 			String placeId = "test-place-id";
+			
+			User otherUser = User.builder().id(2L).email("other@example.com").build();
 
-			given(placeReviewRepository.getReviewCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 5L}));
+			// 리뷰 엔티티 생성
+			List<PlaceReview> mockReviews = Arrays.asList(
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(5).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(5).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(4).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(4).build(),
+				PlaceReview.builder().placeId(placeId).user(otherUser).rating(4).build()
+			);
 
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.5}));
+			// 북마크 엔티티 생성
+			List<PlaceBookmark> mockBookmarks = Arrays.asList(
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build(),
+				PlaceBookmark.builder().placeId(placeId).user(otherUser).build()
+			);
 
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 10L}));
+			given(placeReviewRepository.findAllByPlaceIdIn(anyList())).willReturn(mockReviews);
+			given(placeBookmarkRepository.findAllByPlaceIdIn(anyList())).willReturn(mockBookmarks);
 
 			// when
 			PlaceStatsDto result = placeStatsService.getPlaceStats(placeId, null);
@@ -98,7 +141,7 @@ class PlaceStatsServiceTest {
 			assertThat(result).isNotNull();
 			assertThat(result.getPlaceId()).isEqualTo(placeId);
 			assertThat(result.getReviewCount()).isEqualTo(5L);
-			assertThat(result.getAverageRating()).isEqualTo(4.5);
+			assertThat(result.getAverageRating()).isEqualTo(4.4);
 			assertThat(result.getBookmarkCount()).isEqualTo(10L);
 			assertThat(result.getIsBookmarked()).isNull();
 			assertThat(result.getHasUserReview()).isNull();
@@ -110,20 +153,17 @@ class PlaceStatsServiceTest {
 			// given
 			String placeId = "test-place-id";
 
-			given(placeReviewRepository.getReviewCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
-
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, null}));
-
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
+			// 빈 리스트 반환 (리뷰 없음)
+			given(placeReviewRepository.findAllByPlaceIdIn(anyList())).willReturn(List.of());
+			given(placeBookmarkRepository.findAllByPlaceIdIn(anyList())).willReturn(List.of());
 
 			// when
 			PlaceStatsDto result = placeStatsService.getPlaceStats(placeId, null);
 
 			// then
 			assertThat(result.getAverageRating()).isEqualTo(0.0);
+			assertThat(result.getReviewCount()).isEqualTo(0L);
+			assertThat(result.getBookmarkCount()).isEqualTo(0L);
 		}
 
 		@Test
@@ -131,15 +171,17 @@ class PlaceStatsServiceTest {
 		void getPlaceStats_DecimalRating_RoundsToTwoDecimalPlaces() {
 			// given
 			String placeId = "test-place-id";
+			User user = User.builder().id(1L).email("test@example.com").build();
 
-			given(placeReviewRepository.getReviewCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 3L}));
+			// 평점 평균이 4.6666666666이 되도록 설정
+			List<PlaceReview> mockReviews = Arrays.asList(
+				PlaceReview.builder().placeId(placeId).user(user).rating(5).build(),
+				PlaceReview.builder().placeId(placeId).user(user).rating(4).build(),
+				PlaceReview.builder().placeId(placeId).user(user).rating(5).build()
+			);
 
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 4.6666666666}));
-
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(anyList()))
-				.willReturn(Arrays.<Object[]>asList(new Object[]{placeId, 0L}));
+			given(placeReviewRepository.findAllByPlaceIdIn(anyList())).willReturn(mockReviews);
+			given(placeBookmarkRepository.findAllByPlaceIdIn(anyList())).willReturn(List.of());
 
 			// when
 			PlaceStatsDto result = placeStatsService.getPlaceStats(placeId, null);
@@ -159,33 +201,38 @@ class PlaceStatsServiceTest {
 			// given
 			List<String> placeIds = Arrays.asList("place1", "place2", "place3");
 			Long userId = 1L;
+			
+			User user = User.builder().id(userId).email("test@example.com").build();
+			User otherUser = User.builder().id(2L).email("other@example.com").build();
 
-			given(placeReviewRepository.getReviewCountsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 5L},
-					new Object[]{"place2", 3L},
-					new Object[]{"place3", 8L}
-				));
+			// 리뷰 데이터
+			List<PlaceReview> mockReviews = Arrays.asList(
+				// place1: 2개 리뷰, 평균 4.5점, userId 리뷰 없음
+				PlaceReview.builder().placeId("place1").user(otherUser).rating(4).build(),
+				PlaceReview.builder().placeId("place1").user(otherUser).rating(5).build(),
+				
+				// place2: 1개 리뷰, 평균 4점, userId 리뷰 있음
+				PlaceReview.builder().placeId("place2").user(user).rating(4).build(),
+				
+				// place3: 1개 리뷰, 평균 5점, userId 리뷰 없음
+				PlaceReview.builder().placeId("place3").user(otherUser).rating(5).build()
+			);
 
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 4.5},
-					new Object[]{"place2", 3.8},
-					new Object[]{"place3", 4.9}
-				));
+			// 북마크 데이터
+			List<PlaceBookmark> mockBookmarks = Arrays.asList(
+				// place1: userId 북마크 있음
+				PlaceBookmark.builder().placeId("place1").user(user).build(),
+				PlaceBookmark.builder().placeId("place1").user(otherUser).build(),
+				
+				// place2: userId 북마크 없음
+				PlaceBookmark.builder().placeId("place2").user(otherUser).build(),
+				
+				// place3: userId 북마크 없음
+				PlaceBookmark.builder().placeId("place3").user(otherUser).build()
+			);
 
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 10L},
-					new Object[]{"place2", 7L},
-					new Object[]{"place3", 15L}
-				));
-
-			given(placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds))
-				.willReturn(Arrays.asList("place1"));
-
-			given(placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds))
-				.willReturn(Arrays.asList("place2"));
+			given(placeReviewRepository.findAllByPlaceIdIn(placeIds)).willReturn(mockReviews);
+			given(placeBookmarkRepository.findAllByPlaceIdIn(placeIds)).willReturn(mockBookmarks);
 
 			// when
 			Map<String, PlaceStatsDto> result = placeStatsService.getPlaceStatsMap(placeIds, userId);
@@ -207,27 +254,10 @@ class PlaceStatsServiceTest {
 		void getPlaceStatsMap_WithoutUserId_Success() {
 			// given
 			List<String> placeIds = Arrays.asList("place1", "place2", "place3");
-
-			given(placeReviewRepository.getReviewCountsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 5L},
-					new Object[]{"place2", 3L},
-					new Object[]{"place3", 8L}
-				));
-
-			given(placeReviewRepository.getAverageRatingsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 4.5},
-					new Object[]{"place2", 3.8},
-					new Object[]{"place3", 4.9}
-				));
-
-			given(placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds))
-				.willReturn(Arrays.<Object[]>asList(
-					new Object[]{"place1", 10L},
-					new Object[]{"place2", 7L},
-					new Object[]{"place3", 15L}
-				));
+			
+			// 간단한 mock 데이터
+			given(placeReviewRepository.findAllByPlaceIdIn(placeIds)).willReturn(List.of());
+			given(placeBookmarkRepository.findAllByPlaceIdIn(placeIds)).willReturn(List.of());
 
 			// when
 			Map<String, PlaceStatsDto> result = placeStatsService.getPlaceStatsMap(placeIds, null);

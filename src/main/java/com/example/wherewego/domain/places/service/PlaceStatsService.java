@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.places.dto.response.PlaceStatsDto;
+import com.example.wherewego.domain.places.entity.PlaceBookmark;
+import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceBookmarkRepository;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 
@@ -61,37 +63,38 @@ public class PlaceStatsService {
 		log.debug("배치 통계 조회 시작: {} 개 장소", placeIds.size());
 
 		// 1. 리뷰 개수 배치 조회
-		Map<String, Long> reviewCountMap = placeReviewRepository.getReviewCountsByPlaceIds(placeIds)
-			.stream()
-			.collect(Collectors.toMap(
-				result -> (String)result[0],
-				result -> (Long)result[1]
-			));
+		List<PlaceReview> placeReviews = placeReviewRepository.findAllByPlaceIdIn(placeIds);
+		Map<String, Long> reviewCountMap = placeReviews.stream()
+			.collect(Collectors.groupingBy(PlaceReview::getPlaceId, Collectors.counting()));
 
 		// 2. 평균 평점 배치 조회
-		Map<String, Double> averageRatingMap = placeReviewRepository.getAverageRatingsByPlaceIds(placeIds)
-			.stream()
-			.filter(result -> result[1] != null) // null 값 필터링
-			.collect(Collectors.toMap(
-				result -> (String)result[0],
-				result -> (Double)result[1]
-			));
+		Map<String, Double> averageRatingMap = placeReviews.stream()
+			.filter(review -> review.getRating() != null)
+			.collect(Collectors.groupingBy(PlaceReview::getPlaceId, 
+				Collectors.averagingDouble(PlaceReview::getRating)));
 
 		// 3. 북마크 개수 배치 조회
-		Map<String, Long> bookmarkCountMap = placeBookmarkRepository.getBookmarkCountsByPlaceIds(placeIds)
-			.stream()
-			.collect(Collectors.toMap(
-				result -> (String)result[0],
-				result -> (Long)result[1]
-			));
+		List<PlaceBookmark> placeBookmarks = placeBookmarkRepository.findAllByPlaceIdIn(placeIds);
+		Map<String, Long> bookmarkCountMap = placeBookmarks.stream()
+			.collect(Collectors.groupingBy(PlaceBookmark::getPlaceId, Collectors.counting()));
 
 		// 4. 사용자별 개인화 정보 배치 조회
 		List<String> userBookmarkedPlaces = List.of();
 		List<String> userReviewedPlaces = List.of();
 
 		if (userId != null) {
-			userBookmarkedPlaces = placeBookmarkRepository.findBookmarkedPlaceIds(userId, placeIds);
-			userReviewedPlaces = placeReviewRepository.findPlaceIdsWithUserReviews(userId, placeIds);
+			// 사용자 북마크 정보를 Stream으로 처리
+			userBookmarkedPlaces = placeBookmarks.stream()
+				.filter(bookmark -> bookmark.getUser().getId().equals(userId))
+				.map(PlaceBookmark::getPlaceId)
+				.toList();
+			
+			// 사용자 리뷰 정보를 Stream으로 처리
+			userReviewedPlaces = placeReviews.stream()
+				.filter(review -> review.getUser().getId().equals(userId))
+				.map(PlaceReview::getPlaceId)
+				.distinct()
+				.toList();
 		}
 
 		final List<String> bookmarkedPlaces = userBookmarkedPlaces;
