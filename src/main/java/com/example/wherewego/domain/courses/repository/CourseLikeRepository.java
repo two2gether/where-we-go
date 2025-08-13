@@ -24,26 +24,22 @@ public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = """
-		INSERT INTO course_likes (user_id, course_id, is_deleted, created_at, updated_at, deleted_at)
-		VALUES (:userId, :courseId, 0, NOW(), NOW(), NULL)
-		ON DUPLICATE KEY UPDATE
-		  is_deleted = IF(is_deleted = 1, 0, is_deleted),
-		  deleted_at = IF(is_deleted = 1, NULL, deleted_at),
-		  updated_at = IF(is_deleted = 1, NOW(), updated_at)
+		  DELETE FROM course_likes
+		   WHERE user_id = :userId AND course_id = :courseId
 		""", nativeQuery = true)
-	int upsertActive(@Param("userId") Long userId, @Param("courseId") Long courseId);
+	int deleteLike(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
 	@Modifying
-	@Query("delete from CourseLike cl where cl.user.id = :userId and cl.course.id = :courseId")
-	int deleteByUserIdAndCourseId(@Param("userId") Long userId, @Param("courseId") Long courseId);
-
 	@Query(value = """
-		SELECT id
-		FROM course_likes
-		WHERE user_id = :userId
-		  AND course_id = :courseId
-		  AND is_deleted = 0
+		INSERT IGNORE INTO course_likes (user_id, course_id, is_deleted, created_at, updated_at)
+		VALUES (:userId, :courseId, 0, NOW(), NOW())
 		""", nativeQuery = true)
-	Long findActiveId(@Param("userId") Long userId, @Param("courseId") Long courseId);
+	int insertIgnoreLike(@Param("userId") Long userId, @Param("courseId") Long courseId);
+
+	@Query("""
+		    select l.id from CourseLike l
+		    where l.user.id = :userId and l.course.id = :courseId
+		""")
+	Long findId(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
 }
