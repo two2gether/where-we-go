@@ -22,14 +22,13 @@ public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
 	@EntityGraph(attributePaths = {"course"})
 	Page<CourseLike> findAllByUserId(Long userId, Pageable pageable);
 
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Modifying
 	@Query(value = """
-		INSERT INTO course_likes (user_id, course_id, is_deleted, created_at, updated_at, deleted_at)
-		VALUES (:userId, :courseId, 0, NOW(), NOW(), NULL)
+		INSERT INTO course_likes (user_id, course_id, active, is_deleted, created_at, updated_at)
+		VALUES (:userId, :courseId, 1, 0, NOW(), NOW())
 		ON DUPLICATE KEY UPDATE
-		  is_deleted = IF(is_deleted = 1, 0, is_deleted),
-		  deleted_at = IF(is_deleted = 1, NULL, deleted_at),
-		  updated_at = IF(is_deleted = 1, NOW(), updated_at)
+		    active = IF(active = 0, 1, active),
+		    updated_at = IF(active = 0, NOW(), updated_at)
 		""", nativeQuery = true)
 	int upsertActive(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
@@ -46,4 +45,5 @@ public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
 		""", nativeQuery = true)
 	Long findActiveId(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
+	boolean existsByUserIdAndCourseIdAndActiveTrue(Long userId, Long courseId);
 }

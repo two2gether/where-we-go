@@ -69,6 +69,11 @@ public class CourseLikeService {
 	 */
 	@Transactional
 	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
+		// 1. 이미 좋아요 활성 상태인지 먼저 확인
+		boolean alreadyLiked = likeRepository.existsByUserIdAndCourseIdAndActiveTrue(userId, courseId);
+		if (alreadyLiked) {
+			throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
+		}
 		User user = userService.getUserById(userId);
 
 		final int MAX_RETRY = 4;
@@ -85,16 +90,13 @@ public class CourseLikeService {
 					safeBumpCacheVersion(userId);
 				}
 				Long likeId = likeRepository.findActiveId(userId, courseId);
-				if (likeId == null) {
-					return new CourseLikeResponseDto(null, userId, courseId); // id 없어도 클라이언트 기능엔 영향 없음
-				}
 				return new CourseLikeResponseDto(likeId, userId, courseId);
 
 			} catch (org.springframework.dao.PessimisticLockingFailureException e) {
 				if (i == MAX_RETRY - 1)
 					throw e;
 				try {
-					Thread.sleep(20L * (i + 1));
+					Thread.sleep(20L * (i + 1)); // 짧은 지수 백오프
 				} catch (InterruptedException ignored) {
 				}
 			}
@@ -114,6 +116,12 @@ public class CourseLikeService {
 			try {
 				courseRepository.findByIdForUpdate(courseId)
 					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
+
+				// 먼저 좋아요 존재 여부 확인
+				boolean alreadyLiked = likeRepository.existsByUserIdAndCourseIdAndActiveTrue(userId, courseId);
+				if (!alreadyLiked) {
+					throw new CustomException(ErrorCode.LIKE_NOT_FOUND);
+				}
 
 				int deleted = likeRepository.deleteByUserIdAndCourseId(userId, courseId);
 				if (deleted == 1) {
@@ -156,9 +164,7 @@ public class CourseLikeService {
 		}
 
 		//place가져오기
-		List<Long> courseIds = pagedLikeList.getContent().stream()
-			.map(CourseLike::getId)
-			.toList();
+		List<Long> courseIds = pagedLikeList.getContent().stream().map(CourseLike::getId).toList();
 
 		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
 			courseIds);
@@ -166,16 +172,14 @@ public class CourseLikeService {
 		Map<Long, List<PlacesOrder>> mappedPlaceOrders = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream()
-			.map(courseLike -> {
-				Course course = courseLike.getCourse();
-				List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(),
-					new ArrayList<>());
-				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
-				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
-				return CourseMapper.toCourseLikeDto(course, courseLike, places);
-			})
-			.toList();
+		List<CourseLikeListResponseDto> dtos = pagedLikeList.getContent().stream().map(courseLike -> {
+			Course course = courseLike.getCourse();
+			List<PlacesOrder> orders = mappedPlaceOrders.getOrDefault(courseLike.getCourse().getId(),
+				new ArrayList<>());
+			List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
+			List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
+			return CourseMapper.toCourseLikeDto(course, courseLike, places);
+		}).toList();
 
 		return PagedResponse.from(new PageImpl<>(dtos, pageable, pagedLikeList.getTotalPages()));
 	}
