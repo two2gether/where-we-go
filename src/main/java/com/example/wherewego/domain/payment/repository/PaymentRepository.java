@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.PaymentStatus;
 import com.example.wherewego.domain.payment.entity.Payment;
@@ -37,7 +36,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	 * 해당 주문의 결제가 아직 진행 중(READY)이면 EXPIRED 로 마킹합니다.
 	 */
 	@Modifying(clearAutomatically = true)
-	@Transactional
 	@Query("""
 		    UPDATE Payment p
 		       SET p.paymentStatus = com.example.wherewego.domain.common.enums.PaymentStatus.EXPIRED
@@ -58,7 +56,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	 * @return 업데이트된 행 수 (1이면 성공, 0이면 실패)
 	 */
 	@Modifying(clearAutomatically = true)
-	@Transactional
 	@Query("""
 		UPDATE Payment p 
 		SET p.paymentStatus = com.example.wherewego.domain.common.enums.PaymentStatus.REFUND_REQUESTED,
