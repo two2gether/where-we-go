@@ -43,4 +43,11 @@ public interface EventProductRepository extends JpaRepository<EventProduct, Long
 		""")
 	int increaseStock(@Param("productId") Long productId,
 		@Param("quantity") int quantity);
+
+	/**
+	 * 상품의 조회수를 주어진 값만큼 증가시킵니다.
+	 */
+	@Modifying
+	@Query("UPDATE EventProduct p SET p.viewCount = p.viewCount + :count WHERE p.id = :productId")
+	void incrementViewCount(@Param("productId") Long productId, @Param("count") long count);
 }

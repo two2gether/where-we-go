@@ -1,11 +1,13 @@
 package com.example.wherewego.domain.eventproduct.service;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,10 +30,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EventProductService {
 
-	private final EventRepository eventRepository;
-	private final RedisTemplate<String, String> redisTemplate;
-	private static final String VIEW_COUNT_KEY_PREFIX = "view_count:eventProduct:";
 	private final EventProductRepository eventProductRepository;
+	private final RedisTemplate<String, String> redisTemplate;
+	private static final String VIEW_COUNT_KEY = "view_count:eventProduct:";
 
 	/**
 	 * 이벤트 상품 목록을 페이징하여 조회합니다.(삭제되지 않은 상품만)
@@ -62,15 +63,14 @@ public class EventProductService {
 	 * @return 이벤트 상품 상세 정보
 	 * @throws CustomException 상품을 찾을 수 없는 경우
 	 */
-	@Transactional
+	@Transactional(readOnly = true)
 	public EventProductDetailResponseDto findEventById(Long productId) {
 		// 1. 상품 조회
 		EventProduct findProduct = eventProductRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
 
 		// 2. 조회수 증가 (Redis)
-		String viewCountKey = VIEW_COUNT_KEY_PREFIX + productId;
-		redisTemplate.opsForValue().increment(viewCountKey);
+		redisTemplate.opsForValue().increment(VIEW_COUNT_KEY + productId);
 
 		// 3. [조회된 엔티티 -> 응답 DTO 변환]
 		return EventProductMapper.toDetailDto(findProduct);
@@ -87,5 +87,34 @@ public class EventProductService {
 	public EventProduct getEventProductById(Long productId) {
 		return eventProductRepository.findByIdAndIsDeletedFalse(productId)
 			.orElseThrow(() -> new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+	}
+
+	/**
+	 * 10분마다 실행되어 Redis의 해당 상품의 누적 조회수를 DB에 반영합니다.
+	 * Redis는 DB 업데이트 전까지 임시로 조회수를 쌓아두는 공간으로 활용됩니다.
+	 */
+	@Scheduled(cron = "0 */10 * * * *")
+	@Transactional
+	public void updateViewCountsToDB() {
+		Set<String> keys = redisTemplate.keys(VIEW_COUNT_KEY + "*");
+
+		if (keys == null || keys.isEmpty()) {
+			return; // 처리할 키가 없으면 즉시 종료
+		}
+
+		// 각 키를 순회하며 DB에 반영
+		for (String key : keys) {
+			String productIdStr = key.substring(VIEW_COUNT_KEY.length());
+			Long productId = Long.parseLong(productIdStr);
+
+			String viewCountStr = redisTemplate.opsForValue().get(key);
+			if (viewCountStr == null) continue;
+
+			long viewCountToAdd = Long.parseLong(viewCountStr);
+			eventProductRepository.incrementViewCount(productId, viewCountToAdd);
+
+			// DB에 성공적으로 반영된 키는 Redis에서 삭제하여 중복 반영을 방지
+			redisTemplate.delete(key);
+		}
 	}
 }
