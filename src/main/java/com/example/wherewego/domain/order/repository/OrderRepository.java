@@ -95,7 +95,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 		   WHERE o.id = :orderId
 		     AND o.status IN :fromStatuses
 		""")
-	int updateStatusIfCurrent(Long orderId,
-		com.example.wherewego.domain.common.enums.OrderStatus toStatus,
-		java.util.Collection<com.example.wherewego.domain.common.enums.OrderStatus> fromStatuses);
+	int updateStatusIfCurrent(@Param("orderId") Long orderId, @Param("toStatus") OrderStatus toStatus,
+		@Param("fromStatuses") Collection<OrderStatus> fromStatuses
+	);
 }
