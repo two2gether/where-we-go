@@ -21,6 +21,7 @@ import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.mapper.OrderMapper;
 import com.example.wherewego.domain.order.repository.OrderRepository;
+import com.example.wherewego.domain.payment.repository.PaymentRepository;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
@@ -36,10 +37,15 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final EventProductService eventProductService;
 	private final EventProductRepository eventProductRepository;
+	private final PaymentRepository paymentRepository;
 
 	@Transactional
 	public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
-
+		int quantity = requestDto.getQuantity();
+		// 인당 주문은 하나만 가능
+		if (quantity != 1) {
+			throw new CustomException(ErrorCode.ONLY_ONE_ITEM_ALLOWED);
+		}
 		// 재주문 금지 대상
 		Set<OrderStatus> blockedStatus = EnumSet.of(
 			OrderStatus.PENDING,
@@ -54,7 +60,6 @@ public class OrderService {
 		// 1. 사용자 조회
 		User user = userService.getUserById(userId);
 		Long productId = requestDto.getProductId();
-		int quantity = requestDto.getQuantity();
 
 		// 2. Atomic Update 호출
 		int updated = eventProductRepository.decreaseStockIfAvailable(productId, quantity);
@@ -172,7 +177,7 @@ public class OrderService {
 	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
 	 */
 	@Transactional
-	public void deletedOrderById(Long orderId, Long userId) {
+	public void cancelOrder(Long orderId, Long userId) {
 		// 1. 주문 조회하기
 		Order findOrder = orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ORDER_NOT_FOUND));
@@ -181,6 +186,11 @@ public class OrderService {
 		if (!findOrder.getUser().getId().equals(userId)) {
 			throw new CustomException(ErrorCode.UNAUTHORIZED_ORDER_ACCESS);
 		}
+		Long productId = findOrder.getEventProduct().getId();
+		int quantity = findOrder.getQuantity();
+
+		eventProductRepository.increaseStock(productId, quantity);
+		paymentRepository.markExpiredIfReady(orderId);
 
 		// 3. 삭제하기 (DB삭제)
 		orderRepository.delete(findOrder);

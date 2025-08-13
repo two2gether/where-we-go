@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.order.entity.Order;
@@ -90,14 +89,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 	 *@return 업데이트 된 행 수
 	 */
 	@Modifying(clearAutomatically = true)
-	@Transactional
 	@Query("""
 		  UPDATE Order o
 		     SET o.status = :toStatus
 		   WHERE o.id = :orderId
 		     AND o.status IN :fromStatuses
 		""")
-	int updateStatusIfCurrent(Long orderId,
-		com.example.wherewego.domain.common.enums.OrderStatus toStatus,
-		java.util.Collection<com.example.wherewego.domain.common.enums.OrderStatus> fromStatuses);
+	int updateStatusIfCurrent(@Param("orderId") Long orderId, @Param("toStatus") OrderStatus toStatus,
+		@Param("fromStatuses") Collection<OrderStatus> fromStatuses
+	);
 }
