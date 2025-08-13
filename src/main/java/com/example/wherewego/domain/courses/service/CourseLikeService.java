@@ -3,6 +3,7 @@ package com.example.wherewego.domain.courses.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.Cacheable;
@@ -53,14 +54,6 @@ public class CourseLikeService {
 	private final NotificationService notificationService;
 	private final RedisTemplate<String, Object> redisTemplate;
 
-	private void safeBumpCacheVersion(Long userId) {
-		try {
-			redisTemplate.opsForValue().increment("course-like-list:ver:" + userId);
-		} catch (Exception e) {
-			log.warn("Cache evict skipped (redis issue): {}", e.getMessage());
-		}
-	}
-
 	/**
 	 *
 	 * @param userId 요청 사용자 ID
@@ -86,7 +79,12 @@ public class CourseLikeService {
 				if (affected == 1) {
 					courseRepository.incrementLikeCount(courseId);
 					notificationService.triggerLikeNotification(user, course);
-					safeBumpCacheVersion(userId);
+					// 캐시 삭제
+					String pattern = "course-like-list::userId:" + userId + ":*";
+					Set<String> keysToDelete = redisTemplate.keys(pattern);
+					if (keysToDelete != null && !keysToDelete.isEmpty()) {
+						redisTemplate.delete(keysToDelete);
+					}
 				}
 
 				Long likeId = likeRepository.findId(userId, courseId);
@@ -124,7 +122,12 @@ public class CourseLikeService {
 				int deleted = likeRepository.deleteLike(userId, courseId);
 				if (deleted == 1) {
 					courseRepository.decrementLikeCount(courseId);
-					safeBumpCacheVersion(userId);
+					// 캐시 삭제
+					String pattern = "course-like-list::userId:" + userId + ":*";
+					Set<String> keysToDelete = redisTemplate.keys(pattern);
+					if (keysToDelete != null && !keysToDelete.isEmpty()) {
+						redisTemplate.delete(keysToDelete);
+					}
 				}
 				return;
 
