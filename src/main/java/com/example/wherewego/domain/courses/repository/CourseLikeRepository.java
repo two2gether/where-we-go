@@ -22,28 +22,24 @@ public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
 	@EntityGraph(attributePaths = {"course"})
 	Page<CourseLike> findAllByUserId(Long userId, Pageable pageable);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = """
+		  DELETE FROM course_likes
+		   WHERE user_id = :userId AND course_id = :courseId
+		""", nativeQuery = true)
+	int deleteLike(@Param("userId") Long userId, @Param("courseId") Long courseId);
+
 	@Modifying
 	@Query(value = """
-		INSERT INTO course_likes (user_id, course_id, active, is_deleted, created_at, updated_at)
-		VALUES (:userId, :courseId, 1, 0, NOW(), NOW())
-		ON DUPLICATE KEY UPDATE
-		    active = IF(active = 0, 1, active),
-		    updated_at = IF(active = 0, NOW(), updated_at)
+		INSERT IGNORE INTO course_likes (user_id, course_id, is_deleted, created_at, updated_at)
+		VALUES (:userId, :courseId, 0, NOW(), NOW())
 		""", nativeQuery = true)
-	int upsertActive(@Param("userId") Long userId, @Param("courseId") Long courseId);
+	int insertIgnoreLike(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
-	@Modifying
-	@Query("delete from CourseLike cl where cl.user.id = :userId and cl.course.id = :courseId")
-	int deleteByUserIdAndCourseId(@Param("userId") Long userId, @Param("courseId") Long courseId);
+	@Query("""
+		    select l.id from CourseLike l
+		    where l.user.id = :userId and l.course.id = :courseId
+		""")
+	Long findId(@Param("userId") Long userId, @Param("courseId") Long courseId);
 
-	@Query(value = """
-		SELECT id
-		FROM course_likes
-		WHERE user_id = :userId
-		  AND course_id = :courseId
-		  AND is_deleted = 0
-		""", nativeQuery = true)
-	Long findActiveId(@Param("userId") Long userId, @Param("courseId") Long courseId);
-
-	boolean existsByUserIdAndCourseIdAndActiveTrue(Long userId, Long courseId);
 }

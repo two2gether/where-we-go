@@ -69,11 +69,10 @@ public class CourseLikeService {
 	 */
 	@Transactional
 	public CourseLikeResponseDto createCourseLike(Long userId, Long courseId) {
-		// 1. 이미 좋아요 활성 상태인지 먼저 확인
-		boolean alreadyLiked = likeRepository.existsByUserIdAndCourseIdAndActiveTrue(userId, courseId);
-		if (alreadyLiked) {
+		if (likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
 			throw new CustomException(ErrorCode.LIKE_ALREADY_EXISTS);
 		}
+
 		User user = userService.getUserById(userId);
 
 		final int MAX_RETRY = 4;
@@ -82,21 +81,22 @@ public class CourseLikeService {
 				Course course = courseRepository.findByIdForUpdate(courseId)
 					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
-				int affected = likeRepository.upsertActive(userId, courseId);
+				int affected = likeRepository.insertIgnoreLike(userId, courseId);
 
-				if (affected > 0) {
+				if (affected == 1) {
 					courseRepository.incrementLikeCount(courseId);
 					notificationService.triggerLikeNotification(user, course);
 					safeBumpCacheVersion(userId);
 				}
-				Long likeId = likeRepository.findActiveId(userId, courseId);
+
+				Long likeId = likeRepository.findId(userId, courseId);
 				return new CourseLikeResponseDto(likeId, userId, courseId);
 
-			} catch (org.springframework.dao.PessimisticLockingFailureException e) {
+			} catch (PessimisticLockingFailureException e) {
 				if (i == MAX_RETRY - 1)
 					throw e;
 				try {
-					Thread.sleep(20L * (i + 1)); // 짧은 지수 백오프
+					Thread.sleep(20L * (i + 1));
 				} catch (InterruptedException ignored) {
 				}
 			}
@@ -111,19 +111,17 @@ public class CourseLikeService {
 	 */
 	@Transactional
 	public void deleteCourseLike(Long userId, Long courseId) {
-		final int MAX_RETRY = 5;
+		final int MAX_RETRY = 4;
 		for (int i = 0; i < MAX_RETRY; i++) {
 			try {
 				courseRepository.findByIdForUpdate(courseId)
 					.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
-
-				// 먼저 좋아요 존재 여부 확인
-				boolean alreadyLiked = likeRepository.existsByUserIdAndCourseIdAndActiveTrue(userId, courseId);
-				if (!alreadyLiked) {
+				// 좋아요 존재 여부 확인
+				if (!likeRepository.existsByUserIdAndCourseId(userId, courseId)) {
 					throw new CustomException(ErrorCode.LIKE_NOT_FOUND);
 				}
 
-				int deleted = likeRepository.deleteByUserIdAndCourseId(userId, courseId);
+				int deleted = likeRepository.deleteLike(userId, courseId);
 				if (deleted == 1) {
 					courseRepository.decrementLikeCount(courseId);
 					safeBumpCacheVersion(userId);

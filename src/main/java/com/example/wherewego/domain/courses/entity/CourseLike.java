@@ -3,7 +3,6 @@ package com.example.wherewego.domain.courses.entity;
 import com.example.wherewego.domain.common.entity.BaseEntity;
 import com.example.wherewego.domain.user.entity.User;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -53,15 +52,8 @@ public class CourseLike extends BaseEntity {
 	@JoinColumn(name = "course_id", nullable = false)
 	private Course course;
 
-	/**
-	 * 좋아요 활성 여부
-	 */
-	@Column(name = "active", nullable = false)
-	private Boolean active = true;
-
 	public CourseLike(User user, Course course) {
 		this.user = user;
 		this.course = course;
-		this.active = true;
 	}
 }
