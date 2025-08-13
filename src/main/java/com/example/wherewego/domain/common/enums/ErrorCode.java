@@ -42,6 +42,7 @@ public enum ErrorCode {
 	ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문이 존재하지 않습니다."),
 	UNAUTHORIZED_ORDER_ACCESS(HttpStatus.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."),
 	ORDER_ALREADY_EXISTS_FOR_USER(HttpStatus.CONFLICT, "이미 진행 중인 주문이 있습니다."),
+	ONLY_ONE_ITEM_ALLOWED(HttpStatus.BAD_REQUEST, "하나의 상품만 주문할 수 있습니다."),
 
 	// 결제 관련 에러 정의
 	PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
