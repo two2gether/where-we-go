@@ -41,7 +41,11 @@ public class OrderService {
 
 	@Transactional
 	public OrderCreateResponseDto createOrder(OrderCreateRequestDto requestDto, Long userId) {
-
+		int quantity = requestDto.getQuantity();
+		// 인당 주문은 하나만 가능
+		if (quantity != 1) {
+			throw new CustomException(ErrorCode.ONLY_ONE_ITEM_ALLOWED);
+		}
 		// 재주문 금지 대상
 		Set<OrderStatus> blockedStatus = EnumSet.of(
 			OrderStatus.PENDING,
@@ -56,7 +60,6 @@ public class OrderService {
 		// 1. 사용자 조회
 		User user = userService.getUserById(userId);
 		Long productId = requestDto.getProductId();
-		int quantity = requestDto.getQuantity();
 
 		// 2. Atomic Update 호출
 		int updated = eventProductRepository.decreaseStockIfAvailable(productId, quantity);
