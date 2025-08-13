@@ -50,6 +50,7 @@ public enum ErrorCode {
 	INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "결제 완료된 건만 환불 가능합니다."),
 	REFUND_TIME_EXPIRED(HttpStatus.BAD_REQUEST, "환불 가능 기간이 지났습니다."),
 	REFUND_ALREADY_REQUESTED(HttpStatus.CONFLICT, "이미 환불 요청된 결제입니다."),
+	REFUND_NOT_POSSIBLE(HttpStatus.BAD_REQUEST, "현재 환불이 불가능합니다."),
 	REFUND_PROCESSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "환불 처리 중 오류가 발생했습니다."),
 
 	// 외부 API 관련 에러 정의
