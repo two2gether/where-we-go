@@ -152,7 +152,7 @@ public class CommentService {
 	 * @return 페이징된 댓글 목록
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)", unless = "#result == null")
+	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 
 		// 코스 존재 여부 확인
@@ -177,7 +177,7 @@ public class CommentService {
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
 	 * @return 페이징된 댓글 목록
 	 */
-	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)", unless = "#result == null")
+	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
 		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
 		Page<CommentResponseDto> dtoPage = page.map(this::toDto);
@@ -216,13 +216,13 @@ public class CommentService {
 		String coursePattern = "course-comment-list::courseId:" + courseId + ":*";
 		String userPattern = "user-comment-list::userId:" + userId + ":*";
 
-		Set<String> couresKeysToDelete = redisTemplate.keys(coursePattern);
+		Set<String> courseKeysToDelete = redisTemplate.keys(coursePattern);
 		Set<String> userKeysToDelete = redisTemplate.keys(userPattern);
 
-		if (couresKeysToDelete != null && !couresKeysToDelete.isEmpty()) {
-			redisTemplate.delete(couresKeysToDelete);
+		if (!courseKeysToDelete.isEmpty()) {
+			redisTemplate.delete(courseKeysToDelete);
 		}
-		if (userKeysToDelete != null && !userKeysToDelete.isEmpty()) {
+		if (!userKeysToDelete.isEmpty()) {
 			redisTemplate.delete(userKeysToDelete);
 		}
 	}
