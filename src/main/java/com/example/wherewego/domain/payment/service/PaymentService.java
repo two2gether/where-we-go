@@ -199,6 +199,7 @@ public class PaymentService {
 
 	/**
 	 * 환불 요청 처리 (전액 환불만 지원)
+	 * 동시성 문제를 해결하기 위해 원자적 업데이트를 사용합니다.
 	 *
 	 * @param orderId 주문 ID
 	 * @param requestDto 환불 요청 정보
@@ -208,16 +209,47 @@ public class PaymentService {
 	 */
 	@Transactional
 	public RefundResponseDto requestRefund(Long orderId, RefundRequestDto requestDto, Long userId) {
-		// 1. 결제 정보 조회 및 검증
-		Payment payment = validateRefundEligibility(orderId, userId);
+		// 1. 원자적 환불 상태 변경 (Race Condition 방지)
+		LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+		int updatedRows = paymentRepository.requestRefundAtomically(
+			orderId, userId, requestDto.getRefundReason(), sevenDaysAgo);
+		
+		// 2. 업데이트 실패 시 환불 불가능 예외 발생
+		if (updatedRows == 0) {
+			// 구체적인 실패 원인 확인을 위해 결제 정보 조회
+			Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId)
+				.orElse(null);
+			
+			if (payment == null) {
+				throw new CustomException(ErrorCode.PAYMENT_NOT_FOUND);
+			}
+			
+			// 상태별 세부 에러 메시지
+			if (!PaymentStatus.DONE.equals(payment.getPaymentStatus())) {
+				if (PaymentStatus.REFUND_REQUESTED.equals(payment.getPaymentStatus()) ||
+				    PaymentStatus.REFUNDED.equals(payment.getPaymentStatus())) {
+					throw new CustomException(ErrorCode.REFUND_ALREADY_REQUESTED);
+				}
+				throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
+			}
+			
+			// 7일 제한 확인
+			if (payment.getCreatedAt().isBefore(sevenDaysAgo)) {
+				throw new CustomException(ErrorCode.REFUND_TIME_EXPIRED);
+			}
+			
+			// 그 외의 경우 (예: 동시성 충돌)
+			throw new CustomException(ErrorCode.REFUND_NOT_POSSIBLE);
+		}
 
-		// 2. 환불 요청 상태로 변경
-		payment.requestRefund(requestDto.getRefundReason(), userId);
+		// 3. 업데이트된 결제 정보 다시 조회
+		Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-		// 3. TOSS API 호출
+		// 4. TOSS API 호출
 		callTossRefundApi(payment);
 
-		// 4. 응답 DTO 생성
+		// 5. 응답 DTO 생성
 		return RefundResponseDto.builder()
 			.paymentId(payment.getId())
 			.orderId(payment.getOrder().getId())
@@ -229,13 +261,15 @@ public class PaymentService {
 	}
 
 	/**
-	 * 환불 가능성 검증
+	 * [DEPRECATED] 환불 가능성 검증 - 동시성 문제로 인해 사용 중단
+	 * 대신 requestRefundAtomically() 메서드의 원자적 업데이트를 사용하세요.
 	 *
 	 * @param orderId 주문 ID
 	 * @param userId 사용자 ID (본인 확인용)
 	 * @return 환불 가능한 결제 정보
 	 * @throws CustomException 환불 불가능한 경우 (결제 정보 없음, 이미 환불됨, 기간 만료 등)
 	 */
+	@Deprecated
 	private Payment validateRefundEligibility(Long orderId, Long userId) {
 		// 결제 정보 조회
 		Payment payment = paymentRepository.findByOrderIdAndUserId(orderId, userId)
