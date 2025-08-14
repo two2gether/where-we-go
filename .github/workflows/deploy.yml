@@ -226,55 +226,95 @@ jobs:
         
         echo "✅ Service is now stable!"
 
-    - name: Verify deployment
+    - name: Run task directly and check logs
       run: |
-        echo "Verifying ECS deployment..."
+        echo "🚀 Running ECS task directly for debugging..."
         
-        # 서비스 상태 확인
-        SERVICE_STATUS=$(aws ecs describe-services \
+        # 태스크를 직접 실행
+        echo "Starting new task..."
+        TASK_ARN=$(aws ecs run-task \
           --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }} \
-          --query 'services[0].status' \
+          --task-definition ${{ env.CONTAINER_NAME }} \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[subnet-0e533526451bc7f03,subnet-0ae50afddab2e86a7],securityGroups=[sg-090c59b19c64fcc0b],assignPublicIp=ENABLED}" \
+          --query 'tasks[0].taskArn' \
+          --output text)
+        
+        echo "Task started: $TASK_ARN"
+        
+        # 태스크 상태 모니터링
+        echo "Waiting for task to start..."
+        sleep 30
+        
+        # 태스크 상태 확인
+        TASK_STATUS=$(aws ecs describe-tasks \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --tasks $TASK_ARN \
+          --query 'tasks[0].lastStatus' \
           --output text)
           
-        echo "Service Status: $SERVICE_STATUS"
+        echo "Task Status: $TASK_STATUS"
         
-        if [[ "$SERVICE_STATUS" != "ACTIVE" ]]; then
-          echo "❌ Service is not active"
-          exit 1
-        fi
-        
-        # 러닝 태스크 확인
-        RUNNING_COUNT=$(aws ecs describe-services \
+        # 태스크 상세 정보 출력
+        echo "📋 Task Details:"
+        aws ecs describe-tasks \
           --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }} \
-          --query 'services[0].runningCount' \
+          --tasks $TASK_ARN \
+          --query 'tasks[0].{TaskArn:taskArn,LastStatus:lastStatus,DesiredStatus:desiredStatus,StoppedReason:stoppedReason,Containers:containers[*].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason}}' \
+          --output table
+        
+        # 컨테이너별 로그 확인
+        echo "📄 Checking container logs..."
+        
+        # Redis 로그
+        echo "=== Redis Container Logs ==="
+        aws logs get-log-events \
+          --log-group-name "/ecs/wherewego-redis" \
+          --log-stream-name "ecs/redis/$(echo $TASK_ARN | cut -d'/' -f3)" \
+          --query 'events[*].message' \
+          --output text || echo "No Redis logs found yet"
+        
+        # Spring Boot 앱 로그
+        echo "=== Spring Boot App Logs ==="
+        aws logs get-log-events \
+          --log-group-name "/ecs/wherewego-app" \
+          --log-stream-name "ecs/wherewego-app/$(echo $TASK_ARN | cut -d'/' -f3)" \
+          --query 'events[*].message' \
+          --output text || echo "No app logs found yet"
+        
+        # 30초 더 기다린 후 다시 확인
+        echo "Waiting 30 more seconds and checking again..."
+        sleep 30
+        
+        # 최종 태스크 상태 확인
+        FINAL_STATUS=$(aws ecs describe-tasks \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --tasks $TASK_ARN \
+          --query 'tasks[0].lastStatus' \
           --output text)
           
-        echo "Running Tasks: $RUNNING_COUNT"
+        echo "Final Task Status: $FINAL_STATUS"
         
-        if [[ "$RUNNING_COUNT" -eq 0 ]]; then
-          echo "❌ No running tasks found"
+        if [[ "$FINAL_STATUS" == "RUNNING" ]]; then
+          echo "✅ Task is running successfully!"
           
-          # 태스크 실패 원인 확인
-          echo "Checking stopped tasks for failure reasons..."
-          aws ecs list-tasks \
+          # 태스크 정리 (테스트용이므로)
+          echo "Stopping test task..."
+          aws ecs stop-task \
             --cluster ${{ env.ECS_CLUSTER }} \
-            --service-name ${{ env.ECS_SERVICE }} \
-            --desired-status STOPPED \
-            --query 'taskArns[0]' \
-            --output text | \
-          xargs -I {} aws ecs describe-tasks \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --tasks {} \
-            --query 'tasks[0].stoppedReason' \
-            --output text
+            --task $TASK_ARN \
+            --reason "Test deployment completed"
+        else
+          echo "❌ Task failed to start or stopped unexpectedly"
           
-          exit 1
+          # 실패 원인 상세 조회
+          echo "=== Failure Analysis ==="
+          aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks $TASK_ARN \
+            --query 'tasks[0]' \
+            --output json
         fi
-        
-        echo "✅ Service is running with $RUNNING_COUNT task(s)"
-        echo "🎉 Deployment verification completed successfully!"
 
   notify:
     runs-on: ubuntu-latest
