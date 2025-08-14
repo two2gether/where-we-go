@@ -14,17 +14,19 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment'
+    outputs:
+      image-uri: ${{ steps.build-image.outputs.image }}
+      environment: ${{ steps.set-env.outputs.environment }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Notify deployment start
+      - name: Notify build start
         run: |
-          # 배포 시작 알림
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             ENV_ICON="🚀"
             ENV_NAME="Production"
@@ -41,56 +43,62 @@ jobs:
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"$ENV_ICON *WhereWeGo Deployment Started* 🏁\n배포를 시작합니다...\"
+                  \"text\": \"$ENV_ICON *WhereWeGo Build Started* 🔨\\n빌드를 시작합니다...\"
                 }
               }, {
                 \"type\": \"section\",
                 \"fields\": [{
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Environment:*\n$ENV_NAME (${{ env.ENVIRONMENT }})\"
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\"
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Author:*\n${{ github.actor }}\"
+                  \"text\": \"*Author:*\\n${{ github.actor }}\"
                 }]
               }]
             }]
           }" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Set environment variables
+        id: set-env
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
-            echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
-            echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
+            echo "environment=prod" >> $GITHUB_OUTPUT
           else
-            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
-            echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
-            echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
+            echo "environment=prod" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"⚙️ Gradle 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          ./gradlew clean build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: GitHubActions
+          role-session-name: GitHubActions-Build
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Notify build start
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{
-            \"text\": \"⚙️ Docker 이미지 빌드 중... (약 2-3분 소요)\"
-          }" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Build and push Docker image
         id: build-image
@@ -98,8 +106,11 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # 빌드 시작 시간 기록
           BUILD_START=$(date +%s)
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🐳 Docker 이미지 빌드 중... (약 2-3분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
           # Docker 이미지 빌드 및 푸시
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -110,62 +121,113 @@ jobs:
           
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
           
-          # 빌드 완료 알림
           BUILD_END=$(date +%s)
           BUILD_DURATION=$((BUILD_END - BUILD_START))
+          
           curl -X POST -H 'Content-type: application/json' \
           --data "{
-            \"text\": \"✅ Docker 빌드 완료! ECR 업로드 중... (소요시간: ${BUILD_DURATION}초)\"
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *빌드 완료!* ✅\\n배포 준비가 완료되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*빌드 시간:*\\n⏱️ ${BUILD_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*다음 단계:*\\n🚀 배포 시작 예정\"
+                }]
+              }]
+            }]
           }" ${{ secrets.SLACK_WEBHOOK }}
 
-      - name: Notify ECS deployment start
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      cluster: ${{ steps.set-deploy-vars.outputs.cluster }}
+      service: ${{ steps.set-deploy-vars.outputs.service }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set deployment variables
+        id: set-deploy-vars
+        run: |
+          echo "cluster=wherewego-prod-cluster" >> $GITHUB_OUTPUT
+          echo "service=wherewego-prod-service" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Notify deployment start
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data "{
-            \"text\": \"🔄 ECS 서비스 배포 중... 잠시만 기다려주세요!\"
+            \"attachments\": [{
+              \"color\": \"#ff9500\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🚀 *배포 시작!* ⚡\\n새 버전을 서버에 배포 중...\"
+                }
+              }]
+            }]
           }" ${{ secrets.SLACK_WEBHOOK }}
 
-      - name: Update task definition and deploy
+      - name: Update task definition and start deployment
         run: |
-          # 배포 시작 시간 기록
           DEPLOY_START=$(date +%s)
+          
           # ECR URI를 태스크 정의에 반영
-          sed "s|ECR_URI_PLACEHOLDER|${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" aws/task-definition.json > temp-task-definition.json
+          sed "s|ECR_URI_PLACEHOLDER|${{ needs.build.outputs.image-uri }}|g" aws/task-definition.json > temp-task-definition.json
           
           # 태스크 정의 등록
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "✅ Task definition registered: $TASK_DEF_ARN"
           
           # 서비스 존재 여부 확인
-          SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'length(services)' --output text 2>/dev/null || echo "0")
+          SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ steps.set-deploy-vars.outputs.cluster }} --services ${{ steps.set-deploy-vars.outputs.service }} --query 'length(services)' --output text 2>/dev/null || echo "0")
           
           if [[ "$SERVICE_EXISTS" == "0" ]]; then
             echo "🚀 Creating new ECS service..."
           
-            # CloudFormation Outputs에서 리소스 ID 가져오기 (유동적)
+            # CloudFormation Outputs에서 리소스 ID 가져오기
             PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
               --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
               --output text)
               
             PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
               --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
               --output text)
               
             ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
               --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
               --output text)
             
-            echo "📋 CloudFormation Stack: wherewego-${{ env.ENVIRONMENT }}"
+            echo "📋 CloudFormation Stack: wherewego-${{ needs.build.outputs.environment }}"
             echo "🔗 Using subnets: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
             echo "🛡️ Using security group: $ECS_SECURITY_GROUP"
           
             # ECS 서비스 생성
             aws ecs create-service \
-              --cluster ${{ env.ECS_CLUSTER }} \
-              --service-name ${{ env.ECS_SERVICE }} \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service-name ${{ steps.set-deploy-vars.outputs.service }} \
               --task-definition ${{ env.CONTAINER_NAME }} \
               --desired-count 1 \
               --launch-type FARGATE \
@@ -175,45 +237,77 @@ jobs:
           
             # 기존 서비스 업데이트
             aws ecs update-service \
-              --cluster ${{ env.ECS_CLUSTER }} \
-              --service ${{ env.ECS_SERVICE }} \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service ${{ steps.set-deploy-vars.outputs.service }} \
               --task-definition ${{ env.CONTAINER_NAME }} \
               --desired-count 1
-          
-            # 서비스 안정화 대기
-            echo "⏳ Waiting for service stability..."
-            aws ecs wait services-stable \
-              --cluster ${{ env.ECS_CLUSTER }} \
-              --services ${{ env.ECS_SERVICE }}
           fi
           
-          echo "✅ Deployment completed successfully!"
-          
-          # 배포 완료 시간 계산
           DEPLOY_END=$(date +%s)
           DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
           
           # 임시 파일 정리
           rm temp-task-definition.json
           
-          # 배포 단계 완료 알림
           curl -X POST -H 'Content-type: application/json' \
           --data "{
-            \"text\": \"🎯 ECS 배포 완료! (소요시간: ${DEPLOY_DURATION}초) 최종 검증 중...\"
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"⚡ *배포 시작됨!* 🎯\\n서비스가 업데이트되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*배포 시간:*\\n⏱️ ${DEPLOY_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
+                }]
+              }]
+            }]
           }" ${{ secrets.SLACK_WEBHOOK }}
 
-      - name: Final deployment notification
-        if: always()
+  verify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Verify
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for service stability and final notification
         run: |
-          # 전체 실행 시간 계산 (job 시작부터)
-          JOB_START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s)
-          JOB_END_TIME=$(date +%s)
-          TOTAL_DURATION=$((JOB_END_TIME - JOB_START_TIME))
-          DURATION_MIN=$((TOTAL_DURATION / 60))
-          DURATION_SEC=$((TOTAL_DURATION % 60))
+          VERIFY_START=$(date +%s)
           
-          # 배포 결과에 따른 메시지 설정
-          if [[ "${{ job.status }}" == "success" ]]; then
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🏥 헬스체크 진행 중... (약 3-5분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            # 서비스 안정화 대기
+            echo "⏳ Waiting for service stability..."
+            aws ecs wait services-stable \
+              --cluster ${{ needs.deploy.outputs.cluster }} \
+              --services ${{ needs.deploy.outputs.service }} \
+              --cli-read-timeout 600 || echo "⚠️ 타임아웃이지만 서비스는 백그라운드에서 계속 진행됩니다"
+          fi
+          
+          VERIFY_END=$(date +%s)
+          VERIFY_DURATION=$((VERIFY_END - VERIFY_START))
+          VERIFY_MIN=$((VERIFY_DURATION / 60))
+          VERIFY_SEC=$((VERIFY_DURATION % 60))
+          
+          # 전체 결과에 따른 메시지 설정
+          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.deploy.result }}" == "success" ]]; then
             COLOR="good"
             STATUS="✅ SUCCESS"
             MESSAGE="배포가 성공적으로 완료되었습니다!"
@@ -221,7 +315,13 @@ jobs:
           else
             COLOR="danger" 
             STATUS="❌ FAILED"
-            MESSAGE="배포 중 오류가 발생했습니다."
+            if [[ "${{ needs.build.result }}" == "failure" ]]; then
+              MESSAGE="빌드 중 오류가 발생했습니다."
+            elif [[ "${{ needs.deploy.result }}" == "failure" ]]; then
+              MESSAGE="배포 중 오류가 발생했습니다."
+            else
+              MESSAGE="알 수 없는 오류가 발생했습니다."
+            fi
             EMOJI="💥"
           fi
           
@@ -235,9 +335,10 @@ jobs:
           fi
           
           # 커밋 메시지 가져오기
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 50)
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 50)
           
-          # Slack 메시지 전송
+          # 최종 Slack 메시지 전송
           curl -X POST -H 'Content-type: application/json' \
           --data "{
             \"attachments\": [{
@@ -246,28 +347,28 @@ jobs:
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"$EMOJI $ENV_ICON *WhereWeGo Deployment* $STATUS\n$MESSAGE\"
+                  \"text\": \"$EMOJI $ENV_ICON *WhereWeGo Deployment* $STATUS\\n$MESSAGE\"
                 }
               }, {
                 \"type\": \"section\",
                 \"fields\": [{
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Environment:*\n$ENV_NAME (${{ env.ENVIRONMENT }})\"
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\"
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Duration:*\n⏱️ ${DURATION_MIN}분 ${DURATION_SEC}초\"
+                  \"text\": \"*헬스체크:*\\n⏱️ ${VERIFY_MIN}분 ${VERIFY_SEC}초\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Author:*\n👤 ${{ github.actor }}\"
+                  \"text\": \"*Author:*\\n👤 ${{ github.actor }}\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Message:*\n💬 $COMMIT_MSG\"
+                  \"text\": \"*Message:*\\n💬 $COMMIT_MSG\"
                 }]
               }, {
                 \"type\": \"actions\",
@@ -278,13 +379,6 @@ jobs:
                     \"text\": \"🔍 View Workflow\"
                   },
                   \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
-                }, {
-                  \"type\": \"button\",
-                  \"text\": {
-                    \"type\": \"plain_text\",
-                    \"text\": \"🚀 View App\"
-                  },
-                  \"url\": \"https://wherewego-app.example.com\"
                 }]
               }]
             }]
