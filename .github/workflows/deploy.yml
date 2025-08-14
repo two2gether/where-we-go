@@ -140,10 +140,11 @@ jobs:
         sed "s|ECR_URI_PLACEHOLDER|${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" aws/task-definition.json > temp-task-definition.json
         
         # 태스크 정의 등록
-        aws ecs register-task-definition --cli-input-json file://temp-task-definition.json
+        TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+        echo "Task definition registered: $TASK_DEF_ARN"
         
         # 등록된 태스크 정의 다운로드 (최신 버전 사용)
-        aws ecs describe-task-definition --task-definition ${{ env.CONTAINER_NAME }} --query taskDefinition > task-definition.json
+        aws ecs describe-task-definition --task-definition $TASK_DEF_ARN --query taskDefinition > task-definition.json
         
         # 임시 파일 정리
         rm temp-task-definition.json
