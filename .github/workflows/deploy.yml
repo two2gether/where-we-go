@@ -2,9 +2,7 @@ name: Deploy to AWS ECS
 
 on:
   push:
-    branches: [main, dev, feature/docker-deployment]
-  pull_request:
-    branches: [main, dev]
+    branches: [ main, dev, feature/docker-deployment ]
 
 env:
   AWS_REGION: ap-northeast-2
@@ -14,337 +12,276 @@ env:
 permissions:
   id-token: write
   contents: read
-  actions: read
-  security-events: write
-  checks: write
-  pull-requests: write
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Run tests (skip for deployment)
-      run: echo "Skipping tests for deployment" # ./gradlew test --no-daemon
-
-    # - name: Generate test report
-    #   uses: dorny/test-reporter@v1
-    #   if: success() || failure()
-    #   with:
-    #     name: Gradle Tests
-    #     path: build/test-results/test/*.xml
-    #     reporter: java-junit
-    #     fail-on-error: false
-
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Run security scan with Trivy
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'table'
-        # format: 'sarif'
-        # output: 'trivy-results.sarif'
-
-    # - name: Upload Trivy scan results
-    #   uses: github/codeql-action/upload-sarif@v3
-    #   if: always()
-    #   with:
-    #     sarif_file: 'trivy-results.sarif'
-
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    needs: [test, security-scan]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment'
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set environment variables
-      run: |
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "ENVIRONMENT=prod" >> $GITHUB_ENV
-          echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
-          echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
-        elif [[ "${{ github.ref }}" == "refs/heads/feature/docker-deployment" ]]; then
-          echo "ENVIRONMENT=prod" >> $GITHUB_ENV
-          echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
-          echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
-        else
-          echo "ENVIRONMENT=dev" >> $GITHUB_ENV
-          echo "ECS_CLUSTER=wherewego-dev-cluster" >> $GITHUB_ENV
-          echo "ECS_SERVICE=wherewego-dev-service" >> $GITHUB_ENV
-        fi
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: GitHubActions
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        # Docker 이미지 빌드 및 푸시
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        
-        # latest 태그도 푸시
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        
-        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-    - name: Register task definition
-      run: |
-        echo "Registering task definition..."
-        # ECR URI를 태스크 정의에 반영
-        sed "s|ECR_URI_PLACEHOLDER|${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" aws/task-definition.json > temp-task-definition.json
-        
-        # 태스크 정의 등록
-        TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
-        echo "Task definition registered: $TASK_DEF_ARN"
-        
-        # 등록된 태스크 정의 다운로드 (최신 버전 사용)
-        aws ecs describe-task-definition --task-definition $TASK_DEF_ARN --query taskDefinition > task-definition.json
-        
-        # 임시 파일 정리
-        rm temp-task-definition.json
-
-
-    - name: Check if ECS service exists
-      id: check-service
-      run: |
-        echo "Checking if ECS service exists..."
-        
-        # Check if service exists
-        SERVICE_STATUS=$(aws ecs describe-services \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }} \
-          --query 'services[0].status' \
-          --output text 2>/dev/null || echo "NONE")
-        
-        echo "Service status: $SERVICE_STATUS"
-        
-        if [[ "$SERVICE_STATUS" == "ACTIVE" ]]; then
-          echo "service_exists=true" >> $GITHUB_OUTPUT
-          echo "✅ Service exists and is active"
-        else
-          echo "service_exists=false" >> $GITHUB_OUTPUT
-          echo "❌ Service does not exist or is not active"
-        fi
-
-    - name: Create ECS service if not exists
-      if: steps.check-service.outputs.service_exists == 'false'
-      run: |
-        echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
-        
-        # CloudFormation Output에서 동적으로 리소스 ID 조회
-        echo "Retrieving resource IDs from CloudFormation..."
-        
-        # CloudFormation Stack에서 리소스 ID들을 동적으로 조회
-        PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-prod-infrastructure \
-          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
-          --output text)
-        
-        PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-prod-infrastructure \
-          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
-          --output text)
-        
-        ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-prod-infrastructure \
-          --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
-          --output text)
-        
-        echo "Public Subnet 1: $PUBLIC_SUBNET_1"
-        echo "Public Subnet 2: $PUBLIC_SUBNET_2" 
-        echo "ECS Security Group: $ECS_SECURITY_GROUP"
-        
-        # 조회된 ID 검증
-        if [[ -z "$PUBLIC_SUBNET_1" || -z "$PUBLIC_SUBNET_2" || -z "$ECS_SECURITY_GROUP" ]]; then
-          echo "❌ CloudFormation에서 리소스 ID를 조회하지 못했습니다!"
-          echo "PUBLIC_SUBNET_1: $PUBLIC_SUBNET_1"
-          echo "PUBLIC_SUBNET_2: $PUBLIC_SUBNET_2"
-          echo "ECS_SECURITY_GROUP: $ECS_SECURITY_GROUP"
-          exit 1
-        fi
-        
-        echo "✅ CloudFormation에서 리소스 ID 조회 완료!"
-        
-        # ECS 서비스 생성
-        aws ecs create-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --service-name ${{ env.ECS_SERVICE }} \
-          --task-definition ${{ env.CONTAINER_NAME }} \
-          --desired-count 1 \
-          --launch-type FARGATE \
-          --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --enable-execute-command \
-          --tags "key=Environment,value=${{ env.ENVIRONMENT }}" "key=Project,value=wherewego"
-
-    - name: Update existing ECS service
-      if: steps.check-service.outputs.service_exists == 'true'
-      run: |
-        echo "Updating existing ECS service with new task definition..."
-        
-        # ECS 서비스 업데이트
-        aws ecs update-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --service ${{ env.ECS_SERVICE }} \
-          --task-definition ${{ env.CONTAINER_NAME }} \
-          --desired-count 1
-        
-        echo "✅ ECS service updated successfully!"
-        
-        # 서비스 안정화 대기
-        echo "Waiting for service stability..."
-        aws ecs wait services-stable \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }}
-        
-        echo "✅ Service is now stable!"
-
-    - name: Run task directly and check logs
-      run: |
-        echo "🚀 Running ECS task directly for debugging..."
-        
-        # 태스크를 직접 실행
-        echo "Starting new task..."
-        TASK_ARN=$(aws ecs run-task \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --task-definition ${{ env.CONTAINER_NAME }} \
-          --launch-type FARGATE \
-          --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --query 'tasks[0].taskArn' \
-          --output text)
-        
-        echo "Task started: $TASK_ARN"
-        
-        # 태스크 상태 모니터링
-        echo "Waiting for task to start..."
-        sleep 30
-        
-        # 태스크 상태 확인
-        TASK_STATUS=$(aws ecs describe-tasks \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --tasks $TASK_ARN \
-          --query 'tasks[0].lastStatus' \
-          --output text)
+      - name: Notify deployment start
+        run: |
+          # 배포 시작 알림
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
           
-        echo "Task Status: $TASK_STATUS"
-        
-        # 태스크 상세 정보 출력
-        echo "📋 Task Details:"
-        aws ecs describe-tasks \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --tasks $TASK_ARN \
-          --query 'tasks[0].{TaskArn:taskArn,LastStatus:lastStatus,DesiredStatus:desiredStatus,StoppedReason:stoppedReason,Containers:containers[*].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason}}' \
-          --output table
-        
-        # 컨테이너별 로그 확인
-        echo "📄 Checking container logs..."
-        
-        # Redis 로그
-        echo "=== Redis Container Logs ==="
-        aws logs get-log-events \
-          --log-group-name "/ecs/wherewego-redis" \
-          --log-stream-name "ecs/redis/$(echo $TASK_ARN | cut -d'/' -f3)" \
-          --query 'events[*].message' \
-          --output text || echo "No Redis logs found yet"
-        
-        # Spring Boot 앱 로그
-        echo "=== Spring Boot App Logs ==="
-        aws logs get-log-events \
-          --log-group-name "/ecs/wherewego-app" \
-          --log-stream-name "ecs/wherewego-app/$(echo $TASK_ARN | cut -d'/' -f3)" \
-          --query 'events[*].message' \
-          --output text || echo "No app logs found yet"
-        
-        # 30초 더 기다린 후 다시 확인
-        echo "Waiting 30 more seconds and checking again..."
-        sleep 30
-        
-        # 최종 태스크 상태 확인
-        FINAL_STATUS=$(aws ecs describe-tasks \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --tasks $TASK_ARN \
-          --query 'tasks[0].lastStatus' \
-          --output text)
-          
-        echo "Final Task Status: $FINAL_STATUS"
-        
-        if [[ "$FINAL_STATUS" == "RUNNING" ]]; then
-          echo "✅ Task is running successfully!"
-          
-          # 태스크 정리 (테스트용이므로)
-          echo "Stopping test task..."
-          aws ecs stop-task \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --task $TASK_ARN \
-            --reason "Test deployment completed"
-        else
-          echo "❌ Task failed to start or stopped unexpectedly"
-          
-          # 실패 원인 상세 조회
-          echo "=== Failure Analysis ==="
-          aws ecs describe-tasks \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --tasks $TASK_ARN \
-            --query 'tasks[0]' \
-            --output json
-        fi
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$ENV_ICON *WhereWeGo Deployment Started* 🏁\n배포를 시작합니다...\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\n$ENV_NAME (${{ env.ENVIRONMENT }})\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\n${{ github.actor }}\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
 
-  notify:
-    runs-on: ubuntu-latest
-    needs: build-and-deploy
-    if: always()
-    
-    steps:
-    - name: Notify deployment result
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment'
-      run: |
-        if [[ "${{ needs.build-and-deploy.result }}" == "success" ]]; then
-          echo "✅ 배포가 성공적으로 완료되었습니다!"
-        else
-          echo "❌ 배포 중 오류가 발생했습니다."
-        fi
+      - name: Set environment variables
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
+            echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "ECS_CLUSTER=wherewego-dev-cluster" >> $GITHUB_ENV
+            echo "ECS_SERVICE=wherewego-dev-service" >> $GITHUB_ENV
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Notify build start
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"⚙️ Docker 이미지 빌드 중... (약 2-3분 소요)\"
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # 빌드 시작 시간 기록
+          BUILD_START=$(date +%s)
+          # Docker 이미지 빌드 및 푸시
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          # latest 태그도 푸시
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          
+          # 빌드 완료 알림
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"✅ Docker 빌드 완료! ECR 업로드 중... (소요시간: ${BUILD_DURATION}초)\"
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify ECS deployment start
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"🔄 ECS 서비스 배포 중... 잠시만 기다려주세요!\"
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Update task definition and deploy
+        run: |
+          # 배포 시작 시간 기록
+          DEPLOY_START=$(date +%s)
+          # ECR URI를 태스크 정의에 반영
+          sed "s|ECR_URI_PLACEHOLDER|${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" aws/task-definition.json > temp-task-definition.json
+          
+          # 태스크 정의 등록
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "✅ Task definition registered: $TASK_DEF_ARN"
+          
+          # 서비스 존재 여부 확인
+          SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'length(services)' --output text 2>/dev/null || echo "0")
+          
+          if [[ "$SERVICE_EXISTS" == "0" ]]; then
+            echo "🚀 Creating new ECS service..."
+          
+            # 리소스 ID 조회 (태그 기반)
+            PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
+              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-public-subnet-1" \
+              --query 'Subnets[0].SubnetId' \
+              --output text)
+          
+            PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
+              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-public-subnet-2" \
+              --query 'Subnets[0].SubnetId' \
+              --output text)
+          
+            ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
+              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-ecs-sg" \
+              --query 'SecurityGroups[0].GroupId' \
+              --output text)
+          
+            # ECS 서비스 생성
+            aws ecs create-service \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --service-name ${{ env.ECS_SERVICE }} \
+              --task-definition ${{ env.CONTAINER_NAME }} \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}"
+          else
+            echo "🔄 Updating existing ECS service..."
+          
+            # 기존 서비스 업데이트
+            aws ecs update-service \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --service ${{ env.ECS_SERVICE }} \
+              --task-definition ${{ env.CONTAINER_NAME }} \
+              --desired-count 1
+          
+            # 서비스 안정화 대기
+            echo "⏳ Waiting for service stability..."
+            aws ecs wait services-stable \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --services ${{ env.ECS_SERVICE }}
+          fi
+          
+          echo "✅ Deployment completed successfully!"
+          
+          # 배포 완료 시간 계산
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          
+          # 임시 파일 정리
+          rm temp-task-definition.json
+          
+          # 배포 단계 완료 알림
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"🎯 ECS 배포 완료! (소요시간: ${DEPLOY_DURATION}초) 최종 검증 중...\"
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Final deployment notification
+        if: always()
+        run: |
+          # 전체 실행 시간 계산 (job 시작부터)
+          JOB_START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s)
+          JOB_END_TIME=$(date +%s)
+          TOTAL_DURATION=$((JOB_END_TIME - JOB_START_TIME))
+          DURATION_MIN=$((TOTAL_DURATION / 60))
+          DURATION_SEC=$((TOTAL_DURATION % 60))
+          
+          # 배포 결과에 따른 메시지 설정
+          if [[ "${{ job.status }}" == "success" ]]; then
+            COLOR="good"
+            STATUS="✅ SUCCESS"
+            MESSAGE="배포가 성공적으로 완료되었습니다!"
+            EMOJI="🎉"
+          else
+            COLOR="danger" 
+            STATUS="❌ FAILED"
+            MESSAGE="배포 중 오류가 발생했습니다."
+            EMOJI="💥"
+          fi
+          
+          # 브랜치에 따른 환경 이모지
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
+          
+          # 커밋 메시지 가져오기
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 50)
+          
+          # Slack 메시지 전송
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"$COLOR\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$EMOJI $ENV_ICON *WhereWeGo Deployment* $STATUS\n$MESSAGE\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\n$ENV_NAME (${{ env.ENVIRONMENT }})\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Duration:*\n⏱️ ${DURATION_MIN}분 ${DURATION_SEC}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\n👤 ${{ github.actor }}\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Message:*\n💬 $COMMIT_MSG\"
+                }]
+              }, {
+                \"type\": \"actions\",
+                \"elements\": [{
+                  \"type\": \"button\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"🔍 View Workflow\"
+                  },
+                  \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                }, {
+                  \"type\": \"button\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"🚀 View App\"
+                  },
+                  \"url\": \"https://wherewego-app.example.com\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
