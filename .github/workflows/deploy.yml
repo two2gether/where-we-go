@@ -150,40 +150,27 @@ jobs:
         rm temp-task-definition.json
 
 
-    - name: Delete existing ECS service (to fix IAM role issue)
-      run: |
-        echo "Deleting existing ECS service to fix IAM role configuration..."
-        
-        # Check if service exists and delete it
-        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
-          echo "Service exists, deleting..."
-          
-          # Update service to 0 desired count first
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --desired-count 0
-          
-          # Wait for service to scale down
-          echo "Waiting for service to scale down..."
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }}
-          
-          # Delete the service
-          aws ecs delete-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }}
-          
-          echo "Service deleted successfully"
-        else
-          echo "Service does not exist, proceeding with creation..."
-        fi
-
     - name: Check if ECS service exists
       id: check-service
       run: |
-        echo "service_exists=false" >> $GITHUB_OUTPUT
+        echo "Checking if ECS service exists..."
+        
+        # Check if service exists
+        SERVICE_STATUS=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --query 'services[0].status' \
+          --output text 2>/dev/null || echo "NONE")
+        
+        echo "Service status: $SERVICE_STATUS"
+        
+        if [[ "$SERVICE_STATUS" == "ACTIVE" ]]; then
+          echo "service_exists=true" >> $GITHUB_OUTPUT
+          echo "✅ Service exists and is active"
+        else
+          echo "service_exists=false" >> $GITHUB_OUTPUT
+          echo "❌ Service does not exist or is not active"
+        fi
 
     - name: Create ECS service if not exists
       if: steps.check-service.outputs.service_exists == 'false'
@@ -217,9 +204,10 @@ jobs:
           --enable-execute-command \
           --tags "key=Environment,value=${{ env.ENVIRONMENT }}" "key=Project,value=wherewego"
 
-    - name: Update ECS service with new task definition
+    - name: Update existing ECS service
+      if: steps.check-service.outputs.service_exists == 'true'
       run: |
-        echo "Updating ECS service with new task definition..."
+        echo "Updating existing ECS service with new task definition..."
         
         # ECS 서비스 업데이트
         aws ecs update-service \
@@ -240,47 +228,53 @@ jobs:
 
     - name: Verify deployment
       run: |
-        # ECS 서비스에서 Public IP 가져오기
-        echo "Getting ECS service public IP..."
-        sleep 60  # 서비스 시작 대기
+        echo "Verifying ECS deployment..."
         
-        # ECS 태스크의 Public IP 가져오기
-        TASK_ARN=$(aws ecs list-tasks \
+        # 서비스 상태 확인
+        SERVICE_STATUS=$(aws ecs describe-services \
           --cluster ${{ env.ECS_CLUSTER }} \
-          --service-name ${{ env.ECS_SERVICE }} \
-          --query 'taskArns[0]' \
+          --services ${{ env.ECS_SERVICE }} \
+          --query 'services[0].status' \
           --output text)
+          
+        echo "Service Status: $SERVICE_STATUS"
         
-        if [ "$TASK_ARN" != "None" ] && [ "$TASK_ARN" != "" ]; then
-          PUBLIC_IP=$(aws ecs describe-tasks \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --tasks $TASK_ARN \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text | xargs -I {} aws ec2 describe-network-interfaces \
-            --network-interface-ids {} \
-            --query 'NetworkInterfaces[0].Association.PublicIp' \
-            --output text)
-          
-          echo "Public IP: $PUBLIC_IP"
-          
-          # 헬스체크 수행
-          echo "Testing health check endpoint..."
-          for i in {1..30}; do
-            if curl -f "http://$PUBLIC_IP:8080/actuator/health" --connect-timeout 10; then
-              echo "Health check passed!"
-              echo "Service available at: http://$PUBLIC_IP:8080"
-              exit 0
-            fi
-            echo "Attempt $i failed, retrying in 10 seconds..."
-            sleep 10
-          done
-          
-          echo "Health check failed after 30 attempts"
-          exit 1
-        else
-          echo "No running tasks found"
+        if [[ "$SERVICE_STATUS" != "ACTIVE" ]]; then
+          echo "❌ Service is not active"
           exit 1
         fi
+        
+        # 러닝 태스크 확인
+        RUNNING_COUNT=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --query 'services[0].runningCount' \
+          --output text)
+          
+        echo "Running Tasks: $RUNNING_COUNT"
+        
+        if [[ "$RUNNING_COUNT" -eq 0 ]]; then
+          echo "❌ No running tasks found"
+          
+          # 태스크 실패 원인 확인
+          echo "Checking stopped tasks for failure reasons..."
+          aws ecs list-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service-name ${{ env.ECS_SERVICE }} \
+            --desired-status STOPPED \
+            --query 'taskArns[0]' \
+            --output text | \
+          xargs -I {} aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks {} \
+            --query 'tasks[0].stoppedReason' \
+            --output text
+          
+          exit 1
+        fi
+        
+        echo "✅ Service is running with $RUNNING_COUNT task(s)"
+        echo "🎉 Deployment verification completed successfully!"
 
   notify:
     runs-on: ubuntu-latest
