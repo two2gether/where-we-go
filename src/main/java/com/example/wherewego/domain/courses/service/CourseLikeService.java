@@ -82,7 +82,7 @@ public class CourseLikeService {
 					// 캐시 삭제
 					String pattern = "course-like-list::userId:" + userId + ":*";
 					Set<String> keysToDelete = redisTemplate.keys(pattern);
-					if (keysToDelete != null && !keysToDelete.isEmpty()) {
+					if (!keysToDelete.isEmpty()) {
 						redisTemplate.delete(keysToDelete);
 					}
 				}
@@ -125,7 +125,7 @@ public class CourseLikeService {
 					// 캐시 삭제
 					String pattern = "course-like-list::userId:" + userId + ":*";
 					Set<String> keysToDelete = redisTemplate.keys(pattern);
-					if (keysToDelete != null && !keysToDelete.isEmpty()) {
+					if (!keysToDelete.isEmpty()) {
 						redisTemplate.delete(keysToDelete);
 					}
 				}

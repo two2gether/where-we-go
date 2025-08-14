@@ -98,7 +98,7 @@ public class EventProductService {
 	public void updateViewCountsToDB() {
 		Set<String> keys = redisTemplate.keys(VIEW_COUNT_KEY + "*");
 
-		if (keys == null || keys.isEmpty()) {
+		if (keys.isEmpty()) {
 			return; // 처리할 키가 없으면 즉시 종료
 		}
 
