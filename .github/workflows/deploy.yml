@@ -177,21 +177,39 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # 하드코딩된 리소스 ID (임시 해결책)
-        # TODO: AWS 콘솔에서 실제 ID 확인 후 업데이트 필요
-        echo "Using hardcoded resource IDs..."
+        # CloudFormation Output에서 동적으로 리소스 ID 조회
+        echo "Retrieving resource IDs from CloudFormation..."
         
-        # CloudFormation에서 생성된 실제 리소스 ID들
-        PUBLIC_SUBNET_1="subnet-0e533526451bc7f03"  # wherewego-prod-public-subnet-1
-        PUBLIC_SUBNET_2="subnet-0ae50afddab2e86a7"  # wherewego-prod-public-subnet-2
-        ECS_SECURITY_GROUP="sg-090c59b19c64fcc0b"   # wherewego-prod-ecs-sg
+        # CloudFormation Stack에서 리소스 ID들을 동적으로 조회
+        PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-prod-infrastructure \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+          --output text)
+        
+        PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-prod-infrastructure \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+          --output text)
+        
+        ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-prod-infrastructure \
+          --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+          --output text)
         
         echo "Public Subnet 1: $PUBLIC_SUBNET_1"
         echo "Public Subnet 2: $PUBLIC_SUBNET_2" 
         echo "ECS Security Group: $ECS_SECURITY_GROUP"
         
-        # ID 검증 완료 ✅
-        echo "✅ 모든 리소스 ID 확인 완료!"
+        # 조회된 ID 검증
+        if [[ -z "$PUBLIC_SUBNET_1" || -z "$PUBLIC_SUBNET_2" || -z "$ECS_SECURITY_GROUP" ]]; then
+          echo "❌ CloudFormation에서 리소스 ID를 조회하지 못했습니다!"
+          echo "PUBLIC_SUBNET_1: $PUBLIC_SUBNET_1"
+          echo "PUBLIC_SUBNET_2: $PUBLIC_SUBNET_2"
+          echo "ECS_SECURITY_GROUP: $ECS_SECURITY_GROUP"
+          exit 1
+        fi
+        
+        echo "✅ CloudFormation에서 리소스 ID 조회 완료!"
         
         # ECS 서비스 생성
         aws ecs create-service \
@@ -236,7 +254,7 @@ jobs:
           --cluster ${{ env.ECS_CLUSTER }} \
           --task-definition ${{ env.CONTAINER_NAME }} \
           --launch-type FARGATE \
-          --network-configuration "awsvpcConfiguration={subnets=[subnet-0e533526451bc7f03,subnet-0ae50afddab2e86a7],securityGroups=[sg-090c59b19c64fcc0b],assignPublicIp=ENABLED}" \
+          --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
           --query 'tasks[0].taskArn' \
           --output text)
         
