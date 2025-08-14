@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Redis 캐시 서버
+  redis:
+    image: redis:7.2-alpine
+    container_name: wherewego-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - wherewego-network
+
+  # Spring Boot 애플리케이션
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: wherewego-app
+    ports:
+      - "8080:8080"
+    environment:
+      # 데이터베이스 설정 (RDS 연결)
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=${DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      
+      # Redis 설정
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      
+      # JWT 및 API 키
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      
+      # 소셜 로그인 설정
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      
+      # 결제 설정
+      - TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wherewego-network
+
+volumes:
+  redis_data:
+
+networks:
+  wherewego-network:
+    driver: bridge

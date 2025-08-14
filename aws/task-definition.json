@@ -1,0 +1,130 @@
+{
+  "family": "wherewego-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "redis",
+      "image": "redis:7.2-alpine",
+      "portMappings": [
+        {
+          "containerPort": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/wherewego-redis",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "command": ["redis-server", "--appendonly", "yes"],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "redis-cli ping || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    },
+    {
+      "name": "wherewego-app",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/wherewego-app:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "dependsOn": [
+        {
+          "containerName": "redis",
+          "condition": "HEALTHY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/wherewego-app",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        },
+        {
+          "name": "SPRING_DATA_REDIS_HOST",
+          "value": "localhost"
+        },
+        {
+          "name": "SPRING_DATA_REDIS_PORT",
+          "value": "6379"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/username"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/password"
+        },
+        {
+          "name": "JWT_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/jwt/secret"
+        },
+        {
+          "name": "GOOGLE_MAPS_API_KEY",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/maps-api-key"
+        },
+        {
+          "name": "KAKAO_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/kakao/client-id"
+        },
+        {
+          "name": "KAKAO_REDIRECT_URI",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/kakao/redirect-uri"
+        },
+        {
+          "name": "GOOGLE_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/client-id"
+        },
+        {
+          "name": "GOOGLE_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/client-secret"
+        },
+        {
+          "name": "GOOGLE_REDIRECT_URI",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/redirect-uri"
+        },
+        {
+          "name": "TOSS_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/toss/secret-key"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
