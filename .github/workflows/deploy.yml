@@ -129,8 +129,18 @@ jobs:
         
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Download task definition
+    - name: Register initial task definition
       run: |
+        # 태스크 정의가 없으면 먼저 등록
+        if ! aws ecs describe-task-definition --task-definition ${{ env.CONTAINER_NAME }} > /dev/null 2>&1; then
+          echo "Registering initial task definition..."
+          # ECR URI를 태스크 정의에 반영
+          sed "s|ECR_URI_PLACEHOLDER|${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" aws/task-definition.json > temp-task-definition.json
+          aws ecs register-task-definition --cli-input-json file://temp-task-definition.json
+          rm temp-task-definition.json
+        fi
+        
+        # 기존 태스크 정의 다운로드
         aws ecs describe-task-definition --task-definition ${{ env.CONTAINER_NAME }} --query taskDefinition > task-definition.json
 
     - name: Fill in the new image ID in the Amazon ECS task definition

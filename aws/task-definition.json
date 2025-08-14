@@ -4,8 +4,8 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+  "executionRoleArn": "arn:aws:iam::729705323525:role/wherewego-prod-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::729705323525:role/wherewego-prod-ecs-task-role",
   "containerDefinitions": [
     {
       "name": "redis",
@@ -36,7 +36,7 @@
     },
     {
       "name": "wherewego-app",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/wherewego-app:latest",
+      "image": "ECR_URI_PLACEHOLDER",
       "portMappings": [
         {
           "containerPort": 8080,
@@ -75,47 +75,47 @@
       "secrets": [
         {
           "name": "SPRING_DATASOURCE_URL",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/url"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/db/url"
         },
         {
           "name": "SPRING_DATASOURCE_USERNAME",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/username"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/db/username"
         },
         {
           "name": "SPRING_DATASOURCE_PASSWORD",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/db/password"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/db/password"
         },
         {
           "name": "JWT_SECRET_KEY",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/jwt/secret"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/jwt/secret"
         },
         {
           "name": "GOOGLE_MAPS_API_KEY",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/maps-api-key"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/maps-api-key"
         },
         {
           "name": "KAKAO_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/kakao/client-id"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/kakao/client-id"
         },
         {
           "name": "KAKAO_REDIRECT_URI",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/kakao/redirect-uri"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/kakao/redirect-uri"
         },
         {
           "name": "GOOGLE_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/client-id"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/client-id"
         },
         {
           "name": "GOOGLE_CLIENT_SECRET",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/client-secret"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/client-secret"
         },
         {
           "name": "GOOGLE_REDIRECT_URI",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/google/redirect-uri"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/redirect-uri"
         },
         {
           "name": "TOSS_SECRET_KEY",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:YOUR_ACCOUNT_ID:parameter/wherewego/toss/secret-key"
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/toss/secret-key"
         }
       ],
       "healthCheck": {
