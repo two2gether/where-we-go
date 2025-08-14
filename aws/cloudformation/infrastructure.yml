@@ -289,6 +289,24 @@ Outputs:
     Export:
       Name: !Sub ${ProjectName}-${Environment}-VPC-ID
 
+  PublicSubnet1:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-PublicSubnet1
+
+  PublicSubnet2:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-PublicSubnet2
+
+  ECSSecurityGroup:
+    Description: ECS Security Group ID
+    Value: !Ref ECSSecurityGroup
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-ECSSecurityGroup
+
   ECSServiceEndpoint:
     Description: ECS Service Endpoint (will be set after service creation)
     Value: !Sub "Check ECS service for public IP"

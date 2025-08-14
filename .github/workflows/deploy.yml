@@ -169,24 +169,34 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # CloudFormation 출력에서 서브넷과 보안그룹 정보 가져오기
-        PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
+        # VPC ID 가져오기
+        VPC_ID=$(aws cloudformation describe-stacks \
           --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
           --region ap-northeast-2 \
-          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+          --query 'Stacks[0].Outputs[?OutputKey==`VPC`].OutputValue' \
           --output text)
         
-        PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --region ap-northeast-2 \
-          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+        # Public 서브넷들 직접 조회
+        PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*PublicSubnet1*" \
+          --query 'Subnets[0].SubnetId' \
           --output text)
         
-        ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --region ap-northeast-2 \
-          --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+        PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*PublicSubnet2*" \
+          --query 'Subnets[0].SubnetId' \
           --output text)
+        
+        # ECS 보안 그룹 직접 조회
+        ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=*ECS*" \
+          --query 'SecurityGroups[0].GroupId' \
+          --output text)
+        
+        echo "VPC ID: $VPC_ID"
+        echo "Public Subnet 1: $PUBLIC_SUBNET_1"
+        echo "Public Subnet 2: $PUBLIC_SUBNET_2"
+        echo "ECS Security Group: $ECS_SECURITY_GROUP"
         
         # ECS 서비스 생성
         aws ecs create-service \
