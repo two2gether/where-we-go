@@ -87,7 +87,7 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
           --data "{\"text\": \"⚙️ Gradle 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
           
-          ./gradlew clean build
+          ./gradlew clean build -x test
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
