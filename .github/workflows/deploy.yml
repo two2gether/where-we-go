@@ -169,33 +169,24 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # VPC ID 가져오기
-        VPC_ID=$(aws cloudformation describe-stacks \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --region ap-northeast-2 \
-          --query 'Stacks[0].Outputs[?OutputKey==`VPC`].OutputValue' \
-          --output text)
-        
-        # Public 서브넷들 직접 조회
+        # 리소스들을 태그로 직접 조회 (더 안정적)
         PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*PublicSubnet1*" \
+          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=tag:Name,Values=*PublicSubnet1*" \
           --query 'Subnets[0].SubnetId' \
           --output text)
         
         PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*PublicSubnet2*" \
+          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=tag:Name,Values=*PublicSubnet2*" \
           --query 'Subnets[0].SubnetId' \
           --output text)
         
-        # ECS 보안 그룹 직접 조회
         ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=*ECS*" \
+          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=group-name,Values=*ecs*" \
           --query 'SecurityGroups[0].GroupId' \
           --output text)
         
-        echo "VPC ID: $VPC_ID"
         echo "Public Subnet 1: $PUBLIC_SUBNET_1"
-        echo "Public Subnet 2: $PUBLIC_SUBNET_2"
+        echo "Public Subnet 2: $PUBLIC_SUBNET_2" 
         echo "ECS Security Group: $ECS_SECURITY_GROUP"
         
         # ECS 서비스 생성
