@@ -155,14 +155,40 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
 
+    - name: Delete existing ECS service (to fix IAM role issue)
+      run: |
+        echo "Deleting existing ECS service to fix IAM role configuration..."
+        
+        # Check if service exists and delete it
+        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
+          echo "Service exists, deleting..."
+          
+          # Update service to 0 desired count first
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --desired-count 0
+          
+          # Wait for service to scale down
+          echo "Waiting for service to scale down..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }}
+          
+          # Delete the service
+          aws ecs delete-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }}
+          
+          echo "Service deleted successfully"
+        else
+          echo "Service does not exist, proceeding with creation..."
+        fi
+
     - name: Check if ECS service exists
       id: check-service
       run: |
-        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
-          echo "service_exists=true" >> $GITHUB_OUTPUT
-        else
-          echo "service_exists=false" >> $GITHUB_OUTPUT
-        fi
+        echo "service_exists=false" >> $GITHUB_OUTPUT
 
     - name: Create ECS service if not exists
       if: steps.check-service.outputs.service_exists == 'false'
