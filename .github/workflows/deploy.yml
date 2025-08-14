@@ -149,13 +149,6 @@ jobs:
         # 임시 파일 정리
         rm temp-task-definition.json
 
-    - name: Fill in the new image ID in the Amazon ECS task definition
-      id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
 
     - name: Delete existing ECS service (to fix IAM role issue)
       run: |
@@ -224,13 +217,26 @@ jobs:
           --enable-execute-command \
           --tags "key=Environment,value=${{ env.ENVIRONMENT }}" "key=Project,value=wherewego"
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+    - name: Update ECS service with new task definition
+      run: |
+        echo "Updating ECS service with new task definition..."
+        
+        # ECS 서비스 업데이트
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ env.CONTAINER_NAME }} \
+          --desired-count 1
+        
+        echo "✅ ECS service updated successfully!"
+        
+        # 서비스 안정화 대기
+        echo "Waiting for service stability..."
+        aws ecs wait services-stable \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }}
+        
+        echo "✅ Service is now stable!"
 
     - name: Verify deployment
       run: |
