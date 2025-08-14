@@ -155,6 +155,50 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
 
+    - name: Check if ECS service exists
+      id: check-service
+      run: |
+        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
+          echo "service_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "service_exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create ECS service if not exists
+      if: steps.check-service.outputs.service_exists == 'false'
+      run: |
+        echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
+        
+        # CloudFormation 출력에서 서브넷과 보안그룹 정보 가져오기
+        PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --region ap-northeast-2 \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+          --output text)
+        
+        PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --region ap-northeast-2 \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+          --output text)
+        
+        ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --region ap-northeast-2 \
+          --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+          --output text)
+        
+        # ECS 서비스 생성
+        aws ecs create-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service-name ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ env.CONTAINER_NAME }} \
+          --desired-count 1 \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+          --enable-execute-command \
+          --tags "key=Environment,value=${{ env.ENVIRONMENT }}" "key=Project,value=wherewego"
+
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
