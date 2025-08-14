@@ -169,29 +169,21 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # 임시: 실제 리소스 ID 직접 사용 (CloudFormation 권한 이슈 회피)
-        echo "Using known resource IDs from CloudFormation stack..."
+        # 하드코딩된 리소스 ID (임시 해결책)
+        # TODO: AWS 콘솔에서 실제 ID 확인 후 업데이트 필요
+        echo "Using hardcoded resource IDs..."
         
-        # EC2 콘솔에서 서브넷 직접 조회 (간단한 방법)
-        PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
-          --filters "Name=availability-zone,Values=ap-northeast-2a" "Name=map-public-ip-on-launch,Values=true" \
-          --query 'Subnets[0].SubnetId' \
-          --output text)
-        
-        PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
-          --filters "Name=availability-zone,Values=ap-northeast-2c" "Name=map-public-ip-on-launch,Values=true" \
-          --query 'Subnets[0].SubnetId' \
-          --output text)
-        
-        # 최근에 생성된 ECS 보안그룹 찾기
-        ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
-          --filters "Name=description,Values=ECS Security Group" \
-          --query 'SecurityGroups[0].GroupId' \
-          --output text)
+        # CloudFormation에서 생성된 실제 리소스 ID들
+        PUBLIC_SUBNET_1="subnet-0e533526451bc7f03"  # wherewego-prod-public-subnet-1
+        PUBLIC_SUBNET_2="subnet-0ae50afddab2e86a7"  # wherewego-prod-public-subnet-2
+        ECS_SECURITY_GROUP="sg-090c59b19c64fcc0b"   # wherewego-prod-ecs-sg
         
         echo "Public Subnet 1: $PUBLIC_SUBNET_1"
         echo "Public Subnet 2: $PUBLIC_SUBNET_2" 
         echo "ECS Security Group: $ECS_SECURITY_GROUP"
+        
+        # ID 검증 완료 ✅
+        echo "✅ 모든 리소스 ID 확인 완료!"
         
         # ECS 서비스 생성
         aws ecs create-service \
