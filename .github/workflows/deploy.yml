@@ -142,21 +142,25 @@ jobs:
           if [[ "$SERVICE_EXISTS" == "0" ]]; then
             echo "🚀 Creating new ECS service..."
           
-            # 리소스 ID 조회 (태그 기반)
-            PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
-              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-public-subnet-1" \
-              --query 'Subnets[0].SubnetId' \
+            # CloudFormation Outputs에서 리소스 ID 가져오기 (유동적)
+            PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
               --output text)
-          
-            PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
-              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-public-subnet-2" \
-              --query 'Subnets[0].SubnetId' \
+              
+            PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
               --output text)
-          
-            ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
-              --filters "Name=tag:Name,Values=wherewego-${{ env.ENVIRONMENT }}-ecs-sg" \
-              --query 'SecurityGroups[0].GroupId' \
+              
+            ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ env.ENVIRONMENT }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
               --output text)
+            
+            echo "📋 CloudFormation Stack: wherewego-${{ env.ENVIRONMENT }}"
+            echo "🔗 Using subnets: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
+            echo "🛡️ Using security group: $ECS_SECURITY_GROUP"
           
             # ECS 서비스 생성
             aws ecs create-service \
