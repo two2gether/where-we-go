@@ -4,8 +4,8 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::729705323525:role/wherewego-prod-ecs-task-execution-role",
-  "taskRoleArn": "arn:aws:iam::729705323525:role/wherewego-prod-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::729705323525:role/wherewego-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::729705323525:role/wherewego-ecs-task-role",
   "containerDefinitions": [
     {
       "name": "redis",
