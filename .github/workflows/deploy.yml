@@ -96,6 +96,10 @@ jobs:
           echo "ENVIRONMENT=prod" >> $GITHUB_ENV
           echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
           echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
+        elif [[ "${{ github.ref }}" == "refs/heads/feature/docker-deployment" ]]; then
+          echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+          echo "ECS_CLUSTER=wherewego-prod-cluster" >> $GITHUB_ENV
+          echo "ECS_SERVICE=wherewego-prod-service" >> $GITHUB_ENV
         else
           echo "ENVIRONMENT=dev" >> $GITHUB_ENV
           echo "ECS_CLUSTER=wherewego-dev-cluster" >> $GITHUB_ENV
