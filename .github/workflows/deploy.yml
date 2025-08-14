@@ -169,20 +169,22 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # 리소스들을 태그로 직접 조회 (더 안정적)
-        PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
-          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=tag:Name,Values=*PublicSubnet1*" \
-          --query 'Subnets[0].SubnetId' \
+        # CloudFormation 스택에서 직접 리소스 ID 조회
+        echo "Querying CloudFormation stack resources..."
+        
+        PUBLIC_SUBNET_1=$(aws cloudformation list-stack-resources \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --query 'StackResourceSummaries[?LogicalResourceId==`PublicSubnet1`].PhysicalResourceId' \
           --output text)
         
-        PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
-          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=tag:Name,Values=*PublicSubnet2*" \
-          --query 'Subnets[0].SubnetId' \
+        PUBLIC_SUBNET_2=$(aws cloudformation list-stack-resources \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --query 'StackResourceSummaries[?LogicalResourceId==`PublicSubnet2`].PhysicalResourceId' \
           --output text)
         
-        ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
-          --filters "Name=tag:Project,Values=wherewego" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=group-name,Values=*ecs*" \
-          --query 'SecurityGroups[0].GroupId' \
+        ECS_SECURITY_GROUP=$(aws cloudformation list-stack-resources \
+          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
+          --query 'StackResourceSummaries[?LogicalResourceId==`ECSSecurityGroup`].PhysicalResourceId' \
           --output text)
         
         echo "Public Subnet 1: $PUBLIC_SUBNET_1"
