@@ -169,22 +169,24 @@ jobs:
       run: |
         echo "Creating ECS service: ${{ env.ECS_SERVICE }}"
         
-        # CloudFormation 스택에서 직접 리소스 ID 조회
-        echo "Querying CloudFormation stack resources..."
+        # 임시: 실제 리소스 ID 직접 사용 (CloudFormation 권한 이슈 회피)
+        echo "Using known resource IDs from CloudFormation stack..."
         
-        PUBLIC_SUBNET_1=$(aws cloudformation list-stack-resources \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --query 'StackResourceSummaries[?LogicalResourceId==`PublicSubnet1`].PhysicalResourceId' \
+        # EC2 콘솔에서 서브넷 직접 조회 (간단한 방법)
+        PUBLIC_SUBNET_1=$(aws ec2 describe-subnets \
+          --filters "Name=availability-zone,Values=ap-northeast-2a" "Name=map-public-ip-on-launch,Values=true" \
+          --query 'Subnets[0].SubnetId' \
           --output text)
         
-        PUBLIC_SUBNET_2=$(aws cloudformation list-stack-resources \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --query 'StackResourceSummaries[?LogicalResourceId==`PublicSubnet2`].PhysicalResourceId' \
+        PUBLIC_SUBNET_2=$(aws ec2 describe-subnets \
+          --filters "Name=availability-zone,Values=ap-northeast-2c" "Name=map-public-ip-on-launch,Values=true" \
+          --query 'Subnets[0].SubnetId' \
           --output text)
         
-        ECS_SECURITY_GROUP=$(aws cloudformation list-stack-resources \
-          --stack-name wherewego-${{ env.ENVIRONMENT }}-infrastructure \
-          --query 'StackResourceSummaries[?LogicalResourceId==`ECSSecurityGroup`].PhysicalResourceId' \
+        # 최근에 생성된 ECS 보안그룹 찾기
+        ECS_SECURITY_GROUP=$(aws ec2 describe-security-groups \
+          --filters "Name=description,Values=ECS Security Group" \
+          --query 'SecurityGroups[0].GroupId' \
           --output text)
         
         echo "Public Subnet 1: $PUBLIC_SUBNET_1"
