@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class EventCreateResponseDto {
+public class EventProductCreateResponseDto {
 	/**
 	 * 생성된 상품의 고유 식별자
 	 */

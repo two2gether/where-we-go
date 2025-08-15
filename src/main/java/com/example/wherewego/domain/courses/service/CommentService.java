@@ -1,11 +1,16 @@
 package com.example.wherewego.domain.courses.service;
 
+import java.util.Set;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.entity.Comment;
@@ -32,28 +37,26 @@ public class CommentService {
 	private final CommentRepository commentRepository;
 	private final CourseRepository courseRepository;
 	private final UserService userService;
+	private final CourseService courseService;
 	private final NotificationService notificationService;
+	private final RedisTemplate<String, Object> redisTemplate;
 
 	/**
 	 * 코스에 새로운 댓글을 생성합니다.
 	 * 비공개 코스인 경우 작성자만 댓글을 작성할 수 있습니다.
 	 *
-	 * @param courseId 댓글을 작성할 코스 ID
 	 * @param userId 댓글 작성자 ID
 	 * @param requestDto 댓글 내용을 담은 요청 DTO
 	 * @return 생성된 댓글 정보
 	 * @throws CustomException 사용자/코스를 찾을 수 없거나 비공개 코스에 접근 권한이 없는 경우
 	 */
 	@Transactional
-	public CommentResponseDto createComment(Long courseId, Long userId, CommentRequestDto requestDto) {
+	public CommentResponseDto createComment(Long userId, CommentCreateRequestDto requestDto) {
 
+		Long courseId = requestDto.getCourseId();
 		User user = userService.getUserById(userId);
 
-		Course course = courseRepository.findByIdWithThemes(courseId)
-			.orElseThrow(() -> {
-				log.warn("댓글 생성 실패 - 코스 없음: {}", courseId);
-				return new CustomException(ErrorCode.COURSE_NOT_FOUND);
-			});
+		Course course = courseService.getCourseById(courseId);
 
 		if (isNotCourseOwner(userId, course)) {
 			log.warn("댓글 생성 실패 - 비공개 코스에 접근 시도: courseId {}, 작성자 {}, 요청자 {}",
@@ -71,6 +74,9 @@ public class CommentService {
 
 		//알림 생성
 		notificationService.triggerCommentNotification(user, course);
+
+		// 캐시 삭제
+		deleteCache(courseId, userId);
 
 		return CommentResponseDto.of(comment);
 	}
@@ -100,6 +106,8 @@ public class CommentService {
 
 		commentRepository.delete(comment);
 
+		// 캐시 삭제
+		deleteCache(comment.getCourse().getId(), userId);
 	}
 
 	/**
@@ -129,6 +137,9 @@ public class CommentService {
 
 		comment.updateContent(requestDto.getContent());
 
+		// 캐시 삭제
+		deleteCache(comment.getCourse().getId(), userId);
+
 		return CommentResponseDto.of(comment);
 	}
 
@@ -141,6 +152,7 @@ public class CommentService {
 	 * @return 페이징된 댓글 목록
 	 */
 	@Transactional(readOnly = true)
+	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
 		return getCommentsByCourse(courseId, pageable, null);
 	}
@@ -179,6 +191,7 @@ public class CommentService {
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
 	 * @return 페이징된 댓글 목록
 	 */
+	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
 		return getCommentsByUser(userId, pageable, null);
 	}
@@ -207,6 +220,28 @@ public class CommentService {
 	 */
 	private boolean isNotCourseOwner(Long userId, Course course) {
 		return !course.getIsPublic() && !course.getUser().getId().equals(userId);
+	}
+
+	/**
+	 * Redis 캐시에서 특정 코스와 사용자의 댓글 목록 캐시를 삭제합니다.
+	 *
+	 * @param courseId 캐시를 삭제할 코스 ID
+	 * @param userId   캐시를 삭제할 사용자 ID
+	 */
+	private void deleteCache(Long courseId, Long userId) {
+		// 캐시 삭제
+		String coursePattern = "course-comment-list::courseId:" + courseId + ":*";
+		String userPattern = "user-comment-list::userId:" + userId + ":*";
+
+		Set<String> courseKeysToDelete = redisTemplate.keys(coursePattern);
+		Set<String> userKeysToDelete = redisTemplate.keys(userPattern);
+
+		if (!courseKeysToDelete.isEmpty()) {
+			redisTemplate.delete(courseKeysToDelete);
+		}
+		if (!userKeysToDelete.isEmpty()) {
+			redisTemplate.delete(userKeysToDelete);
+		}
 	}
 
 }

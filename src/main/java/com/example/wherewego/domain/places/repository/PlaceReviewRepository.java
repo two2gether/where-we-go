@@ -52,33 +52,13 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 	 */
 	boolean existsByUserIdAndPlaceId(Long userId, String placeId);
 
-	// ====================== 배치 쿼리 최적화 메서드 ======================
+	// ====================== Stream 방식 배치 처리 메서드 ======================
 
 	/**
-	 * 여러 장소의 리뷰 개수를 일괄 조회 (N+1 문제 해결)
+	 * 여러 장소의 모든 리뷰를 일괄 조회 (Stream 처리용)
 	 * 
 	 * @param placeIds 조회할 장소 ID 목록
-	 * @return 장소 ID를 키로 하는 리뷰 개수 맵
+	 * @return 리뷰 목록
 	 */
-	@Query("SELECT r.placeId, COUNT(r) FROM PlaceReview r WHERE r.placeId IN :placeIds GROUP BY r.placeId")
-	List<Object[]> getReviewCountsByPlaceIds(@Param("placeIds") List<String> placeIds);
-
-	/**
-	 * 여러 장소의 평균 평점을 일괄 조회 (N+1 문제 해결)
-	 * 
-	 * @param placeIds 조회할 장소 ID 목록
-	 * @return 장소 ID를 키로 하는 평균 평점 맵
-	 */
-	@Query("SELECT r.placeId, AVG(r.rating) FROM PlaceReview r WHERE r.placeId IN :placeIds GROUP BY r.placeId")
-	List<Object[]> getAverageRatingsByPlaceIds(@Param("placeIds") List<String> placeIds);
-
-	/**
-	 * 특정 사용자가 여러 장소에 리뷰를 작성했는지 일괄 확인 (N+1 문제 해결)
-	 * 
-	 * @param userId 사용자 ID
-	 * @param placeIds 확인할 장소 ID 목록
-	 * @return 사용자가 리뷰를 작성한 장소 ID 목록
-	 */
-	@Query("SELECT DISTINCT r.placeId FROM PlaceReview r WHERE r.user.id = :userId AND r.placeId IN :placeIds")
-	List<String> findPlaceIdsWithUserReviews(@Param("userId") Long userId, @Param("placeIds") List<String> placeIds);
+	List<PlaceReview> findAllByPlaceIdIn(List<String> placeIds);
 }

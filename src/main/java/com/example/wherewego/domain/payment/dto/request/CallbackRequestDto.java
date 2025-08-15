@@ -14,6 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CallbackRequestDto {
+
+	private Long paymentId;
+
 	/**
 	 * 결제 상태 (PAY_COMPLETE만 전달됨)
 	 */

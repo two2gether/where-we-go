@@ -22,9 +22,11 @@ import org.springframework.data.domain.Pageable;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
+import com.example.wherewego.domain.eventproduct.service.EventProductService;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.order.repository.OrderRepository;
@@ -42,10 +44,13 @@ class OrderServiceTest {
 	private UserService userService;
 
 	@Mock
-	private EventService eventService;
+	private EventProductService eventProductService;
 
 	@Mock
 	private OrderRepository orderRepository;
+
+	@Mock
+	private EventProductRepository eventProductRepository;
 
 	@InjectMocks
 	private OrderService orderService;
@@ -68,14 +73,15 @@ class OrderServiceTest {
 			OrderCreateRequestDto requestDto = new OrderCreateRequestDto(productId, quantity);
 
 			given(userService.getUserById(userId)).willReturn(user);
-			given(eventService.getEventProductById(productId)).willReturn(product);
+			given(eventProductService.getEventProductById(productId)).willReturn(product);
 			given(product.getPrice()).willReturn(price);
+			given(eventProductRepository.decreaseStockIfAvailable(productId, quantity)).willReturn(1);
 
 			Order expectedOrder = mock(Order.class);
 			given(orderRepository.save(any(Order.class))).willReturn(expectedOrder);
 
 			// when
-			Order result = orderService.createOrder(requestDto, userId);
+			OrderCreateResponseDto result = orderService.createOrder(requestDto, userId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -98,8 +104,8 @@ class OrderServiceTest {
 		}
 
 		@Test
-		@DisplayName("상품이 존재하지 않으면 예외가 발생한다")
-		void shouldThrowIfProductNotFound() {
+		@DisplayName("재고 부족으로 주문을 생성할 수 없으면 예외가 발생한다")
+		void shouldThrowIfOutOfStock() {
 			// given
 			Long userId = 1L;
 			Long productId = 10L;
@@ -107,12 +113,12 @@ class OrderServiceTest {
 
 			User user = mock(User.class);
 			given(userService.getUserById(userId)).willReturn(user);
-			given(eventService.getEventProductById(productId)).willThrow(new CustomException(ErrorCode.EVENT_PRODUCT_NOT_FOUND));
+			given(eventProductRepository.decreaseStockIfAvailable(productId, 1)).willReturn(0);
 
 			// when & then
 			assertThatThrownBy(() -> orderService.createOrder(requestDto, userId))
 				.isInstanceOf(CustomException.class)
-				.hasMessage(ErrorCode.EVENT_PRODUCT_NOT_FOUND.getMessage());
+				.hasMessage(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK.getMessage());
 		}
 	}
 
@@ -126,14 +132,14 @@ class OrderServiceTest {
 			// given
 			Long orderId = 1L;
 			Long userId = 1L;
-			
+
 			User mockUser = mock(User.class);
 			EventProduct mockProduct = mock(EventProduct.class);
 			Order mockOrder = mock(Order.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
 			given(orderRepository.findByIdAndUserId(orderId, userId)).willReturn(Optional.of(mockOrder));
-			
+
 			given(mockOrder.getId()).willReturn(orderId);
 			given(mockOrder.getOrderNo()).willReturn("ORDER123");
 			given(mockOrder.getQuantity()).willReturn(2);
@@ -159,7 +165,7 @@ class OrderServiceTest {
 			// given
 			Long orderId = 1L;
 			Long userId = 1L;
-			
+
 			User mockUser = mock(User.class);
 			given(userService.getUserById(userId)).willReturn(mockUser);
 			given(orderRepository.findByIdAndUserId(orderId, userId)).willReturn(Optional.empty());
@@ -181,18 +187,18 @@ class OrderServiceTest {
 			// given
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
-			
+
 			User mockUser = mock(User.class);
 			Order order1 = mock(Order.class);
 			Order order2 = mock(Order.class);
 			EventProduct product1 = mock(EventProduct.class);
 			EventProduct product2 = mock(EventProduct.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
-			
+
 			Page<Order> orderPage = new PageImpl<>(Arrays.asList(order1, order2), pageable, 2);
 			given(orderRepository.findOrdersByUserId(userId, pageable)).willReturn(orderPage);
-			
+
 			// Mock order1
 			given(order1.getId()).willReturn(1L);
 			given(order1.getOrderNo()).willReturn("ORDER001");
@@ -203,7 +209,7 @@ class OrderServiceTest {
 			given(product1.getProductName()).willReturn("상품1");
 			given(product1.getProductImage()).willReturn("image1.jpg");
 			given(order1.getCreatedAt()).willReturn(LocalDateTime.now().minusDays(1));
-			
+
 			// Mock order2
 			given(order2.getId()).willReturn(2L);
 			given(order2.getOrderNo()).willReturn("ORDER002");
@@ -220,8 +226,8 @@ class OrderServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(2);
-			assertThat(result.totalElements()).isEqualTo(2);
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getTotalElements()).isEqualTo(2);
 			verify(userService).getUserById(userId);
 			verify(orderRepository).findOrdersByUserId(userId, pageable);
 		}
@@ -233,16 +239,16 @@ class OrderServiceTest {
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
 			OrderStatus status = OrderStatus.DONE;
-			
+
 			User mockUser = mock(User.class);
 			Order order1 = mock(Order.class);
 			EventProduct product1 = mock(EventProduct.class);
-			
+
 			given(userService.getUserById(userId)).willReturn(mockUser);
-			
+
 			Page<Order> orderPage = new PageImpl<>(Arrays.asList(order1), pageable, 1);
 			given(orderRepository.findOrdersByUserIdAndStatus(userId, status, pageable)).willReturn(orderPage);
-			
+
 			// Mock order1
 			given(order1.getId()).willReturn(1L);
 			given(order1.getOrderNo()).willReturn("ORDER001");
@@ -259,8 +265,8 @@ class OrderServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(1);
-			assertThat(result.totalElements()).isEqualTo(1);
+			assertThat(result.getContent()).hasSize(1);
+			assertThat(result.getTotalElements()).isEqualTo(1);
 			verify(userService).getUserById(userId);
 			verify(orderRepository).findOrdersByUserIdAndStatus(userId, status, pageable);
 		}
@@ -271,7 +277,7 @@ class OrderServiceTest {
 			// given
 			Long userId = 1L;
 			Pageable pageable = PageRequest.of(0, 10);
-			
+
 			given(userService.getUserById(userId)).willThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
 			// when & then

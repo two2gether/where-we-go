@@ -17,6 +17,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentRequestDto {
+
+	private Long paymentId;
+
 	/**
 	 * 가맹점 API Key (절대 노출 금지)
 	 */

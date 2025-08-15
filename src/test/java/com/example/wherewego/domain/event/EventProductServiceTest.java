@@ -19,23 +19,23 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.example.wherewego.domain.common.enums.ErrorCode;
-import com.example.wherewego.domain.eventproduct.dto.response.EventDetailResponseDto;
-import com.example.wherewego.domain.eventproduct.dto.response.EventListResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductDetailResponseDto;
+import com.example.wherewego.domain.eventproduct.dto.response.EventProductListResponseDto;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
-import com.example.wherewego.domain.eventproduct.repository.EventRepository;
-import com.example.wherewego.domain.eventproduct.service.EventService;
+import com.example.wherewego.domain.eventproduct.repository.EventProductRepository;
+import com.example.wherewego.domain.eventproduct.service.EventProductService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EventService 테스트")
-class EventServiceTest {
+class EventProductServiceTest {
 
 	@Mock
-	private EventRepository eventRepository;
+	private EventProductRepository eventProductRepository;
 
 	@InjectMocks
-	private EventService eventService;
+	private EventProductService eventProductService;
 
 	@Nested
 	@DisplayName("이벤트 목록 조회")
@@ -60,16 +60,16 @@ class EventServiceTest {
 			List<EventProduct> events = List.of(event1, event2);
 			Page<EventProduct> eventPage = new PageImpl<>(events, pageable, events.size());
 
-			given(eventRepository.findAllByIsDeletedFalse(pageable)).willReturn(eventPage);
+			given(eventProductRepository.findAllByIsDeletedFalse(pageable)).willReturn(eventPage);
 
 			// when
-			PagedResponse<EventListResponseDto> result = eventService.findAllEvents(pageable);
+			PagedResponse<EventProductListResponseDto> result = eventProductService.findAllEvents(pageable);
 
 			// then
 			assertThat(result).isNotNull();
-			List<EventListResponseDto> content = result.content();
+			List<EventProductListResponseDto> content = result.getContent();
 			assertThat(content).hasSize(2);
-			assertThat(result.content().get(0).getProductId()).isEqualTo(1L);
+			assertThat(result.getContent().get(0).getProductId()).isEqualTo(1L);
 		}
 	}
 
@@ -84,11 +84,11 @@ class EventServiceTest {
 			Long productId = 1L;
 
 			EventProduct event = mock(EventProduct.class);
-			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(event));
+			given(eventProductRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.of(event));
 			given(event.getId()).willReturn(productId);
 
 			// when
-			EventDetailResponseDto result = eventService.findEventById(productId);
+			EventProductDetailResponseDto result = eventProductService.findEventById(productId);
 
 			// then
 			assertThat(result).isNotNull();
@@ -101,10 +101,10 @@ class EventServiceTest {
 		void shouldThrowExceptionIfProductNotFound() {
 			// given
 			Long productId = 999L;
-			given(eventRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.empty());
+			given(eventProductRepository.findByIdAndIsDeletedFalse(productId)).willReturn(Optional.empty());
 
 			// when & then
-			assertThatThrownBy(() -> eventService.findEventById(productId))
+			assertThatThrownBy(() -> eventProductService.findEventById(productId))
 				.isInstanceOf(CustomException.class)
 				.hasMessage(ErrorCode.EVENT_PRODUCT_NOT_FOUND.getMessage());
 		}

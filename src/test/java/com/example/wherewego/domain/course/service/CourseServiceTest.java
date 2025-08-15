@@ -28,11 +28,11 @@ import com.example.wherewego.domain.courses.dto.response.CourseDetailResponseDto
 import com.example.wherewego.domain.courses.entity.Course;
 import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
-import com.example.wherewego.domain.courses.repository.PlaceRepository;
+import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
 import com.example.wherewego.domain.courses.service.CourseService;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -48,13 +48,13 @@ class CourseServiceTest {
 	private CourseRepository courseRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private UserService userService;
 
 	@Mock
 	private PlaceService placeService;
 
 	@Mock
-	private PlaceRepository placeRepository;
+	private PlacesOrderRepository placesOrderRepository;
 
 	@InjectMocks
 	private CourseService courseService;
@@ -106,7 +106,7 @@ class CourseServiceTest {
 
 		when(courseRepository.findByExactRegionAndIsPublicTrue("서울", pageable))
 			.thenReturn(coursePage);
-		when(placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(List.of(1L)))
+		when(placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(List.of(1L)))
 			.thenReturn(testPlaces);
 
 		// when
@@ -114,7 +114,7 @@ class CourseServiceTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.content()).hasSize(1);
+		assertThat(result.getContent()).hasSize(1);
 		verify(courseRepository).findByExactRegionAndIsPublicTrue("서울", pageable);
 	}
 
@@ -129,7 +129,7 @@ class CourseServiceTest {
 		// 테마 필터링이 있는 경우의 Repository 메서드 모킹
 		when(courseRepository.findByRegionAndThemesInAndIsPublicTrue("", List.of(CourseTheme.HEALING), pageable))
 			.thenReturn(coursePage);
-		when(placeRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(List.of(1L)))
+		when(placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(List.of(1L)))
 			.thenReturn(testPlaces);
 
 		// when
@@ -137,7 +137,7 @@ class CourseServiceTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.content()).hasSize(1);
+		assertThat(result.getContent()).hasSize(1);
 	}
 
 	@Test
@@ -149,7 +149,7 @@ class CourseServiceTest {
 		double userLng = 126.9780;
 
 		when(courseRepository.findByIdWithThemes(courseId)).thenReturn(Optional.of(testCourse));
-		when(placeRepository.findByCourseIdOrderByVisitOrderAsc(courseId)).thenReturn(testPlaces);
+		when(placesOrderRepository.findByCourseIdOrderByVisitOrderAsc(courseId)).thenReturn(testPlaces);
 
 		// when
 		CourseDetailResponseDto result = courseService.getCourseDetail(courseId, userLat, userLng);
@@ -160,7 +160,7 @@ class CourseServiceTest {
 		assertThat(result.getRegion()).isEqualTo("서울");
 		assertThat(result.getIsPublic()).isTrue();
 		verify(courseRepository).findByIdWithThemes(courseId);
-		verify(placeRepository).findByCourseIdOrderByVisitOrderAsc(courseId);
+		verify(placesOrderRepository).findByCourseIdOrderByVisitOrderAsc(courseId);
 	}
 
 	@Test
@@ -177,7 +177,7 @@ class CourseServiceTest {
 			.hasMessage(ErrorCode.COURSE_NOT_FOUND.getMessage());
 
 		verify(courseRepository).findByIdWithThemes(nonExistentCourseId);
-		verify(placeRepository, never()).findByCourseIdOrderByVisitOrderAsc(any());
+		verify(placesOrderRepository, never()).findByCourseIdOrderByVisitOrderAsc(any());
 	}
 
 	// 코스 삭제 관련 테스트들은 현재 구현되지 않은 기능이므로 제거

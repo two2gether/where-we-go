@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -21,7 +22,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "course_likes")
+@Table(
+	name = "course_likes",
+	uniqueConstraints = @UniqueConstraint(
+		name = "uq_course_like_user_course",
+		columnNames = {"user_id", "course_id"}
+	)
+)
 public class CourseLike extends BaseEntity {
 
 	/**

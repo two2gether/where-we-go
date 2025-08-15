@@ -1,203 +1,385 @@
-name: CI/CD Deploy
+name: Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev, feature/docker-deployment ]
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: wherewego-app
+  CONTAINER_NAME: wherewego-app
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment'
+    outputs:
+      image-uri: ${{ steps.build-image.outputs.image }}
+      environment: ${{ steps.set-env.outputs.environment }}
+    
     steps:
-      - name: Checkout source code
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Notify build start
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$ENV_ICON *WhereWeGo Build Started* 🔨\\n빌드를 시작합니다...\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\\n${{ github.actor }}\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
 
-      - name: Grant permission to gradlew
-        run: chmod +x ./gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Build Spring Boot App
-        run: ./gradlew clean build -x test
+      - name: Build with Gradle
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"⚙️ Gradle 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          ./gradlew clean build -x test
 
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: app
-          path: build/libs/*.jar
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Build
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          BUILD_START=$(date +%s)
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🐳 Docker 이미지 빌드 중... (약 2-3분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          # Docker 이미지 빌드 및 푸시
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          # latest 태그도 푸시
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *빌드 완료!* ✅\\n배포 준비가 완료되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*빌드 시간:*\\n⏱️ ${BUILD_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*다음 단계:*\\n🚀 배포 시작 예정\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    env:
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
-
+    needs: build
+    outputs:
+      cluster: ${{ steps.set-deploy-vars.outputs.cluster }}
+      service: ${{ steps.set-deploy-vars.outputs.service }}
+    
     steps:
-      - name: Download JAR Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup EC2 environment
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Set deployment variables
+        id: set-deploy-vars
+        run: |
+          echo "cluster=wherewego-prod-cluster" >> $GITHUB_OUTPUT
+          echo "service=wherewego-prod-service" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 애플리케이션 디렉토리 생성
-            mkdir -p /home/ubuntu/app
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Notify deployment start
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#ff9500\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🚀 *배포 시작!* ⚡\\n새 버전을 서버에 배포 중...\"
+                }
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Update task definition and start deployment
+        run: |
+          DEPLOY_START=$(date +%s)
+          
+          # ECR URI를 태스크 정의에 반영
+          sed "s|ECR_URI_PLACEHOLDER|${{ needs.build.outputs.image-uri }}|g" aws/task-definition.json > temp-task-definition.json
+          
+          # 태스크 정의 등록
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "✅ Task definition registered: $TASK_DEF_ARN"
+          
+          # 서비스 존재 여부 확인
+          SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ steps.set-deploy-vars.outputs.cluster }} --services ${{ steps.set-deploy-vars.outputs.service }} --query 'length(services)' --output text 2>/dev/null || echo "0")
+          
+          if [[ "$SERVICE_EXISTS" == "0" ]]; then
+            echo "🚀 Creating new ECS service..."
+          
+            # CloudFormation Outputs에서 리소스 ID 가져오기
+            PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+              --output text)
+              
+            PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+              --output text)
+              
+            ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+              --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+              --output text)
             
-            # Java 17 설치 확인 및 설치
-            if ! java -version 2>&1 | grep -q "17"; then
-              echo "Installing Java 17..."
-              sudo apt update
-              sudo apt install -y openjdk-17-jdk
+            echo "📋 CloudFormation Stack: wherewego-${{ needs.build.outputs.environment }}"
+            echo "🔗 Using subnets: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
+            echo "🛡️ Using security group: $ECS_SECURITY_GROUP"
+          
+            # ECS 서비스 생성
+            aws ecs create-service \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service-name ${{ steps.set-deploy-vars.outputs.service }} \
+              --task-definition ${{ env.CONTAINER_NAME }} \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}"
+          else
+            echo "🔄 Updating existing ECS service..."
+          
+            # 기존 서비스 업데이트
+            aws ecs update-service \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service ${{ steps.set-deploy-vars.outputs.service }} \
+              --task-definition ${{ env.CONTAINER_NAME }} \
+              --desired-count 1
+          fi
+          
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          
+          # 임시 파일 정리
+          rm temp-task-definition.json
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"⚡ *배포 시작됨!* 🎯\\n서비스가 업데이트되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*배포 시간:*\\n⏱️ ${DEPLOY_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Verify
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for service stability and final notification
+        run: |
+          VERIFY_START=$(date +%s)
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🏥 헬스체크 진행 중... (약 3-5분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            # 서비스 안정화 대기
+            echo "⏳ Waiting for service stability..."
+            aws ecs wait services-stable \
+              --cluster ${{ needs.deploy.outputs.cluster }} \
+              --services ${{ needs.deploy.outputs.service }} \
+              --cli-read-timeout 600 || echo "⚠️ 타임아웃이지만 서비스는 백그라운드에서 계속 진행됩니다"
+          fi
+          
+          VERIFY_END=$(date +%s)
+          VERIFY_DURATION=$((VERIFY_END - VERIFY_START))
+          VERIFY_MIN=$((VERIFY_DURATION / 60))
+          VERIFY_SEC=$((VERIFY_DURATION % 60))
+          
+          # 전체 결과에 따른 메시지 설정
+          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.deploy.result }}" == "success" ]]; then
+            COLOR="good"
+            STATUS="✅ SUCCESS"
+            MESSAGE="배포가 성공적으로 완료되었습니다!"
+            EMOJI="🎉"
+          else
+            COLOR="danger" 
+            STATUS="❌ FAILED"
+            if [[ "${{ needs.build.result }}" == "failure" ]]; then
+              MESSAGE="빌드 중 오류가 발생했습니다."
+            elif [[ "${{ needs.deploy.result }}" == "failure" ]]; then
+              MESSAGE="배포 중 오류가 발생했습니다."
             else
-              echo "Java 17 already installed"
+              MESSAGE="알 수 없는 오류가 발생했습니다."
             fi
-            
-            # Java 버전 확인
-            java -version
-
-      - name: Copy JAR to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "Where-we-go-0.0.1-SNAPSHOT.jar"
-          target: "/home/ubuntu/app/"
-          overwrite: true
-
-      - name: Stop existing application
-        uses: appleboy/ssh-action@v0.1.10
-        continue-on-error: true
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "🔄 Stopping all existing Java applications..."
-            
-            # 모든 Java 프로세스 확인 및 where-we-go 관련 프로세스 강제 종료
-            for pid in $(pgrep -f "java.*Where-we-go" || true); do
-              if [ ! -z "$pid" ]; then
-                echo "Killing Java process: $pid"
-                sudo kill -9 $pid || echo "Failed to kill $pid"
-              fi
-            done
-            
-            # 포트 8080 사용하는 모든 프로세스 강제 종료
-            sudo lsof -ti:8080 | xargs -r sudo kill -9 || echo "No process using port 8080 via lsof"
-            sudo fuser -k 8080/tcp || echo "No process using port 8080 via fuser"
-            
-            # 추가적으로 pkill로 한번 더
-            sudo pkill -9 -f 'java.*[Ww]here.*[Ww]e.*[Gg]o' || echo "No matching processes via pkill"
-            
-            sleep 10
-            echo "✅ Stop process completed"
-            
-            # 최종 포트 확인
-            if sudo lsof -i:8080; then
-              echo "⚠️ Port 8080 still in use - attempting additional cleanup"
-              sudo netstat -tlnp | grep 8080 | awk '{print $7}' | cut -d'/' -f1 | xargs -r sudo kill -9
-            else
-              echo "✅ Port 8080 is now free"
-            fi
-
-      - name: Start Spring Boot Application
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DB_HOST,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,JWT_SECRET_KEY,GOOGLE_MAPS_API_KEY
-          script: |
-            cd /home/ubuntu/app
-            
-            # 환경변수 파일 생성
-            cat > .env << EOF
-            DB_HOST=$DB_HOST
-            DB_PORT=$DB_PORT
-            DB_NAME=$DB_NAME
-            DB_USERNAME=$DB_USERNAME
-            DB_PASSWORD=$DB_PASSWORD
-            JWT_SECRET_KEY=$JWT_SECRET_KEY
-            GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
-            EOF
-            
-            # 환경변수 로드
-            export $(cat .env | xargs)
-            
-            # Spring Boot 애플리케이션 시작
-            nohup java -jar Where-we-go-0.0.1-SNAPSHOT.jar \
-              --spring.profiles.active=dev \
-              --spring.datasource.url="jdbc:mysql://$DB_HOST:$DB_PORT/$DB_NAME?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true" \
-              --spring.datasource.username="$DB_USERNAME" \
-              --spring.datasource.password="$DB_PASSWORD" \
-              --jwt.secret.key="$JWT_SECRET_KEY" \
-              --google.api.key="$GOOGLE_MAPS_API_KEY" \
-              > app.log 2>&1 &
-            
-            # 애플리케이션 시작 확인
-            sleep 15
-            if pgrep -f 'java.*Where-we-go' > /dev/null; then
-              echo "✅ Application process started successfully"
-              echo "📋 Application log:"
-            else
-              echo "⚠️ Application process not found, but continuing to health check"
-              echo "📋 Current log:"
-              cat app.log || echo "No log file found"
-            fi
-            
-            echo "🔍 Proceeding to health check for final verification..."
-
-      - name: Health Check
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 헬스 체크 (최대 2분 재시도)
-            for i in {1..4}; do
-              echo "Health check attempt ${i}/4..."
-            
-              # 프로세스 확인
-              if pgrep -f 'java.*Where-we-go' > /dev/null; then
-                echo "✅ Java process is running"
-            
-                # 헬스 엔드포인트 확인
-                if curl -f "http://localhost:8080/health" -s > /dev/null 2>&1; then
-                  echo "✅ Health check passed!"
-                  curl -s "http://localhost:8080/health" | head -3
-                  exit 0
-                else
-                  echo "Health endpoint not ready yet..."
-                fi
-              else
-                echo "Java process not found..."
-              fi
-            
-              echo "Waiting 30 seconds..."
-              sleep 30
-            done
-            
-            echo "❌ Health check failed after 4 attempts"
-            echo "📋 Application log:"
-            tail -50 /home/ubuntu/app/app.log
-            echo "📋 Process status:"
-            ps aux | grep java
-            exit 1
+            EMOJI="💥"
+          fi
+          
+          # 브랜치에 따른 환경 이모지
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
+          
+          # 커밋 메시지 가져오기
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 50)
+          
+          # 최종 Slack 메시지 전송
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"$COLOR\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$EMOJI $ENV_ICON *WhereWeGo Deployment* $STATUS\\n$MESSAGE\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*헬스체크:*\\n⏱️ ${VERIFY_MIN}분 ${VERIFY_SEC}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\\n👤 ${{ github.actor }}\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Message:*\\n💬 $COMMIT_MSG\"
+                }]
+              }, {
+                \"type\": \"actions\",
+                \"elements\": [{
+                  \"type\": \"button\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"🔍 View Workflow\"
+                  },
+                  \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}

@@ -6,6 +6,10 @@ import com.example.wherewego.domain.payment.dto.request.CallbackRequestDto;
 import com.example.wherewego.domain.payment.dto.response.PaymentDetailResponseDto;
 import com.example.wherewego.domain.payment.entity.Payment;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PaymentMapper {
 
 	// 결제 응답 콜백 DTO → 결제 엔티티
@@ -38,7 +42,7 @@ public class PaymentMapper {
 			.accountBankName(dto.getAccountBankName())
 			.accountNumber(dto.getAccountNumber())
 
-			.paymentStatus(PaymentStatus.DONE) // 결제 완료로 고정
+			.paymentStatus(PaymentStatus.DONE)
 			.build();
 	}
 

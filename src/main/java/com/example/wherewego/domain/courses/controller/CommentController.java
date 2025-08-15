@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
+import com.example.wherewego.domain.courses.dto.request.CommentCreateRequestDto;
 import com.example.wherewego.domain.courses.dto.request.CommentRequestDto;
 import com.example.wherewego.domain.courses.dto.response.CommentResponseDto;
 import com.example.wherewego.domain.courses.service.CommentService;
@@ -42,33 +44,32 @@ public class CommentController {
 	/**
 	 * 코스 댓글 생성 API
 	 *
-	 * POST /api/courses/{courseId}/comments
+	 * POST /api/comments
 	 *
 	 * 인증된 사용자가 특정 코스에 댓글을 작성합니다.
 	 * 댓글 내용은 유효성 검증을 거쳐 저장되며, 작성 시간과 작성자 정보가 함께 기록됩니다.
 	 *
-	 * @param courseId 댓글을 작성할 코스 ID
-	 * @param requestDto 댓글 작성 요청 데이터 (내용 포함)
+	 * @param requestDto 댓글 작성 요청 데이터 (courseId, 내용 포함)
 	 * @param userDetails 인증된 사용자 정보
 	 * @return 생성된 댓글 정보
 	 */
-	@PostMapping("/api/courses/{courseId}/comments")
+	@PostMapping("/api/comments")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<CommentResponseDto> createComment(
-		@PathVariable Long courseId,
-		@RequestBody @Valid CommentRequestDto requestDto,
+		@RequestBody @Valid CommentCreateRequestDto requestDto,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
 
 		Long userId = userDetails.getUser().getId();
 
-		CommentResponseDto responseDto = commentService.createComment(courseId, userId, requestDto);
+		CommentResponseDto responseDto = commentService.createComment(userId, requestDto);
+
 		return ApiResponse.created("댓글이 생성되었습니다.", responseDto);
 	}
 
 	/**
 	 * 코스 댓글 삭제 API
 	 *
-	 * DELETE /api/courses/{courseId}/comments/{commentId}
+	 * DELETE /api/comments/{commentId}
 	 *
 	 * 인증된 사용자가 자신이 작성한 댓글을 삭제합니다.
 	 * 작성자 본인만 삭제할 수 있으며, 권한 검증을 통해 보안을 보장합니다.
@@ -78,7 +79,7 @@ public class CommentController {
 	 * @param userDetails 인증된 사용자 정보 (권한 검증용)
 	 * @return 빈 응답과 성공 메시지
 	 */
-	@DeleteMapping("/api/courses/{courseId}/comments/{commentId}")
+	@DeleteMapping("/api/comments/{commentId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public ApiResponse<Void> deleteComment(
 		@PathVariable Long commentId,
@@ -94,7 +95,7 @@ public class CommentController {
 	/**
 	 * 코스 댓글 수정 API
 	 *
-	 * PATCH /api/courses/{courseId}/comments/{commentId}
+	 * PATCH /api/comments/{commentId}
 	 *
 	 * 인증된 사용자가 자신이 작성한 댓글의 내용을 수정합니다.
 	 * 작성자 본인만 수정할 수 있으며, 수정 시간이 기록됩니다.
@@ -105,7 +106,7 @@ public class CommentController {
 	 * @param userDetails 인증된 사용자 정보 (권한 검증용)
 	 * @return 수정된 댓글 정보
 	 */
-	@PatchMapping("/api/courses/{courseId}/comments/{commentId}")
+	@PatchMapping("/api/comments/{commentId}")
 	public ApiResponse<CommentResponseDto> updateComment(
 		@PathVariable Long commentId,
 		@RequestBody @Valid CommentRequestDto requestDto,
@@ -121,7 +122,7 @@ public class CommentController {
 	/**
 	 * 코스 댓글 목록 조회 API
 	 *
-	 * GET /api/courses/{courseId}/comments
+	 * GET /api/comments
 	 *
 	 * 특정 코스에 달린 모든 댓글을 페이지단위로 조회합니다.
 	 * 댓글은 작성일 내림차순으로 정렬되며, 작성자 정보와 작성/수정 시간이 포함됩니다.
@@ -133,9 +134,9 @@ public class CommentController {
 	 * @param userDetails 현재 인증된 사용자 정보 (선택적)
 	 * @return 페이지네이션된 댓글 목록 (isMine 필드 포함)
 	 */
-	@GetMapping("/api/courses/{courseId}/comments")
+	@GetMapping("/api/comments")
 	public ApiResponse<PagedResponse<CommentResponseDto>> getComments(
-		@PathVariable Long courseId,
+		@RequestParam Long courseId,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
 		@AuthenticationPrincipal CustomUserDetail userDetails) {
 

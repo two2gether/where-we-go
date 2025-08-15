@@ -4,12 +4,16 @@ import com.example.wherewego.domain.common.enums.OrderStatus;
 import com.example.wherewego.domain.eventproduct.entity.EventProduct;
 import com.example.wherewego.domain.order.dto.request.OrderCreateRequestDto;
 import com.example.wherewego.domain.order.dto.response.MyOrderResponseDto;
-import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.dto.response.OrderCreateResponseDto;
+import com.example.wherewego.domain.order.dto.response.OrderDetailResponseDto;
 import com.example.wherewego.domain.order.entity.Order;
 import com.example.wherewego.domain.payment.dto.request.PaymentRequestDto;
 import com.example.wherewego.domain.user.entity.User;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class OrderMapper {
 
 	// 결제 요청 DTO → 주문 엔티티
@@ -39,7 +43,7 @@ public class OrderMapper {
 			.quantity(requestDto.getQuantity())
 			.build();
 	}
-	
+
 	/**
 	 * 주문 엔티티 → 내 주문 목록 응답 DTO
 	 * @param order 주문 엔티티
@@ -57,7 +61,7 @@ public class OrderMapper {
 			.orderedAt(order.getCreatedAt())
 			.build();
 	}
-	
+
 	/**
 	 * 주문 엔티티 → 주문 상세 응답 DTO
 	 * @param order 주문 엔티티

@@ -1,4 +1,4 @@
-package com.example.wherewego.domain.courses.service;
+package com.example.wherewego.domain.course.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -22,6 +22,7 @@ import com.example.wherewego.domain.courses.dto.request.NotificationRequestDto;
 import com.example.wherewego.domain.courses.dto.response.NotificationResponseDto;
 import com.example.wherewego.domain.courses.entity.Notification;
 import com.example.wherewego.domain.courses.repository.NotificationRepository;
+import com.example.wherewego.domain.courses.service.NotificationService;
 
 class NotificationServiceTest {
 
@@ -87,8 +88,8 @@ class NotificationServiceTest {
 		var response = notificationService.getUserNotifications(userId, pageable);
 
 		// then
-		assertThat(response.content()).hasSize(2);
-		assertThat(response.content().get(0).getReceiverId()).isEqualTo(userId);
+		assertThat(response.getContent()).hasSize(2);
+		assertThat(response.getContent().get(0).getReceiverId()).isEqualTo(userId);
 	}
 
 	@Test
@@ -96,7 +97,7 @@ class NotificationServiceTest {
 		// given
 		Long notiId = 100L;
 		Long userId = 200L;
-		
+
 		Notification notification = Notification.builder()
 			.id(notiId)
 			.receiverId(userId)
@@ -105,7 +106,8 @@ class NotificationServiceTest {
 			.message("msg")
 			.build();
 
-		when(notificationRepository.findById(notiId)).thenReturn(Optional.of(notification));
+		when(notificationRepository.findByIdAndReceiverId(notiId, userId))
+			.thenReturn(Optional.of(notification));
 
 		// when
 		NotificationResponseDto result = notificationService.markAsRead(notiId, userId);

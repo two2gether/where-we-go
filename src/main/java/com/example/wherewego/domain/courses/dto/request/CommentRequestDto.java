@@ -6,8 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 댓글 생성 요청 DTO
- * 코스에 댓글을 작성할 때 사용하는 요청 데이터 클래스입니다.
+ * 댓글 수정 요청 DTO
+ * 코스 댓글을 수정할 때 사용하는 요청 데이터 클래스입니다.
  */
 @Getter
 @NoArgsConstructor

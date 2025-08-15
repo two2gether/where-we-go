@@ -41,6 +41,9 @@ public enum ErrorCode {
 	// 주문 관련 에러 정의
 	ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문이 존재하지 않습니다."),
 	UNAUTHORIZED_ORDER_ACCESS(HttpStatus.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."),
+	ORDER_ALREADY_EXISTS_FOR_USER(HttpStatus.CONFLICT, "이미 진행 중인 주문이 있습니다."),
+	ONLY_ONE_ITEM_ALLOWED(HttpStatus.BAD_REQUEST, "하나의 상품만 주문할 수 있습니다."),
+
 	// 결제 관련 에러 정의
 	PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
 
@@ -48,6 +51,7 @@ public enum ErrorCode {
 	INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "결제 완료된 건만 환불 가능합니다."),
 	REFUND_TIME_EXPIRED(HttpStatus.BAD_REQUEST, "환불 가능 기간이 지났습니다."),
 	REFUND_ALREADY_REQUESTED(HttpStatus.CONFLICT, "이미 환불 요청된 결제입니다."),
+	REFUND_NOT_POSSIBLE(HttpStatus.BAD_REQUEST, "현재 환불이 불가능합니다."),
 	REFUND_PROCESSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "환불 처리 중 오류가 발생했습니다."),
 
 	// 외부 API 관련 에러 정의

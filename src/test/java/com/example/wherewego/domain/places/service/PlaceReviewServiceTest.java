@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +30,7 @@ import com.example.wherewego.domain.places.dto.response.PlaceReviewResponseDto;
 import com.example.wherewego.domain.places.entity.PlaceReview;
 import com.example.wherewego.domain.places.repository.PlaceReviewRepository;
 import com.example.wherewego.domain.user.entity.User;
-import com.example.wherewego.domain.user.repository.UserRepository;
+import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.exception.CustomException;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -43,10 +42,10 @@ class PlaceReviewServiceTest {
 	private PlaceReviewRepository placeReviewRepository;
 
 	@Mock
-	private UserRepository userRepository;
+	private PlaceSearchService placeSearchService;
 
 	@Mock
-	private PlaceSearchService placeSearchService;
+	private UserService userService;
 
 	@InjectMocks
 	private PlaceReviewService placeReviewService;
@@ -90,7 +89,7 @@ class PlaceReviewServiceTest {
 
 			given(placeSearchService.getPlaceDetail(placeId)).willReturn(placeDetail);
 			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.of(testUser));
+			given(userService.getUserById(userId)).willReturn(testUser);
 
 			PlaceReview savedReview = PlaceReview.builder()
 				.id(1L)
@@ -156,7 +155,7 @@ class PlaceReviewServiceTest {
 
 			given(placeSearchService.getPlaceDetail(placeId)).willReturn(placeDetail);
 			given(placeReviewRepository.existsByUserIdAndPlaceId(userId, placeId)).willReturn(false);
-			given(userRepository.findByIdAndIsDeletedFalse(userId)).willReturn(Optional.empty());
+			given(userService.getUserById(userId)).willThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
 			// when & then
 			assertThatThrownBy(() -> placeReviewService.createReview(placeId, createRequest, userId))
@@ -212,15 +211,16 @@ class PlaceReviewServiceTest {
 				.willReturn(reviewPage);
 
 			// when
-			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size, userId);
+			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size,
+				userId);
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(2);
-			assertThat(result.totalElements()).isEqualTo(2);
-			assertThat(result.totalPages()).isEqualTo(1);
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getTotalElements()).isEqualTo(2);
+			assertThat(result.getTotalPages()).isEqualTo(1);
 
-			PlaceReviewResponseDto firstReview = result.content().get(0);
+			PlaceReviewResponseDto firstReview = result.getContent().get(0);
 			assertThat(firstReview.getReviewId()).isEqualTo(1L);
 			assertThat(firstReview.getRating()).isEqualTo(5);
 			assertThat(firstReview.getContent()).isEqualTo("정말 좋아요!");
@@ -248,10 +248,11 @@ class PlaceReviewServiceTest {
 				.willReturn(reviewPage);
 
 			// when
-			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size, userId);
+			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size,
+				userId);
 
 			// then
-			PlaceReviewResponseDto myReviewDto = result.content().get(0);
+			PlaceReviewResponseDto myReviewDto = result.getContent().get(0);
 			assertThat(myReviewDto.getIsMyReview()).isTrue();
 		}
 
@@ -266,11 +267,12 @@ class PlaceReviewServiceTest {
 				.willReturn(emptyPage);
 
 			// when
-			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size, userId);
+			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getPlaceReviews(placeId, page, size,
+				userId);
 
 			// then
-			assertThat(result.content()).isEmpty();
-			assertThat(result.totalElements()).isEqualTo(0);
+			assertThat(result.getContent()).isEmpty();
+			assertThat(result.getTotalElements()).isEqualTo(0);
 		}
 	}
 
@@ -409,11 +411,11 @@ class PlaceReviewServiceTest {
 
 			// then
 			assertThat(result).isNotNull();
-			assertThat(result.content()).hasSize(2);
-			assertThat(result.totalElements()).isEqualTo(2);
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getTotalElements()).isEqualTo(2);
 
 			// 모든 리뷰가 내 리뷰여야 함
-			result.content().forEach(review -> {
+			result.getContent().forEach(review -> {
 				assertThat(review.getIsMyReview()).isTrue();
 				assertThat(review.getReviewer().getUserId()).isEqualTo(userId);
 			});
@@ -433,8 +435,8 @@ class PlaceReviewServiceTest {
 			PagedResponse<PlaceReviewResponseDto> result = placeReviewService.getMyReviews(userId, page, size);
 
 			// then
-			assertThat(result.content()).isEmpty();
-			assertThat(result.totalElements()).isEqualTo(0);
+			assertThat(result.getContent()).isEmpty();
+			assertThat(result.getTotalElements()).isEqualTo(0);
 		}
 	}
 }
