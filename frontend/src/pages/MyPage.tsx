@@ -15,6 +15,7 @@ import {
   useMarkAllNotificationsAsRead
 } from '../hooks/useUser';
 import LinearLayout from '../components/layout/LinearLayout';
+import { ProfileImageUploader } from '../components/common/ProfileImageUploader';
 import type { MyPageUpdateRequest, WithdrawRequest } from '../api/types';
 
 const MyPage: React.FC = () => {
@@ -210,28 +211,25 @@ const MyPage: React.FC = () => {
           
           <div>
             <label 
-              className="block mb-2"
+              className="block mb-3"
               style={{
                 fontSize: '14px',
                 fontWeight: '500',
                 color: 'var(--notion-text)'
               }}
             >
-              프로필 이미지 URL
+              프로필 이미지
             </label>
-            <input
-              type="url"
-              value={editForm.profileImage}
-              onChange={(e) => setEditForm(prev => ({ ...prev, profileImage: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid var(--notion-gray-light)',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none'
+            <ProfileImageUploader
+              currentImageUrl={editForm.profileImage || myPageData?.profileImage}
+              onUploadComplete={(imageUrl) => {
+                setEditForm(prev => ({ ...prev, profileImage: imageUrl }));
               }}
-              placeholder="프로필 이미지 URL을 입력하세요"
+              onDeleteComplete={() => {
+                setEditForm(prev => ({ ...prev, profileImage: '' }));
+              }}
+              size="md"
+              className="mb-4"
             />
           </div>
 

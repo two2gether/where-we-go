@@ -99,7 +99,17 @@ public enum ErrorCode {
 
 	// 카카오 로그인 관련 에러 정의
 	KAKAO_ACCESS_TOKEN_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "카카오 액세스 토큰 요청 실패"),
-	KAKAO_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패");
+	KAKAO_USER_INFO_REQUEST_FAILED(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패"),
+
+	// 파일 업로드 관련 에러 정의
+	FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
+	FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제에 실패했습니다."),
+	INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다."),
+	FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기가 제한을 초과했습니다."),
+	EMPTY_FILE(HttpStatus.BAD_REQUEST, "빈 파일입니다."),
+	
+	// 내부 서버 에러
+	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "내부 서버 오류가 발생했습니다.");
 
 	private final HttpStatus status;
 	private final String message;

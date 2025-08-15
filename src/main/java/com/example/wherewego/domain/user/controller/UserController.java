@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.common.enums.OrderStatus;
@@ -40,6 +42,7 @@ import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
 import com.example.wherewego.domain.user.service.UserService;
+import com.example.wherewego.global.response.ImageUploadResponse;
 import com.example.wherewego.global.response.ApiResponse;
 import com.example.wherewego.global.response.PagedResponse;
 
@@ -375,6 +378,54 @@ public class UserController {
 		notificationService.deleteAllRead(userId);
 
 		return ApiResponse.noContent("읽은 알림이 전체 삭제 되었습니다.");
+	}
+
+	/**
+	 * 프로필 이미지 업로드 API
+	 *
+	 * POST /api/users/profile/image
+	 *
+	 * 인증된 사용자의 프로필 이미지를 S3에 업로드하고 DB를 업데이트합니다.
+	 * 기존 프로필 이미지가 있다면 S3에서 삭제 후 새 이미지로 교체합니다.
+	 * 10MB 이하의 이미지 파일만 업로드 가능하며, JPEG, PNG, GIF, WebP 형식을 지원합니다.
+	 *
+	 * @param userDetail 인증된 사용자 정보
+	 * @param file 업로드할 이미지 파일
+	 * @return 업로드된 이미지 URL과 성공 메시지
+	 */
+	@PostMapping("/profile/image")
+	public ApiResponse<ImageUploadResponse> uploadProfileImage(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@RequestParam("file") MultipartFile file
+	) {
+		try {
+			String imageUrl = userService.updateProfileImage(userDetail.getUser().getId(), file);
+			return ApiResponse.ok("프로필 이미지가 성공적으로 업로드되었습니다.", 
+				ImageUploadResponse.success(imageUrl));
+		} catch (Exception e) {
+			return ApiResponse.badRequest(e.getMessage(), 
+				ImageUploadResponse.error(e.getMessage()));
+		}
+	}
+
+	/**
+	 * 프로필 이미지 삭제 API
+	 *
+	 * DELETE /api/users/profile/image
+	 *
+	 * 인증된 사용자의 프로필 이미지를 S3에서 삭제하고 DB에서 URL을 제거합니다.
+	 * 프로필 이미지가 없는 경우에도 정상 응답을 반환합니다.
+	 *
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 성공 메시지
+	 */
+	@DeleteMapping("/profile/image")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public ApiResponse<Void> deleteProfileImage(
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		userService.deleteProfileImage(userDetail.getUser().getId());
+		return ApiResponse.noContent("프로필 이미지가 성공적으로 삭제되었습니다.");
 	}
 
 }

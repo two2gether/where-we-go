@@ -114,6 +114,25 @@ Resources:
   # Private Route Table 제거됨 - NAT Gateway 없이는 불필요
 
   # Security Groups
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-${Environment}-alb-sg
+      GroupDescription: ALB Security Group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-alb-sg
+
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -124,11 +143,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-${Environment}-ecs-sg
@@ -207,6 +222,49 @@ Resources:
         EncryptionType: AES256
 
   # CloudWatch Log Groups
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${ProjectName}-${Environment}-alb
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-${Environment}-alb
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${ProjectName}-${Environment}-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
   AppLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -219,7 +277,7 @@ Resources:
       LogGroupName: !Sub /ecs/${ProjectName}-redis
       RetentionInDays: 7
 
-  # S3 Bucket for Frontend Static Files
+  # S3 Bucket for Frontend Static Website Hosting
   FrontendS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -235,8 +293,9 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
-            AllowedMethods: [GET]
+            AllowedMethods: [GET, POST, PUT, DELETE, HEAD]
             AllowedOrigins: ['*']
+            MaxAge: 3000
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-${Environment}-frontend
@@ -254,47 +313,38 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub ${FrontendS3Bucket}/*
 
-  # CloudFront Distribution
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
+  # S3 Bucket for Image Uploads
+  ImageUploadS3Bucket:
+    Type: AWS::S3::Bucket
     Properties:
-      DistributionConfig:
-        Origins:
-          - Id: S3Origin
-            DomainName: !GetAtt FrontendS3Bucket.RegionalDomainName
-            CustomOriginConfig:
-              HTTPPort: 80
-              HTTPSPort: 443
-              OriginProtocolPolicy: https-only
-        Enabled: true
-        DefaultRootObject: index.html
-        Comment: !Sub ${ProjectName} ${Environment} Frontend Distribution
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - DELETE
-            - GET
-            - HEAD
-            - OPTIONS
-            - PATCH
-            - POST
-            - PUT
-          TargetOriginId: S3Origin
-          ViewerProtocolPolicy: redirect-to-https
-          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
-          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # Managed-CORS-S3Origin
-          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
-          Compress: true
-        CustomErrorResponses:
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-        PriceClass: PriceClass_100
+      BucketName: !Sub ${ProjectName}-${Environment}-images
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, POST, PUT, DELETE, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3000
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-${Environment}-frontend-cdn
+          Value: !Sub ${ProjectName}-${Environment}-images
+
+  # S3 Bucket Policy for Image Uploads (Public Read)
+  ImageUploadS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageUploadS3Bucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub ${ImageUploadS3Bucket}/*
 
 Outputs:
   VPCId:
@@ -321,11 +371,23 @@ Outputs:
     Export:
       Name: !Sub ${ProjectName}-${Environment}-ECSSecurityGroup
 
-  ECSServiceEndpoint:
-    Description: ECS Service Endpoint (will be set after service creation)
-    Value: !Sub "Check ECS service for public IP"
+  ApplicationLoadBalancerURL:
+    Description: Application Load Balancer URL
+    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
     Export:
-      Name: !Sub ${ProjectName}-${Environment}-ECS-Endpoint
+      Name: !Sub ${ProjectName}-${Environment}-ALB-URL
+
+  ApplicationLoadBalancerDNS:
+    Description: Application Load Balancer DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-ALB-DNS
+
+  ALBTargetGroupArn:
+    Description: ALB Target Group ARN
+    Value: !Ref ALBTargetGroup
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-ALB-TargetGroup
 
   ECSClusterName:
     Description: ECS Cluster Name
@@ -351,21 +413,21 @@ Outputs:
     Export:
       Name: !Sub ${ProjectName}-${Environment}-Frontend-S3-Bucket
 
-  CloudFrontDistributionId:
-    Description: CloudFront Distribution ID
-    Value: !Ref CloudFrontDistribution
-    Export:
-      Name: !Sub ${ProjectName}-${Environment}-CloudFront-Distribution-ID
-
-  CloudFrontDomainName:
-    Description: CloudFront Domain Name
-    Value: !GetAtt CloudFrontDistribution.DomainName
-    Export:
-      Name: !Sub ${ProjectName}-${Environment}-CloudFront-Domain
-
   FrontendURL:
-    Description: Frontend Application URL
-    Value: !Sub https://${CloudFrontDistribution.DomainName}
+    Description: Frontend Application URL (S3 Static Website)
+    Value: !Sub http://${FrontendS3Bucket}.s3-website.${AWS::Region}.amazonaws.com
     Export:
       Name: !Sub ${ProjectName}-${Environment}-Frontend-URL
+
+  ImageUploadS3Bucket:
+    Description: Image Upload S3 Bucket Name
+    Value: !Ref ImageUploadS3Bucket
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-Images-S3-Bucket
+
+  ImageUploadBucketURL:
+    Description: Image Upload S3 Bucket URL
+    Value: !Sub https://${ImageUploadS3Bucket}.s3.${AWS::Region}.amazonaws.com
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-Images-S3-URL
 
