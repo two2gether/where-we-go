@@ -394,31 +394,25 @@ jobs:
             BACKEND_HEALTH_URL="백엔드 IP 조회 중..."
           fi
           
-          # 배포 완료 즉시 URL 알림
+          # 배포 진행 상태 알림 (URL 제외)
           curl -X POST -H 'Content-type: application/json' \
           --data "{
             \"attachments\": [{
-              \"color\": \"good\",
+              \"color\": \"#36a64f\",
               \"blocks\": [{
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"🎉 *배포 완료!* ✅\\n새 버전이 배포되었습니다. 아래 URL로 접속 가능합니다.\"
+                  \"text\": \"⚡ *배포 시작됨!* 🎯\\n서비스가 업데이트되었습니다.\"
                 }
               }, {
                 \"type\": \"section\",
                 \"fields\": [{
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*🌐 프론트엔드:*\\n<$FRONTEND_URL|웹사이트 열기>\"
+                  \"text\": \"*배포 시간:*\\n⏱️ ${DEPLOY_DURATION}초\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*⚙️ 백엔드 헬스체크:*\\n<$BACKEND_HEALTH_URL|API 상태 확인>\"
-                }, {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*📝 브랜치:*\\n\`${{ github.ref_name }}\`\"
-                }, {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*🔖 커밋:*\\n\`$(echo ${{ github.sha }} | cut -c1-8)\`\"
+                  \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
                 }]
               }]
             }]
@@ -494,7 +488,7 @@ jobs:
           FRONTEND_URL=$(aws cloudformation describe-stacks \
             --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
             --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
-            --output text 2>/dev/null || echo "설정 중...")
+            --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
             
           # 백엔드 URL 가져오기 (ECS Public IP)  
           echo "🔍 최종 ECS Public IP 확인 중..."
@@ -513,9 +507,9 @@ jobs:
             --output text 2>/dev/null || echo "IP 조회 실패")
           
           if [[ "$BACKEND_PUBLIC_IP" != "IP 조회 실패" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
-            BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080"
+            BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080/actuator/health"
             echo "✅ Backend Public IP: $BACKEND_PUBLIC_IP"
-            echo "🔗 Backend URL: $BACKEND_URL"
+            echo "🔗 Backend Health Check: $BACKEND_URL"
           else
             BACKEND_URL="Backend IP 조회 중... (서비스 시작 대기)"
             echo "⚠️ Backend Public IP 조회 실패 또는 아직 할당되지 않음"
@@ -565,7 +559,7 @@ jobs:
                   \"text\": \"*Frontend:*\\n🌐 $FRONTEND_URL\"
                 }, {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*Backend:*\\n⚙️ $BACKEND_URL\"
+                  \"text\": \"*Backend Health Check:*\\n⚙️ $BACKEND_URL\"
                 }]
               }, {
                 \"type\": \"actions\",
