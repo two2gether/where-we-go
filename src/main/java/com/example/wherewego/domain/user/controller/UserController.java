@@ -403,8 +403,7 @@ public class UserController {
 			return ApiResponse.ok("프로필 이미지가 성공적으로 업로드되었습니다.", 
 				ImageUploadResponse.success(imageUrl));
 		} catch (Exception e) {
-			return ApiResponse.badRequest(e.getMessage(), 
-				ImageUploadResponse.error(e.getMessage()));
+			return ApiResponse.error(e.getMessage());
 		}
 	}
 
