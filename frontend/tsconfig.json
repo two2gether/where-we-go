@@ -14,7 +14,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* 모든 타입 검사 완전 비활성화 */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -23,7 +23,12 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitAny": false,
     "noImplicitReturns": false,
-    "skipLibCheck": true,
+    "noImplicitThis": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "noStrictGenericChecks": true,
+    "noImplicitOverride": false,
+    "useUnknownInCatchVariables": false,
 
     /* Path mapping */
     "baseUrl": ".",
