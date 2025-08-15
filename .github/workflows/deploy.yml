@@ -415,7 +415,6 @@ jobs:
           
           # Get environment variables from Parameter Store
           KAKAO_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/kakao/client-id" --query 'Parameter.Value' --output text)
-          KAKAO_MAP_KEY=$(aws ssm get-parameter --name "/wherewego/kakao/map-key" --with-decryption --query 'Parameter.Value' --output text)
           GOOGLE_MAPS_API_KEY=$(aws ssm get-parameter --name "/wherewego/google/maps-api-key" --with-decryption --query 'Parameter.Value' --output text)
           GOOGLE_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/google/client-id" --query 'Parameter.Value' --output text)
           
@@ -437,7 +436,6 @@ jobs:
           VITE_API_BASE_URL=http://${ECS_PUBLIC_IP}:8080/api
           VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
           VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
-          VITE_KAKAO_MAP_KEY=${KAKAO_MAP_KEY}
           VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
           VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
           VITE_DEV_MODE=false
