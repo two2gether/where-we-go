@@ -211,69 +211,6 @@ jobs:
             }]
           }" ${{ secrets.SLACK_WEBHOOK }}
 
-      - name: Deploy Frontend to S3
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\": \"🎨 프론트엔드 배포 중... (S3 정적 웹사이트)\"}" ${{ secrets.SLACK_WEBHOOK }}
-
-          # Get S3 bucket names from Parameter Store
-          S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/frontend-bucket" --query 'Parameter.Value' --output text)
-          IMAGE_S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/images-bucket" --query 'Parameter.Value' --output text)
-          AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
-          
-          echo "📦 Frontend S3 Bucket: $S3_BUCKET"
-          echo "🖼️ Image S3 Bucket: $IMAGE_S3_BUCKET"
-          
-          # Build frontend with production environment variables
-          cd frontend
-          npm ci
-          
-          # Get ECS Task Public IP (after backend deployment)
-          echo "🔍 ECS 서비스에서 Public IP 찾는 중..."
-          ECS_PUBLIC_IP=$(aws ecs list-tasks \
-            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
-            --service-name ${{ steps.set-deploy-vars.outputs.service }} \
-            --query 'taskArns[0]' --output text | \
-            xargs -I {} aws ecs describe-tasks \
-            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
-            --tasks {} \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text | \
-            xargs -I {} aws ec2 describe-network-interfaces \
-            --network-interface-ids {} \
-            --query 'NetworkInterfaces[0].Association.PublicIp' \
-            --output text)
-          
-          echo "🌐 ECS Public IP: $ECS_PUBLIC_IP"
-          
-          # Get environment variables from Parameter Store
-          KAKAO_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/kakao/client-id" --query 'Parameter.Value' --output text)
-          GOOGLE_MAPS_API_KEY=$(aws ssm get-parameter --name "/wherewego/google/maps-api-key" --with-decryption --query 'Parameter.Value' --output text)
-          GOOGLE_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/google/client-id" --query 'Parameter.Value' --output text)
-          
-          # Create production environment file
-          cat > .env.production << EOF
-          VITE_API_BASE_URL=http://${ECS_PUBLIC_IP}:8080
-          VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
-          VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
-          VITE_KAKAO_MAP_KEY=${GOOGLE_MAPS_API_KEY}
-          VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-          VITE_DEV_MODE=false
-          VITE_LOG_LEVEL=warn
-          EOF
-          
-          npm run build
-          
-          # Upload to S3 with proper website configuration
-          aws s3 sync dist/ s3://$S3_BUCKET --delete
-          
-          # Enable S3 static website hosting
-          aws s3 website s3://$S3_BUCKET --index-document index.html --error-document index.html
-          
-          cd ..
-          
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\": \"✅ 프론트엔드 S3 배포 완료!\"}" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Update task definition and start deployment
         run: |
@@ -413,6 +350,120 @@ jobs:
                 }, {
                   \"type\": \"mrkdwn\",
                   \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+  frontend:
+    runs-on: ubuntu-latest
+    needs: [build, deploy, verify]
+    if: always() && needs.verify.result == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for frontend deployment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Frontend
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Frontend to S3
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🎨 프론트엔드 배포 시작... (백엔드 배포 완료 후)\"}" ${{ secrets.SLACK_WEBHOOK }}
+
+          # Get S3 bucket names from Parameter Store
+          S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/frontend-bucket" --query 'Parameter.Value' --output text)
+          IMAGE_S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/images-bucket" --query 'Parameter.Value' --output text)
+          AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
+          
+          echo "📦 Frontend S3 Bucket: $S3_BUCKET"
+          echo "🖼️ Image S3 Bucket: $IMAGE_S3_BUCKET"
+          
+          # Get ECS Task Public IP (after backend verification completed)
+          echo "🔍 안정화된 ECS 서비스에서 Public IP 조회 중..."
+          ECS_PUBLIC_IP=$(aws ecs list-tasks \
+            --cluster ${{ needs.deploy.outputs.cluster }} \
+            --service-name ${{ needs.deploy.outputs.service }} \
+            --query 'taskArns[0]' --output text | \
+            xargs -I {} aws ecs describe-tasks \
+            --cluster ${{ needs.deploy.outputs.cluster }} \
+            --tasks {} \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text | \
+            xargs -I {} aws ec2 describe-network-interfaces \
+            --network-interface-ids {} \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text)
+          
+          echo "🌐 최종 ECS Public IP: $ECS_PUBLIC_IP"
+          
+          # Build frontend with production environment variables
+          cd frontend
+          npm ci
+          
+          # Get environment variables from Parameter Store
+          KAKAO_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/kakao/client-id" --query 'Parameter.Value' --output text)
+          GOOGLE_MAPS_API_KEY=$(aws ssm get-parameter --name "/wherewego/google/maps-api-key" --with-decryption --query 'Parameter.Value' --output text)
+          GOOGLE_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/google/client-id" --query 'Parameter.Value' --output text)
+          
+          # Create production environment file with verified backend IP
+          cat > .env.production << EOF
+          VITE_API_BASE_URL=http://${ECS_PUBLIC_IP}:8080
+          VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
+          VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
+          VITE_KAKAO_MAP_KEY=${GOOGLE_MAPS_API_KEY}
+          VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          VITE_DEV_MODE=false
+          VITE_LOG_LEVEL=warn
+          EOF
+          
+          echo "🔧 생성된 환경변수:"
+          cat .env.production
+          
+          npm run build
+          
+          # Upload to S3 with proper website configuration
+          aws s3 sync dist/ s3://$S3_BUCKET --delete
+          
+          # Enable S3 static website hosting
+          aws s3 website s3://$S3_BUCKET --index-document index.html --error-document index.html
+          
+          cd ..
+          
+          # Final success notification with URLs
+          FRONTEND_URL="http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
+          BACKEND_HEALTH_URL="http://${ECS_PUBLIC_IP}:8080/actuator/health"
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *전체 배포 완료!* ✅\\n프론트엔드와 백엔드가 모두 연결되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*🌐 프론트엔드:*\\n<$FRONTEND_URL|웹사이트 열기>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*⚙️ 백엔드 헬스체크:*\\n<$BACKEND_HEALTH_URL|API 상태 확인>\"
                 }]
               }]
             }]
