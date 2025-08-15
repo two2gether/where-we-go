@@ -96,6 +96,7 @@ export interface CreatePlaceRequest {
 
 // 코스 관련 타입
 export interface Course {
+  id?: number; // 백엔드 응답에서 사용할 수 있는 id 필드
   courseId: number;
   nickname: string;
   title: string;
@@ -107,6 +108,8 @@ export interface Course {
   averageRating: number;
   ratingCount?: number; // 총 평점 개수
   myRating?: number; // 현재 사용자의 평점 (로그인된 경우)
+  isLiked?: boolean; // 현재 사용자의 좋아요 여부
+  isBookmarked?: boolean; // 현재 사용자의 북마크 여부
   isPublic: boolean;
   createdAt: string;
 }
@@ -137,6 +140,7 @@ export interface CourseSearchRequest extends PageRequest {
   region?: string;
   theme?: string;
   authorId?: number;
+  sort?: string; // 정렬 파라미터 추가 (예: 'likeCount,desc', 'createdAt,desc')
 }
 
 export interface CreateCourseRequest {
@@ -185,6 +189,9 @@ export interface CourseListResponse {
   averageRating: number;
   isPublic: boolean;
   createdAt: string;
+  isLiked?: boolean; // 현재 사용자의 좋아요 여부
+  isBookmarked?: boolean; // 현재 사용자의 북마크 여부
+  myRating?: number; // 현재 사용자의 평점
   commentCount?: number;
   bookmarkCount?: number;
 }

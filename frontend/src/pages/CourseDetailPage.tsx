@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../api/axios';
 import { courseService } from '../api/services/course.service';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../store';
 import { GitHubLayout } from '../components/layout/GitHubLayout';
 import CourseMap from '../components/maps/CourseMap';
 import CourseComments from '../components/course/CourseComments';
 import CourseRatingModal from '../components/course/CourseRatingModal';
 import StarRating from '../components/rating/StarRating';
+import { convertThemesToDisplay } from '../constants/themes';
+import { useGeolocation } from '../hooks/useGeolocation';
 import type { Course } from '../api/types';
 
 const CourseDetailPage: React.FC = () => {
@@ -19,14 +21,18 @@ const CourseDetailPage: React.FC = () => {
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false); // 로컬 좋아요 상태
   const queryClient = useQueryClient();
+  
+  // 위치 정보 가져오기
+  const { latitude, longitude } = useGeolocation();
 
-  // 코스 상세 정보 조회
+  // 코스 상세 정보 조회 (위치 정보 포함)
   const { data: course, isLoading, error } = useQuery({
-    queryKey: ['course', courseId],
-    queryFn: async () => {
-      const response = await apiRequest.get<Course>(`/courses/${courseId}`);
-      return response.data;
-    },
+    queryKey: ['course', courseId, latitude, longitude],
+    queryFn: () => courseService.getCourseById(
+      Number(courseId), 
+      latitude || undefined, 
+      longitude || undefined
+    ),
     enabled: !!courseId,
     staleTime: 0,
   });
@@ -126,10 +132,10 @@ const CourseDetailPage: React.FC = () => {
   }
 
   const tabs = [
-    { label: '코스 정보', href: '#info', active: activeTab === 'info' },
-    { label: `장소 목록 (${course.places?.length || 0})`, href: '#places', active: activeTab === 'places' },
-    { label: '지도보기', href: '#map', active: activeTab === 'map' },
-    { label: '댓글', href: '#comments', active: activeTab === 'comments' },
+    { label: '코스 정보', href: '#info', active: activeTab === 'info', onClick: () => setActiveTab('info') },
+    { label: `장소 목록 (${course.places?.length || 0})`, href: '#places', active: activeTab === 'places', onClick: () => setActiveTab('places') },
+    { label: '지도보기', href: '#map', active: activeTab === 'map', onClick: () => setActiveTab('map') },
+    { label: '댓글', href: '#comments', active: activeTab === 'comments', onClick: () => setActiveTab('comments') },
   ];
 
   return (
@@ -148,14 +154,49 @@ const CourseDetailPage: React.FC = () => {
           </button>
         </div>
 
-        {/* 메인 이미지 (첫 번째 장소 이미지 사용) */}
-        {course.places && course.places.length > 0 && course.places[0].imageUrl && (
+        {/* 이미지 갤러리 (모든 장소의 이미지) */}
+        {course.places && course.places.length > 0 && (
           <div className="mb-8">
-            <img
-              src={course.places[0].imageUrl}
-              alt={course.title}
-              className="w-full h-64 md:h-80 object-cover rounded-lg border border-github-border"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {course.places
+                .filter(place => place.imageUrl) // 이미지가 있는 장소만 필터링
+                .sort((a, b) => a.visitOrder - b.visitOrder) // 방문 순서대로 정렬
+                .map((place, index) => (
+                <div key={place.placeId} className="relative group">
+                  <img
+                    src={place.imageUrl}
+                    alt={place.name}
+                    className="w-full h-48 object-cover rounded-lg border border-github-border cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => {
+                      // 이미지 클릭 시 새 탭에서 원본 이미지 열기
+                      window.open(place.imageUrl, '_blank');
+                    }}
+                  />
+                  {/* 이미지 위에 장소 정보 오버레이 */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 rounded-b-lg">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                        {place.visitOrder}
+                      </div>
+                      <div className="text-white text-sm font-medium truncate">
+                        {place.name}
+                      </div>
+                    </div>
+                    <div className="text-white/80 text-xs mt-1">
+                      {place.category}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {course.places.filter(place => place.imageUrl).length === 0 && (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-500">이 코스에는 이미지가 포함된 장소가 없습니다</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -167,7 +208,7 @@ const CourseDetailPage: React.FC = () => {
                 <h1 className="text-2xl font-bold text-github-neutral">{course.title}</h1>
                 {course.themes && course.themes.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {course.themes.slice(0, 3).map((theme, index) => (
+                    {convertThemesToDisplay(course.themes.slice(0, 3)).map((theme, index) => (
                       <span key={index} className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
                         {theme}
                       </span>
@@ -287,51 +328,6 @@ const CourseDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="mb-6">
-          <nav className="flex space-x-1 bg-github-canvas-subtle p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('info')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'info'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              코스 정보
-            </button>
-            <button
-              onClick={() => setActiveTab('places')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'places'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              장소 목록 ({course.places?.length || 0})
-            </button>
-            <button
-              onClick={() => setActiveTab('map')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'map'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              지도보기
-            </button>
-            <button
-              onClick={() => setActiveTab('comments')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'comments'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              댓글
-            </button>
-          </nav>
-        </div>
 
         {/* 탭 컨텐츠 */}
         <div>
@@ -364,7 +360,7 @@ const CourseDetailPage: React.FC = () => {
                   <h3 className="font-medium text-github-neutral mb-2">테마</h3>
                   <div className="flex flex-wrap gap-2">
                     {course.themes && course.themes.length > 0 ? (
-                      course.themes.map((theme, index) => (
+                      convertThemesToDisplay(course.themes).map((theme, index) => (
                         <span key={index} className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
                           {theme}
                         </span>
@@ -387,46 +383,93 @@ const CourseDetailPage: React.FC = () => {
                   {course.places
                     .sort((a, b) => a.visitOrder - b.visitOrder)
                     .map((place, index) => (
-                    <div key={place.placeId} className="flex items-start space-x-4 p-4 border border-github-border rounded-lg hover:bg-github-canvas-subtle transition-colors">
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                        {place.visitOrder}
-                      </div>
-                      
+                    <div key={place.placeId} className="border border-github-border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                      {/* 장소 이미지 (있을 경우 큰 크기로 표시) */}
                       {place.imageUrl && (
-                        <div className="flex-shrink-0">
+                        <div className="relative">
                           <img
                             src={place.imageUrl}
                             alt={place.name}
-                            className="w-16 h-16 object-cover rounded-lg"
+                            className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              // 이미지 클릭 시 새 탭에서 원본 이미지 열기
+                              window.open(place.imageUrl, '_blank');
+                            }}
                           />
+                          {/* 방문 순서 배지 */}
+                          <div className="absolute top-3 left-3 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
+                            {place.visitOrder}
+                          </div>
                         </div>
                       )}
                       
-                      <div className="flex-1">
-                        <h4 className="font-medium text-github-neutral">
-                          <button
-                            onClick={() => navigate(`/places/${place.placeId}`)}
-                            className="hover:text-primary-600 transition-colors"
-                          >
-                            {place.name}
-                          </button>
-                        </h4>
-                        <span className="inline-block mt-1 px-2 py-1 bg-github-canvas-subtle text-github-neutral text-xs rounded">
-                          {place.category}
-                        </span>
-                        {place.distanceFromPrevious && index > 0 && (
-                          <p className="text-xs text-github-neutral-muted mt-1">
-                            이전 장소로부터 {place.distanceFromPrevious}m
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="flex items-center space-x-1 text-xs text-github-neutral-muted">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          </svg>
-                          <span>{place.latitude.toFixed(4)}, {place.longitude.toFixed(4)}</span>
+                      {/* 장소 정보 */}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {/* 이미지가 없는 경우에만 방문 순서 표시 */}
+                            {!place.imageUrl && (
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div className="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                                  {place.visitOrder}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <h4 className="font-medium text-github-neutral mb-2">
+                              <button
+                                onClick={() => navigate(`/places/${place.placeId}`)}
+                                className="hover:text-primary-600 transition-colors"
+                              >
+                                {place.name}
+                              </button>
+                            </h4>
+                            
+                            <div className="flex items-center space-x-2 mb-3">
+                              <span className="inline-block px-2 py-1 bg-github-canvas-subtle text-github-neutral text-xs rounded">
+                                {place.category}
+                              </span>
+                            </div>
+                            
+                            {/* 거리 정보 */}
+                            <div className="space-y-2 mb-3">
+                              {/* 현재 위치로부터의 거리 - 백엔드에서 계산된 값 사용 */}
+                              {place.distanceFromUser && (
+                                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                  <span>현재 위치로부터 {place.distanceFromUser >= 1000 ? `${(place.distanceFromUser / 1000).toFixed(1)}km` : `${place.distanceFromUser}m`}</span>
+                                </div>
+                              )}
+                              
+                              {place.distanceFromPrevious && index > 0 && (
+                                <div className="flex items-center space-x-1 text-xs text-green-600">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                  </svg>
+                                  <span>이전 장소로부터 {place.distanceFromPrevious >= 1000 ? `${(place.distanceFromPrevious / 1000).toFixed(1)}km` : `${place.distanceFromPrevious}m`}</span>
+                                </div>
+                              )}
+                              
+                              {/* 위치 정보가 없을 때 안내 메시지 */}
+                              {!place.distanceFromUser && !latitude && (
+                                <div className="flex items-center space-x-1 text-xs text-gray-400">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>위치 정보를 설정하면 거리를 확인할 수 있습니다</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center space-x-1 text-xs text-github-neutral-muted">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              </svg>
+                              <span>{place.latitude.toFixed(4)}, {place.longitude.toFixed(4)}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

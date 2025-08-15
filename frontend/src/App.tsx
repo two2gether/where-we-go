@@ -3,17 +3,20 @@ import React, { useEffect } from 'react';
 import { AppRouter } from './router/AppRouter';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
+import { useLocationStore } from './store/locationStore';
 import { initKakaoSDK } from './utils/kakaoInit';
 import ApiMonitorPanel from './components/common/ApiMonitorPanel';
 import ApiMonitorButton from './components/common/ApiMonitorButton';
+import TokenValidator from './components/auth/TokenValidator';
 
 export const App: React.FC = () => {
   const { user, isAuthenticated, loading, setLoading } = useAuthStore();
   const { theme } = useUIStore();
+  const { lastUpdated } = useLocationStore();
 
-  // Initialize authentication state and Kakao SDK on app start
+  // Initialize authentication state, Kakao SDK, and location on app start
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeApp = async () => {
       try {
         setLoading(true);
 
@@ -21,32 +24,51 @@ export const App: React.FC = () => {
         initKakaoSDK();
 
         // Check if user is stored in localStorage and token is valid
-        const storedAuth = localStorage.getItem('where-we-go-auth');
-        if (storedAuth) {
-          const { state } = JSON.parse(storedAuth);
-          if (state.token && state.user) {
-            // Verify token validity with a simple API call
-            // This will be handled by the axios interceptor
+        const { token, isAuthenticated, checkTokenExpiration } = useAuthStore.getState();
+        try {
+          // 토큰이 있고 인증된 상태인 경우에만 검증
+          if (token && isAuthenticated) {
+            const isValidToken = checkTokenExpiration();
+            if (isValidToken) {
+              console.log('Auth session validated successfully');
+            } else {
+              console.log('Auth session validation failed - token expired');
+            }
+          } else {
+            console.log('No authentication state to validate');
+          }
+        } catch (error) {
+          console.error('Session validation error:', error);
+          // 오류 시에도 앱 로딩을 계속 진행
+        }
+
+        // Initialize location if permission was previously granted and data exists
+        const { latitude, longitude, isPermissionGranted } = useLocationStore.getState();
+        if (isPermissionGranted && (!latitude || !longitude || !lastUpdated)) {
+          // 권한이 있지만 위치 데이터가 없거나 오래된 경우 자동 갱신
+          const now = Date.now();
+          const thirtyMinutes = 30 * 60 * 1000;
+          
+          if (!lastUpdated || (now - lastUpdated > thirtyMinutes)) {
             try {
-              // The token will be automatically attached by the store
-              // If it's invalid, the interceptor will handle refresh or logout
-              console.log('Auth initialized from storage');
+              await useLocationStore.getState().requestLocation();
+              console.log('Location initialized from previous permission');
             } catch (error) {
-              console.error('Token validation failed:', error);
+              console.log('Failed to initialize location:', error);
             }
           }
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error('Failed to initialize app:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    initializeApp();
   }, [setLoading]);
 
-  // Handle authentication across tabs
+  // Handle authentication across tabs (TokenValidator now handles most of this)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'where-we-go-auth') {
@@ -61,19 +83,9 @@ export const App: React.FC = () => {
       }
     };
 
-    const handleLogoutEvent = () => {
-      // Handle logout event from other tabs
-      if (isAuthenticated) {
-        window.location.href = '/login';
-      }
-    };
-
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('logout', handleLogoutEvent);
-
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('logout', handleLogoutEvent);
     };
   }, [isAuthenticated]);
 
@@ -113,6 +125,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="app">
+      {/* 토큰 유효성 검증기 - 전역 토큰 만료 감지 및 자동 로그아웃 */}
+      <TokenValidator />
+      
       <AppRouter />
       
       {/* API 모니터링 컴포넌트들 (개발 환경에서만) */}

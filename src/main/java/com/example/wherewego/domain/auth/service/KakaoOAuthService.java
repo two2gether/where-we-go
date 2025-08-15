@@ -17,6 +17,9 @@ import org.springframework.web.client.RestTemplate;
 import com.example.wherewego.domain.common.enums.ErrorCode;
 import com.example.wherewego.global.exception.CustomException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class KakaoOAuthService {
 
@@ -24,6 +27,9 @@ public class KakaoOAuthService {
 
 	@Value("${kakao.client-id}")
 	private String clientId;
+
+	@Value("${kakao.client-secret:}")
+	private String clientSecret;
 
 	@Value("${kakao.redirect-uri}")
 	private String redirectUri;
@@ -35,6 +41,9 @@ public class KakaoOAuthService {
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add("grant_type", "authorization_code");
 		params.add("client_id", clientId);
+		if (clientSecret != null && !clientSecret.isEmpty()) {
+			params.add("client_secret", clientSecret);
+		}
 		params.add("redirect_uri", redirectUri);
 		params.add("code", code);
 
@@ -44,7 +53,7 @@ public class KakaoOAuthService {
 		HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
 		ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-
+		
 		if (response.getStatusCode() == HttpStatus.OK) {
 			return (String)response.getBody().get("access_token");
 		} else {

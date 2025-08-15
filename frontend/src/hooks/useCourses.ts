@@ -27,10 +27,7 @@ export const useCourses = (
   
   return useQuery({
     queryKey: courseKeys.list(params),
-    queryFn: () => {
-      console.log('📋 useCourses API 호출:', params);
-      return courseService.getCourses(params);
-    },
+    queryFn: () => courseService.getCourses(params),
     staleTime: 5 * 60 * 1000, // 5분
     refetchOnWindowFocus: false,
     refetchOnMount: false, // 마운트 시 재조회 방지
@@ -47,10 +44,16 @@ export const useInfiniteCourses = (params: Omit<CourseSearchRequest, 'page'> = {
       courseService.getCourses({ ...params, page: pageParam }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      if (lastPage.last) return undefined;
+      // 마지막 페이지이거나 내용이 없으면 undefined 반환
+      if (lastPage.last || !lastPage.content || lastPage.content.length === 0) {
+        return undefined;
+      }
       return lastPage.number + 1;
     },
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -69,10 +72,7 @@ export const useMyCourses = (params: Omit<CourseSearchRequest, 'authorId'> & { e
   const { enabled = true, ...courseParams } = params;
   return useQuery({
     queryKey: courseKeys.myList(courseParams),
-    queryFn: () => {
-      console.log('👤 useMyCourses API 호출:', courseParams);
-      return courseService.getMyCourses(courseParams);
-    },
+    queryFn: () => courseService.getMyCourses(courseParams),
     staleTime: 2 * 60 * 1000, // 2분
     refetchOnWindowFocus: false,
     refetchOnMount: false, // 마운트 시 재조회 방지

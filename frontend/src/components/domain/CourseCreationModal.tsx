@@ -31,7 +31,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
   const [description, setDescription] = useState('');
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [region, setRegion] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
   const [orderedPlaceIds, setOrderedPlaceIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -147,6 +147,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
     }
 
     setIsSubmitting(true);
+    
     try {
       await onConfirm({
         title: title.trim(),
@@ -168,7 +169,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
     setDescription('');
     setSelectedThemes([]);
     setRegion('');
-    setIsPublic(true);
+    setIsPublic(false);
     setOrderedPlaceIds([]);
   };
 
@@ -267,9 +268,9 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
                 type="checkbox"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 accent-blue-600"
               />
-              <span className="text-sm text-gray-700">공개 코스로 설정</span>
+              <span className="text-sm text-gray-700">공개 코스로 설정 (현재: {isPublic ? '공개' : '비공개'})</span>
             </label>
             <p className="text-xs text-gray-500 mt-1">
               공개 코스는 다른 사용자들이 볼 수 있습니다.

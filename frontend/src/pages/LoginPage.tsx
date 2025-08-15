@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useLogin, useRegister } from '../hooks/useAuth';
 import { useSocialAuth } from '../hooks/useSocialAuth';
 import { Button, Input, Card } from '../components/base';
-import { SocialLoginButton } from '../components/auth/SocialLoginButton';
+import SocialLoginButtons from '../components/auth/SocialLoginButtons';
 
 export const LoginPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -310,20 +310,8 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
-              <SocialLoginButton
-                provider="google"
-                onClick={handleGoogleLogin}
-                isLogin={isLogin}
-                loading={socialLoading.google}
-              />
-              
-              <SocialLoginButton
-                provider="kakao"
-                onClick={handleKakaoLogin}
-                isLogin={isLogin}
-                loading={socialLoading.kakao}
-              />
+            <div className="mt-4">
+              <SocialLoginButtons />
             </div>
           </div>
         </Card>

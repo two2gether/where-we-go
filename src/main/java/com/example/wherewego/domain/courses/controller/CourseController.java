@@ -71,20 +71,23 @@ public class CourseController {
 	 * 지역과 테마 조건에 따라 공개된 코스 목록을 페이징하여 조회합니다.
 	 * 성능 최적화된 지역 검색과 N+1 쿼리 해결이 적용되어 있습니다.
 	 *
-	 * @param region 검색할 지역 (필수)
+	 * @param region 검색할 지역 (선택사항, null이면 전체 조회)
 	 * @param themes 필터링할 테마 목록 (선택사항)
 	 * @param pageable 페이징 정보 (기본: 10개씩, 생성일 내림차순)
-	 * @return 페이징된 코스 목록과 메타데이터
+	 * @param userDetail 인증된 사용자 정보 (선택사항, 사용자별 상태 조회용)
+	 * @return 페이징된 코스 목록과 메타데이터 (사용자별 상태 포함)
 	 */
 	@GetMapping
 	public ApiResponse<PagedResponse<CourseListResponseDto>> getCourseList(
-		@RequestParam String region,
+		@RequestParam(required = false) String region,
 		@RequestParam(required = false) List<CourseTheme> themes,
-		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+		@PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
 
-		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable);
+		PagedResponse<CourseListResponseDto> response = courseService.getCourseList(filterDto, pageable, userId);
 
 		return ApiResponse.ok("코스 목록 조회를 성공했습니다.", response);
 	}
@@ -96,15 +99,18 @@ public class CourseController {
 	 * @param courseId 조회할 코스 ID
 	 * @param userLatitude 사용자 현재 위도 (루트 계산용, 선택사항)
 	 * @param userLongitude 사용자 현재 경도 (루트 계산용, 선택사항)
-	 * @return 코스 상세 정보 (장소 목록, 루트 정보 포함)
+	 * @param userDetail 인증된 사용자 정보 (선택사항, 사용자별 상태 조회용)
+	 * @return 코스 상세 정보 (장소 목록, 루트 정보, 사용자별 상태 포함)
 	 */
 	@GetMapping("/{courseId}")
 	public ApiResponse<CourseDetailResponseDto> getCourseDetail(
 		@PathVariable Long courseId,
 		@RequestParam(required = false) Double userLatitude,
-		@RequestParam(required = false) Double userLongitude
+		@RequestParam(required = false) Double userLongitude,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
-		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude);
+		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
+		CourseDetailResponseDto response = courseService.getCourseDetail(courseId, userLatitude, userLongitude, userId);
 
 		return ApiResponse.ok("코스 조회를 성공했습니다.", response);
 	}
@@ -164,20 +170,23 @@ public class CourseController {
 	 * 이달의 북마크 수가 많은 순서대로 정렬하여 최신 인기 트렌드를 반영합니다.
 	 * 사용자들이 실제로 저장하고 싶어하는 코스들을 우선적으로 보여줍니다.
 	 *
-	 * @param region 검색할 지역 (필수)
+	 * @param region 검색할 지역 (선택사항, null이면 전체 조회)
 	 * @param themes 필터링할 테마 목록 (선택사항)
 	 * @param pageable 페이지네이션 정보 (기본: 10개씩)
-	 * @return 북마크 수 순으로 정렬된 인기 코스 목록
+	 * @param userDetail 인증된 사용자 정보 (선택사항, 사용자별 상태 조회용)
+	 * @return 북마크 수 순으로 정렬된 인기 코스 목록 (사용자별 상태 포함)
 	 */
 	@GetMapping("/popular")
 	public ApiResponse<PagedResponse<CourseListResponseDto>> getPopularCourseList(
-		@RequestParam String region,
+		@RequestParam(required = false) String region,
 		@RequestParam(required = false) List<CourseTheme> themes,
-		@PageableDefault(page = 0, size = 10) Pageable pageable
+		@PageableDefault(page = 0, size = 10) Pageable pageable,
+		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		CourseListFilterDto filterDto = new CourseListFilterDto(region, themes);
+		Long userId = userDetail != null ? userDetail.getUser().getId() : null;
 
-		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable);
+		PagedResponse<CourseListResponseDto> response = courseService.getPopularCourseList(filterDto, pageable, userId);
 
 		return ApiResponse.ok("인기 코스 목록 조회 성공", response);
 	}

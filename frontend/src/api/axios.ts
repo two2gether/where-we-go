@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { useApiMonitorStore } from '../store/apiMonitorStore';
+import { isTokenExpired } from '../utils/token';
 
 // Axios 설정 타입 확장
 declare module 'axios' {
@@ -30,16 +31,44 @@ api.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const startTime = Date.now();
     
+    // 인증이 필요 없는 엔드포인트 확인
+    const publicEndpoints = [
+      'auth/login',
+      'auth/signup',
+      'auth/refresh',
+      'auth/googlelogin',
+      'auth/kakaologin',
+      'places/search',
+      'places/',
+      'places',
+      'courses/',
+      'courses'
+    ];
+    
+    const requestUrl = config.url || '';
+    const isPublicEndpoint = publicEndpoints.some(endpoint => 
+      requestUrl.includes(endpoint)
+    );
+    
     // 토큰이 있으면 Authorization 헤더에 추가
-    const { token, isAuthenticated } = useAuthStore.getState();
+    const { token, isAuthenticated, logout } = useAuthStore.getState();
     
-    // Debug logging removed for production security
-    
-    if (token && config.headers) {
+    // 공개 엔드포인트가 아니고 토큰이 있는 경우만 만료 검사 수행
+    if (!isPublicEndpoint && token) {
+      if (isTokenExpired(token)) {
+        console.warn('Token expired during request, logging out');
+        logout();
+        // 토큰이 만료된 경우 요청을 중단하지 않고 토큰만 제거
+        // return Promise.reject(new Error('Token expired')); // 이 줄 제거
+      } else {
+        // 토큰이 유효한 경우에만 헤더에 추가
+        if (config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+    } else if (token && config.headers && !isTokenExpired(token)) {
+      // 공개 엔드포인트라도 유효한 토큰이 있으면 헤더에 추가 (옵셔널)
       config.headers.Authorization = `Bearer ${token}`;
-      // Authorization header set successfully
-    } else {
-      // No token available for authorization
     }
     
     // API 모니터링 로그 추가
@@ -127,7 +156,9 @@ api.interceptors.response.use(
       'courses',
       'auth/login',
       'auth/signup',
-      'auth/refresh'
+      'auth/refresh',
+      'auth/googlelogin',
+      'auth/kakaologin'
     ];
     
     // 현재 요청이 public 엔드포인트인지 확인
@@ -184,7 +215,6 @@ api.interceptors.response.use(
           }
           
           // Private endpoint라면 로그아웃
-          // Token refresh failed, redirecting to login
           logout();
           window.location.href = '/login';
         }
@@ -194,7 +224,6 @@ api.interceptors.response.use(
         
         // Public endpoint가 아닌 경우에만 로그아웃 처리
         if (!isPublicEndpoint) {
-          // Private endpoint requires authentication, redirecting
           logout();
           window.location.href = '/login';
         }

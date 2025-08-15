@@ -56,6 +56,26 @@ public class CourseMapper {
 			.build();
 	}
 
+	public static CourseListResponseDto toListWithPlacesAndUserStatus(Course course, List<CoursePlaceInfo> places, 
+			Boolean isLiked, Boolean isBookmarked, Double myRating) {
+		return CourseListResponseDto.builder()
+			.courseId(course.getId())
+			.nickname(course.getUser().getNickname())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.themes(course.getThemes())
+			.region(course.getRegion())
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.places(places)
+			.isLiked(isLiked)
+			.isBookmarked(isBookmarked)
+			.myRating(myRating)
+			.build();
+	}
+
 	public static CourseDetailResponseDto toDetailDto(Course course, List<CoursePlaceInfo> places) {
 		return CourseDetailResponseDto.builder()
 			.courseId(course.getId())
@@ -69,6 +89,26 @@ public class CourseMapper {
 			.averageRating(course.getAverageRating())
 			.isPublic(course.getIsPublic())
 			.createdAt(course.getCreatedAt())
+			.build();
+	}
+
+	public static CourseDetailResponseDto toDetailDtoWithUserStatus(Course course, List<CoursePlaceInfo> places,
+			Boolean isLiked, Boolean isBookmarked, Double myRating) {
+		return CourseDetailResponseDto.builder()
+			.courseId(course.getId())
+			.nickname(course.getUser().getNickname())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.region(course.getRegion())
+			.themes(course.getThemes())
+			.places(places)
+			.likeCount(course.getLikeCount())
+			.averageRating(course.getAverageRating())
+			.isPublic(course.getIsPublic())
+			.createdAt(course.getCreatedAt())
+			.isLiked(isLiked)
+			.isBookmarked(isBookmarked)
+			.myRating(myRating)
 			.build();
 	}
 

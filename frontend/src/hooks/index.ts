@@ -5,4 +5,6 @@ export * from './useBookmarks';
 export * from './useOrders';
 export * from './useCourseLikes';
 export * from './useCourseBookmarks';
+export * from './useCourseRatings';
 export * from './useEventProducts';
+export * from './useGeolocation';

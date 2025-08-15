@@ -23,6 +23,7 @@ import SearchPage from '../pages/SearchPage';
 import ProductManagePage from '../pages/admin/ProductManagePage';
 import ProductCreatePage from '../pages/admin/ProductCreatePage';
 import ProductEditPage from '../pages/admin/ProductEditPage';
+import SocialLoginCallback from '../components/auth/SocialLoginCallback';
 
 // 임시 페이지 컴포넌트들
 const PageSkeleton = () => (
@@ -259,6 +260,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<PageSkeleton />}>
         <LoginPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/auth/:provider/callback',
+    element: (
+      <Suspense fallback={<PageSkeleton />}>
+        <SocialLoginCallback />
       </Suspense>
     ),
   },

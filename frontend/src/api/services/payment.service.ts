@@ -31,18 +31,17 @@ export const paymentService = {
     apiRequest.post<RefundResponse>(`/payments/${orderId}/refund`, refundData)
       .then(response => response.data),
 
-  // 결제 검증 (결제 성공 후 서버 검증)
-  verifyPayment: (paymentKey: string, orderId: string, amount: number): Promise<PaymentDetailResponse> =>
-    apiRequest.post<PaymentDetailResponse>('/payments/verify', {
-      paymentKey,
-      orderId,
-      amount
-    }).then(response => response.data),
+  // TODO: 백엔드에서 결제 검증/취소 API 구현 후 활성화
+  // verifyPayment: (paymentKey: string, orderId: string, amount: number): Promise<PaymentDetailResponse> =>
+  //   apiRequest.post<PaymentDetailResponse>('/payments/verify', {
+  //     paymentKey,
+  //     orderId,
+  //     amount
+  //   }).then(response => response.data),
 
-  // 결제 취소 (결제 실패 시)
-  cancelPayment: (paymentKey: string, cancelReason: string): Promise<void> =>
-    apiRequest.post<void>('/payments/cancel', {
-      paymentKey,
-      cancelReason
-    }).then(response => response.data),
+  // cancelPayment: (paymentKey: string, cancelReason: string): Promise<void> =>
+  //   apiRequest.post<void>('/payments/cancel', {
+  //     paymentKey,
+  //     cancelReason
+  //   }).then(response => response.data),
 };

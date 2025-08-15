@@ -242,7 +242,7 @@ public class UserController {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-		PagedResponse<CourseListResponseDto> response = courseService.getCoursesByUser(userId, pageable);
+		PagedResponse<CourseListResponseDto> response = courseService.getCoursesByUser(userId, userId, pageable);
 
 		return ApiResponse.ok("내가 만든 코스 목록 조회 성공", response);
 	}
@@ -271,7 +271,7 @@ public class UserController {
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
 		PagedResponse<UserCourseBookmarkListDto> response =
-			courseBookmarkService.getUserCourseBookmarks(userId, pageable, userId);
+			courseBookmarkService.getUserCourseBookmarks(userId, pageable);
 
 		return ApiResponse.ok("내가 북마크한 코스 목록 조회 성공", response);
 	}

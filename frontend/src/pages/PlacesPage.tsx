@@ -5,12 +5,13 @@ import { PlaceCard, SearchFilter, EmptyState, PlaceDetailModal, AddToCourseModal
 import { Button, Card, Spinner } from '../components/base';
 import { GitHubLayout, GitHubSidebar, GitHubSidebarSection } from '../components/layout';
 import { RegionFilter } from '../components/common/RegionFilter';
-import { useInfinitePlaces, placeKeys } from '../hooks/usePlaces';
+import { useInfinitePlaces, useNearbyPlaces, placeKeys } from '../hooks/usePlaces';
 import { useToggleBookmark, useBookmarkedPlaces, bookmarkKeys } from '../hooks/useBookmarks';
 import { useDebounce } from '../hooks/useDebounce';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import { useAuthStore } from '../store/authStore';
+import { useLocationStore } from '../store/locationStore';
 import { apiRequest } from '../api/axios';
 import type { Place } from '../api/types';
 
@@ -19,6 +20,12 @@ export const PlacesPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
+  
+  // 위치 스토어에서 상태 가져오기
+  const { latitude, longitude, isPermissionGranted, isLoading: isLocationLoading, error: locationError, requestLocation } = useLocationStore();
+  
+  // 위치 권한 섹션을 숨길지 결정하는 로컬 상태 (세션 동안만 유지)
+  const [isLocationSectionHidden, setIsLocationSectionHidden] = React.useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -53,48 +60,76 @@ export const PlacesPage: React.FC = () => {
   // 검색어 디바운싱 (500ms 지연)
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // API 파라미터 준비 (디바운싱된 검색어 사용, page 제거)
+  // API 파라미터 준비 (디바운싱된 검색어 사용, page 제거, 위치 정보 추가)
   const searchParams = useMemo(() => ({
     keyword: debouncedSearchQuery || undefined,
     category: selectedCategory || undefined,
     region: selectedRegion || undefined,
     size: 20,
-  }), [debouncedSearchQuery, selectedCategory, selectedRegion]);
+    // 위치 정보가 있으면 추가
+    ...(latitude && longitude ? { 
+      latitude, 
+      longitude,
+      radius: 10000 // 10km 반경
+    } : {})
+  }), [debouncedSearchQuery, selectedCategory, selectedRegion, latitude, longitude]);
 
-  // React Query 훅 사용
+  // 위치 기반 근처 장소 조회 (위치가 있을 때만)
+  const nearbyPlacesQuery = useNearbyPlaces(
+    latitude || 0,
+    longitude || 0,
+    10000, // 10km 반경
+    selectedCategory || undefined
+  );
+
+  // 기존 무한 스크롤 장소 조회 (일반 검색용)
   const { 
     data: infinitePlacesData, 
-    isLoading, 
-    error, 
-    refetch,
+    isLoading: isInfinitePlacesLoading, 
+    error: infinitePlacesError, 
+    refetch: refetchInfinitePlaces,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage
   } = useInfinitePlaces(searchParams);
-  
-  // 무한 스크롤 데이터를 flat하게 변환
-  const allPlaces = useMemo(() => {
-    if (!infinitePlacesData?.pages) return [];
-    
-    console.log('Processing infinite places data:', infinitePlacesData.pages);
-    
-    return infinitePlacesData.pages.flatMap(page => {
-      // PageResponse 형태인 경우 .content에서 추출
-      if (page && typeof page === 'object' && 'content' in page) {
-        console.log(`Processing page ${page.number}: ${page.content?.length || 0} places`);
-        return page.content || [];
-      }
-      // 배열인 경우 그대로 반환 (하위 호환성)
-      console.log('Processing page as array:', page?.length || 0, 'places');
-      return Array.isArray(page) ? page : [];
-    });
-  }, [infinitePlacesData]);
 
-  // 무한 스크롤 적용
+  // 현재 사용할 데이터와 상태 결정
+  const shouldUseNearby = !!(latitude && longitude && !debouncedSearchQuery && !selectedRegion);
+  const isLoading = shouldUseNearby ? nearbyPlacesQuery.isLoading : isInfinitePlacesLoading;
+  const error = shouldUseNearby ? nearbyPlacesQuery.error : infinitePlacesError;
+  const refetch = shouldUseNearby ? nearbyPlacesQuery.refetch : refetchInfinitePlaces;
+  
+  // 데이터 소스에 따라 장소 목록 생성
+  const allPlaces = useMemo(() => {
+    if (shouldUseNearby) {
+      // 근처 장소 데이터 사용
+      const nearbyData = nearbyPlacesQuery.data || [];
+      console.log('Using nearby places:', nearbyData.length);
+      return nearbyData;
+    } else {
+      // 무한 스크롤 데이터 사용
+      if (!infinitePlacesData?.pages) return [];
+      
+      console.log('Processing infinite places data:', infinitePlacesData.pages);
+      
+      return infinitePlacesData.pages.flatMap(page => {
+        // PageResponse 형태인 경우 .content에서 추출
+        if (page && typeof page === 'object' && 'content' in page) {
+          console.log(`Processing page ${page.number}: ${page.content?.length || 0} places`);
+          return page.content || [];
+        }
+        // 배열인 경우 그대로 반환 (하위 호환성)
+        console.log('Processing page as array:', page?.length || 0, 'places');
+        return Array.isArray(page) ? page : [];
+      });
+    }
+  }, [shouldUseNearby, nearbyPlacesQuery.data, infinitePlacesData]);
+
+  // 무한 스크롤 적용 (근처 장소 모드가 아닐 때만)
   const observerTarget = useInfiniteScroll({
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
+    hasNextPage: shouldUseNearby ? false : hasNextPage, // 근처 장소 모드에서는 무한 스크롤 비활성화
+    isFetchingNextPage: shouldUseNearby ? false : isFetchingNextPage,
+    fetchNextPage: shouldUseNearby ? () => {} : fetchNextPage,
   });
 
   // 스크롤 위치 추적 (sticky 검색바용)
@@ -410,8 +445,6 @@ export const PlacesPage: React.FC = () => {
 
   const handleConfirmCourseCreation = async (courseData: { title: string; description: string; themes: string[]; region: string; isPublic: boolean; orderedPlaceIds: string[] }) => {
     try {
-      console.log('Creating course with data:', courseData);
-      
       // 실제 API 호출
       const courseCreateRequest = {
         title: courseData.title,
@@ -423,7 +456,6 @@ export const PlacesPage: React.FC = () => {
       };
       
       const response = await apiRequest.post('/courses', courseCreateRequest);
-      console.log('Course created successfully:', response);
       
       // 성공 메시지 표시
       alert(`"${courseData.title}" 코스가 성공적으로 생성되었습니다!`);
@@ -496,6 +528,54 @@ export const PlacesPage: React.FC = () => {
   // 사이드바 구성
   const sidebar = (
     <GitHubSidebar>
+      {/* 위치 정보 섹션 */}
+      <GitHubSidebarSection title="내 위치">
+        <div className="space-y-3">
+          {latitude && longitude ? (
+            <div className="text-sm text-green-600">
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+                <span>위치가 설정되었습니다</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                거리 기준 정렬이 활성화됩니다
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                내 위치를 설정하면 각 장소까지의 거리를 확인할 수 있습니다.
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                onClick={requestLocation}
+                disabled={isLocationLoading}
+                icon={
+                  isLocationLoading ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                  )
+                }
+              >
+                {isLocationLoading ? '위치 확인 중...' : '내 위치 설정'}
+              </Button>
+              {locationError && (
+                <p className="text-xs text-red-600 mt-2">
+                  {locationError}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </GitHubSidebarSection>
+
       {/* 필터 섹션 */}
       <GitHubSidebarSection title="필터">
         <div className="space-y-4">
@@ -672,6 +752,142 @@ export const PlacesPage: React.FC = () => {
         </div>
       </div>
 
+      {/* 위치 권한 요청 섹션 */}
+      {!isPermissionGranted && !isLocationSectionHidden && (
+        <div 
+          className="rounded-lg p-6 mb-8"
+          style={{
+            background: 'linear-gradient(135deg, var(--notion-blue) 0%, #4f46e5 100%)',
+            borderRadius: '12px',
+            color: 'var(--notion-white)',
+            textAlign: 'center'
+          }}
+        >
+          <div className="flex flex-col items-center space-y-4">
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            
+            <div>
+              <h3 
+                style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  marginBottom: '8px',
+                  color: 'var(--notion-white)'
+                }}
+              >
+                📍 가까운 장소부터 찾아보세요
+              </h3>
+              <p 
+                style={{
+                  fontSize: '16px',
+                  marginBottom: '0',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  lineHeight: '1.5'
+                }}
+              >
+                내 위치를 설정하시면 가까운 장소부터 우선적으로 보여드리고,<br />
+                각 장소까지의 정확한 거리를 확인하실 수 있습니다.
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={requestLocation}
+                disabled={isLocationLoading}
+                className="inline-flex items-center px-6 py-3 rounded-md text-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'var(--notion-white)',
+                  color: 'var(--notion-blue)',
+                  border: 'none',
+                  gap: '8px',
+                  fontWeight: '600',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}
+              >
+                {isLocationLoading ? (
+                  <>
+                    <Spinner size="sm" />
+                    위치 확인 중...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    위치 권한 허용하기
+                  </>
+                )}
+              </button>
+              
+              <button
+                className="inline-flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--notion-white)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px'
+                }}
+                onClick={() => {
+                  // 나중에 하기 - 세션 동안 위치 권한 섹션을 숨김
+                  setIsLocationSectionHidden(true);
+                }}
+              >
+                나중에 하기
+              </button>
+            </div>
+            
+            {locationError && (
+              <div 
+                className="mt-3 p-3 rounded-md text-sm"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--notion-white)',
+                  borderRadius: '6px'
+                }}
+              >
+                ⚠️ {locationError}
+              </div>
+            )}
+            
+            <div className="text-xs text-white/70 mt-2">
+              💡 위치 정보는 거리 계산에만 사용되며 저장되지 않습니다
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 위치 설정 완료 알림 */}
+      {isPermissionGranted && latitude && longitude && (
+        <div 
+          className="rounded-lg p-4 mb-8"
+          style={{
+            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+            borderRadius: '8px',
+            color: 'var(--notion-white)',
+            textAlign: 'center'
+          }}
+        >
+          <div className="flex items-center justify-center space-x-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">✅ 위치가 설정되었습니다! 이제 가까운 장소부터 우선적으로 보여드립니다.</span>
+          </div>
+        </div>
+      )}
+
       {/* Original Search and Filters */}
       <SearchFilter
         searchQuery={searchQuery}
@@ -774,10 +990,13 @@ export const PlacesPage: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-semibold text-github-neutral">
-                  검색 결과
+                  {shouldUseNearby ? '📍 내 주변 장소' : '검색 결과'}
                 </h2>
                 <p className="text-sm text-github-neutral-muted mt-1">
                   {places.length}개의 장소를 찾았습니다
+                  {shouldUseNearby && (
+                    <span className="text-blue-600"> • 거리순으로 정렬됨</span>
+                  )}
                   {(searchQuery || selectedCategory || selectedRegion) && (
                     <>
                       {' '}• 필터: {[
@@ -853,13 +1072,18 @@ export const PlacesPage: React.FC = () => {
 
             {/* 무한 스크롤 트리거 및 로딩 표시 */}
             <div ref={observerTarget} className="py-8 flex justify-center">
-              {isFetchingNextPage && (
+              {!shouldUseNearby && isFetchingNextPage && (
                 <div className="flex items-center space-x-2 text-gray-500">
                   <Spinner size="sm" />
                   <span className="text-sm">더 많은 장소를 불러오는 중...</span>
                 </div>
               )}
-              {!hasNextPage && !isFetchingNextPage && places.length > 0 && (
+              {shouldUseNearby && places.length > 0 && (
+                <div className="text-sm text-blue-600">
+                  📍 주변 {places.length}개 장소 (10km 반경 내)
+                </div>
+              )}
+              {!shouldUseNearby && !hasNextPage && !isFetchingNextPage && places.length > 0 && (
                 <div className="text-sm text-gray-500">
                   모든 장소를 불러왔습니다.
                 </div>

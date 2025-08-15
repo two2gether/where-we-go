@@ -87,7 +87,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           alt={title}
           className="w-full h-48 object-cover"
         />
-        <div className="absolute top-3 right-3">
+        <div className="absolute bottom-3 right-3">
           <Badge variant="primary" size="sm">
             {theme}
           </Badge>
@@ -111,7 +111,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <button
           onClick={handleBookmark}
           disabled={isBookmarkToggling}
-          className="absolute top-3 right-16 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors disabled:opacity-50"
+          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors disabled:opacity-50"
         >
           <svg 
             className={`w-5 h-5 transition-colors ${
