@@ -2,7 +2,7 @@ name: Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main, dev, feature/docker-deployment, feat/frontend ]
+    branches: [ main, dev, feature/docker-deployment, feat/frontend-clean ]
 
 env:
   AWS_REGION: ap-northeast-2
@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment' || github.ref == 'refs/heads/feat/frontend'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment' || github.ref == 'refs/heads/feat/frontend-clean'
     outputs:
       image-uri: ${{ steps.build-image.outputs.image }}
       environment: ${{ steps.set-env.outputs.environment }}
