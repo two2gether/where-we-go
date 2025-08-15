@@ -79,8 +79,25 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Build Frontend
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🎨 프론트엔드 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          cd frontend
+          npm ci
+          npm run build
+          cd ..
 
       - name: Build with Gradle
         run: |
@@ -158,6 +175,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js for deployment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Set deployment variables
         id: set-deploy-vars
         run: |
@@ -186,6 +210,55 @@ jobs:
               }]
             }]
           }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Deploy Frontend to S3
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🎨 프론트엔드 배포 중... (S3 업로드)\"}" ${{ secrets.SLACK_WEBHOOK }}
+
+          # Get S3 bucket name from CloudFormation
+          S3_BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendS3Bucket`].OutputValue' \
+            --output text)
+          
+          echo "📦 S3 Bucket: $S3_BUCKET"
+          
+          # Build frontend with production environment variables
+          cd frontend
+          npm ci
+          
+          # Create production environment file
+          cat > .env.production << EOF
+          VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || 'https://api.wherewego.co.kr' }}
+          VITE_KAKAO_APP_KEY=${{ secrets.VITE_KAKAO_APP_KEY }}
+          VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}
+          VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_DEV_MODE=false
+          VITE_LOG_LEVEL=warn
+          EOF
+          
+          npm run build
+          
+          # Upload to S3
+          aws s3 sync dist/ s3://$S3_BUCKET --delete --cache-control "max-age=31536000"
+          
+          # Invalidate CloudFront cache
+          CLOUDFRONT_DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
+            --output text)
+          
+          echo "🌐 CloudFront Distribution ID: $CLOUDFRONT_DISTRIBUTION_ID"
+          
+          aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --paths "/*"
+          
+          cd ..
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"✅ 프론트엔드 배포 완료! CDN 캐시 무효화 진행 중...\"}" ${{ secrets.SLACK_WEBHOOK }}
 
       - name: Update task definition and start deployment
         run: |
@@ -338,6 +411,12 @@ jobs:
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 50)
           
+          # 프론트엔드 URL 가져오기
+          FRONTEND_URL=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
+            --output text 2>/dev/null || echo "설정 중...")
+          
           # 최종 Slack 메시지 전송
           curl -X POST -H 'Content-type: application/json' \
           --data "{
@@ -369,6 +448,9 @@ jobs:
                 }, {
                   \"type\": \"mrkdwn\",
                   \"text\": \"*Message:*\\n💬 $COMMIT_MSG\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Frontend:*\\n🌐 $FRONTEND_URL\"
                 }]
               }, {
                 \"type\": \"actions\",
