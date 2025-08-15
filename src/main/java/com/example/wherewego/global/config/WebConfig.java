@@ -16,13 +16,15 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOriginPatterns("http://localhost:*") // 모든 localhost 포트 허용
+                .allowedOriginPatterns("http://localhost:*")
                 .allowedOrigins(
                     "http://localhost:3000",
                     "http://localhost:3001", 
                     "http://localhost:3002",
                     "http://localhost:3003",
-                    "http://localhost:5173"
+                    "http://localhost:5173",
+                    "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
+                    "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -41,7 +43,9 @@ public class WebConfig implements WebMvcConfigurer {
             "http://localhost:3001", 
             "http://localhost:3002",
             "http://localhost:3003",
-            "http://localhost:5173"
+            "http://localhost:5173",
+            "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
+            "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com"
         ));
         
         // 허용할 HTTP 메서드
