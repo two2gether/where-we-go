@@ -22,13 +22,16 @@ export interface UserCourseBookmarkListDto {
 export const courseBookmarkService = {
   // 코스 북마크 추가
   addCourseBookmark: async (courseId: number): Promise<ApiResponse<CourseBookmarkResponseDto>> => {
-    const response = await api.post(`/courses/${courseId}/bookmark`);
+    const response = await api.post('/bookmarks', { courseId });
     return response.data;
   },
 
   // 코스 북마크 삭제
   removeCourseBookmark: async (courseId: number): Promise<ApiResponse<void>> => {
-    const response = await api.delete(`/courses/${courseId}/bookmark`);
+    const response = await api.delete('/bookmarks', { 
+      data: { courseId },
+      headers: { 'Content-Type': 'application/json' }
+    });
     return response.data;
   }
 };

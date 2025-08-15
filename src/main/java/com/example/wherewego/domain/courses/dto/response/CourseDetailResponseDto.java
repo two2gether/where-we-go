@@ -63,4 +63,16 @@ public class CourseDetailResponseDto {
 	 * 코스 생성 일시
 	 */
 	private LocalDateTime createdAt;
+	/**
+	 * 현재 사용자의 좋아요 여부
+	 */
+	private Boolean isLiked;
+	/**
+	 * 현재 사용자의 북마크 여부
+	 */
+	private Boolean isBookmarked;
+	/**
+	 * 현재 사용자의 평점
+	 */
+	private Double myRating;
 }

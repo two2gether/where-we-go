@@ -9,20 +9,28 @@ export const useCourseLikes = () => {
   // 코스 좋아요 추가
   const addCourseLikeMutation = useMutation({
     mutationFn: (courseId: number) => courseLikeService.addCourseLike(courseId),
-    onSuccess: () => {
+    onSuccess: (data, courseId) => {
       // 관련 쿼리들 무효화
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['users', 'my', 'likes'] });
+      
+      // 특정 코스 상세 정보 무효화
+      queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'popular'] });
     }
   });
 
   // 코스 좋아요 삭제
   const removeCourseLikeMutation = useMutation({
     mutationFn: (courseId: number) => courseLikeService.removeCourseLike(courseId),
-    onSuccess: () => {
+    onSuccess: (data, courseId) => {
       // 관련 쿼리들 무효화
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       queryClient.invalidateQueries({ queryKey: ['users', 'my', 'likes'] });
+      
+      // 특정 코스 상세 정보 무효화
+      queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'popular'] });
     }
   });
 
@@ -38,6 +46,8 @@ export const useCourseLikes = () => {
         await addCourseLikeMutation.mutateAsync(courseId);
       }
     } catch (error) {
+      // 실패 시 관련 쿼리를 다시 불러와서 올바른 상태로 복원
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       throw error;
     }
   };

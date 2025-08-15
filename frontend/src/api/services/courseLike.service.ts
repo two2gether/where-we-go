@@ -22,13 +22,16 @@ export interface CourseLikeListResponseDto {
 export const courseLikeService = {
   // 코스 좋아요 추가
   addCourseLike: async (courseId: number): Promise<ApiResponse<CourseLikeResponseDto>> => {
-    const response = await api.post(`/courses/${courseId}/like`);
+    const response = await api.post('/likes', { courseId });
     return response.data;
   },
 
   // 코스 좋아요 삭제
   removeCourseLike: async (courseId: number): Promise<ApiResponse<void>> => {
-    const response = await api.delete(`/courses/${courseId}/like`);
+    const response = await api.delete('/likes', { 
+      data: { courseId },
+      headers: { 'Content-Type': 'application/json' }
+    });
     return response.data;
   }
 };

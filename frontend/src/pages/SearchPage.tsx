@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { GitHubLayout } from '../components/layout';
+import { CourseCard } from '../components/domain';
 import { useCourses } from '../hooks/useCourses';
 import { usePlaces } from '../hooks/usePlaces';
+import { useToggleCourseLike } from '../hooks/useCourses';
+import { useAuthStore } from '../store';
+import { convertThemesToDisplay } from '../constants/themes';
 
 const SearchPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [activeTab, setActiveTab] = useState<'all' | 'courses' | 'places'>('all');
+  
+  // Auth store for user information
+  const { user } = useAuthStore();
+  
+  // Like functionality
+  const toggleLikeMutation = useToggleCourseLike();
 
   // 코스 검색 - 백엔드에서 search 파라미터를 지원하지 않아 임시로 비활성화
   // Search parameter implementation pending backend support
@@ -35,6 +46,19 @@ const SearchPage: React.FC = () => {
   ];
 
   const isLoading = coursesLoading || placesLoading;
+
+  // Handler functions for CourseCard
+  const handleLike = async (courseId: number) => {
+    try {
+      await toggleLikeMutation.mutateAsync(courseId);
+    } catch (error) {
+      console.error('Like toggle failed:', error);
+    }
+  };
+
+  const handleViewDetails = (courseId: number) => {
+    navigate(`/courses/${courseId}`);
+  };
 
   if (!query) {
     return (
@@ -145,8 +169,32 @@ const SearchPage: React.FC = () => {
                       🚀 코스 ({courses.length})
                     </h3>
                     <div className="space-y-3">
-                      {courses.slice(0, 5).map((course) => (
-                        <CourseCard key={course.courseId} course={course} />
+                      {courses.slice(0, 5).map((course, index) => (
+                        <div 
+                          key={course.courseId || course.id || `course-${index}`}
+                          className="animate-scale-in"
+                          style={{ animationDelay: `${index * 0.1}s` }}
+                        >
+                          <CourseCard
+                            id={course.courseId || course.id}
+                            title={course.title}
+                            description={course.description}
+                            thumbnail={course.thumbnailUrl || course.places?.[0]?.imageUrl || ''}
+                            region={course.region}
+                            theme={course.themes?.[0] ? convertThemesToDisplay([course.themes[0]])[0] || course.themes[0] : course.theme || ''}
+                            rating={course.averageRating || course.rating || 0}
+                            likeCount={course.likeCount || 0}
+                            duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
+                            author={course.author || { 
+                              name: course.nickname || user?.username || user?.name || user?.email || '작성자', 
+                              avatar: user?.avatar || user?.profileImage || '' 
+                            }}
+                            isLiked={course.isLiked || false}
+                            isBookmarked={course.isBookmarked || false}
+                            onLike={handleLike}
+                            onViewDetails={handleViewDetails}
+                          />
+                        </div>
                       ))}
                       {courses.length > 5 && (
                         <button
@@ -215,8 +263,32 @@ const SearchPage: React.FC = () => {
             {/* 코스 탭 */}
             {activeTab === 'courses' && (
               <div className="space-y-3">
-                {courses.map((course) => (
-                  <CourseCard key={course.courseId} course={course} />
+                {courses.map((course, index) => (
+                  <div 
+                    key={course.courseId || course.id || `course-${index}`}
+                    className="animate-scale-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <CourseCard
+                      id={course.courseId || course.id}
+                      title={course.title}
+                      description={course.description}
+                      thumbnail={course.thumbnailUrl || course.places?.[0]?.imageUrl || ''}
+                      region={course.region}
+                      theme={course.themes?.[0] ? convertThemesToDisplay([course.themes[0]])[0] || course.themes[0] : course.theme || ''}
+                      rating={course.averageRating || course.rating || 0}
+                      likeCount={course.likeCount || 0}
+                      duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
+                      author={course.author || { 
+                        name: course.nickname || user?.username || user?.name || user?.email || '작성자', 
+                        avatar: user?.avatar || user?.profileImage || '' 
+                      }}
+                      isLiked={course.isLiked || false}
+                      isBookmarked={course.isBookmarked || false}
+                      onLike={handleLike}
+                      onViewDetails={handleViewDetails}
+                    />
+                  </div>
                 ))}
                 {courses.length === 0 && <NoResults type="코스" query={query} />}
               </div>
@@ -259,55 +331,6 @@ const SearchPage: React.FC = () => {
   );
 };
 
-// 코스 카드 컴포넌트
-const CourseCard: React.FC<{ course: any }> = ({ course }) => (
-  <Link
-    to={`/courses/${course.courseId}`}
-    style={{
-      display: 'block',
-      textDecoration: 'none',
-      background: 'var(--notion-white)',
-      border: '1px solid var(--notion-gray-light)',
-      borderRadius: '8px',
-      padding: '16px',
-      transition: 'all 0.15s ease'
-    }}
-    className="hover:shadow-sm"
-  >
-    <h4 style={{
-      fontSize: '16px',
-      fontWeight: '600',
-      color: 'var(--notion-text)',
-      marginBottom: '8px'
-    }}>
-      {course.title}
-    </h4>
-    {course.description && (
-      <p style={{
-        fontSize: '14px',
-        color: 'var(--notion-text-light)',
-        marginBottom: '12px',
-        lineHeight: '1.4'
-      }}>
-        {course.description.length > 100 
-          ? `${course.description.slice(0, 100)}...` 
-          : course.description}
-      </p>
-    )}
-    <div 
-      className="flex items-center space-x-4"
-      style={{
-        fontSize: '13px',
-        color: 'var(--notion-text-light)'
-      }}
-    >
-      <span>⭐ {course.averageRating?.toFixed(1) || '0.0'}</span>
-      <span>❤️ {course.likeCount || 0}</span>
-      <span>👁️ {course.viewCount || 0}</span>
-      {course.region && <span>📍 {course.region}</span>}
-    </div>
-  </Link>
-);
 
 // 장소 카드 컴포넌트
 const PlaceCard: React.FC<{ place: any }> = ({ place }) => (
