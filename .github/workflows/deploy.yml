@@ -440,7 +440,28 @@ jobs:
             --output text 2>/dev/null || echo "설정 중...")
             
           # 백엔드 URL 가져오기 (ECS Public IP)  
-          BACKEND_URL="http://ECS-Public-IP:8080 (동적 IP)"
+          echo "🔍 최종 ECS Public IP 확인 중..."
+          BACKEND_PUBLIC_IP=$(aws ecs list-tasks \
+            --cluster ${{ needs.deploy.outputs.cluster }} \
+            --service-name ${{ needs.deploy.outputs.service }} \
+            --query 'taskArns[0]' --output text 2>/dev/null | \
+            xargs -I {} aws ecs describe-tasks \
+            --cluster ${{ needs.deploy.outputs.cluster }} \
+            --tasks {} \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text 2>/dev/null | \
+            xargs -I {} aws ec2 describe-network-interfaces \
+            --network-interface-ids {} \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text 2>/dev/null || echo "IP 조회 실패")
+          
+          if [[ "$BACKEND_PUBLIC_IP" != "IP 조회 실패" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
+            BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080"
+            echo "✅ Backend Public IP: $BACKEND_PUBLIC_IP"
+          else
+            BACKEND_URL="Backend IP 조회 중... (서비스 시작 대기)"
+            echo "⚠️ Backend Public IP 조회 실패 또는 아직 할당되지 않음"
+          fi
           
           # 최종 Slack 메시지 전송
           curl -X POST -H 'Content-type: application/json' \
