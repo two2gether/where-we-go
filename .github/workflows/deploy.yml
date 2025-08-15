@@ -366,6 +366,63 @@ jobs:
               }]
             }]
           }" ${{ secrets.SLACK_WEBHOOK }}
+          
+          # 접속 URL 조회
+          FRONTEND_URL=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
+            --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
+          
+          # 백엔드 Public IP 조회
+          BACKEND_PUBLIC_IP=$(aws ecs list-tasks \
+            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+            --service-name ${{ steps.set-deploy-vars.outputs.service }} \
+            --query 'taskArns[0]' --output text 2>/dev/null | \
+            xargs -I {} aws ecs describe-tasks \
+            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+            --tasks {} \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text 2>/dev/null | \
+            xargs -I {} aws ec2 describe-network-interfaces \
+            --network-interface-ids {} \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text 2>/dev/null || echo "조회중")
+            
+          if [[ "$BACKEND_PUBLIC_IP" != "조회중" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
+            BACKEND_HEALTH_URL="http://${BACKEND_PUBLIC_IP}:8080/actuator/health"
+          else
+            BACKEND_HEALTH_URL="백엔드 IP 조회 중..."
+          fi
+          
+          # 배포 완료 즉시 URL 알림
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *배포 완료!* ✅\\n새 버전이 배포되었습니다. 아래 URL로 접속 가능합니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*🌐 프론트엔드:*\\n<$FRONTEND_URL|웹사이트 열기>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*⚙️ 백엔드 헬스체크:*\\n<$BACKEND_HEALTH_URL|API 상태 확인>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*📝 브랜치:*\\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*🔖 커밋:*\\n\`$(echo ${{ github.sha }} | cut -c1-8)\`\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
 
   verify:
     runs-on: ubuntu-latest
@@ -458,10 +515,19 @@ jobs:
           if [[ "$BACKEND_PUBLIC_IP" != "IP 조회 실패" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
             BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080"
             echo "✅ Backend Public IP: $BACKEND_PUBLIC_IP"
+            echo "🔗 Backend URL: $BACKEND_URL"
           else
             BACKEND_URL="Backend IP 조회 중... (서비스 시작 대기)"
             echo "⚠️ Backend Public IP 조회 실패 또는 아직 할당되지 않음"
           fi
+          
+          # URL 정보 GitHub Actions 요약에 출력
+          echo "## 🚀 배포 완료!" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 접속 정보" >> $GITHUB_STEP_SUMMARY
+          echo "- **프론트엔드**: $FRONTEND_URL" >> $GITHUB_STEP_SUMMARY  
+          echo "- **백엔드**: $BACKEND_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **환경**: $ENV_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **브랜치**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           
           # 최종 Slack 메시지 전송
           curl -X POST -H 'Content-type: application/json' \
