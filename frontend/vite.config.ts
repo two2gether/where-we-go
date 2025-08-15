@@ -51,9 +51,9 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@headlessui/react', 'lucide-react', 'framer-motion'],
+          ui: ['@headlessui/react', 'lucide-react'],
           state: ['zustand', '@tanstack/react-query'],
-          utils: ['axios', 'clsx', 'date-fns', 'zod'],
+          utils: ['axios', 'clsx'],
         },
       },
     },
