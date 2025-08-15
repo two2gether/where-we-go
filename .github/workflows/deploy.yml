@@ -420,7 +420,7 @@ jobs:
           
           # Create production environment file with verified backend IP
           cat > .env.production << EOF
-          VITE_API_BASE_URL=http://${ECS_PUBLIC_IP}:8080
+          VITE_API_BASE_URL=http://${ECS_PUBLIC_IP}:8080/api
           VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
           VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
           VITE_KAKAO_MAP_KEY=${GOOGLE_MAPS_API_KEY}

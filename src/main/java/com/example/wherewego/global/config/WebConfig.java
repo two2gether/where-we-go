@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+    // CORS 설정 - 2025.08.16 업데이트
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
