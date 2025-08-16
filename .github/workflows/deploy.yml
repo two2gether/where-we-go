@@ -422,9 +422,32 @@ jobs:
           
           echo "🔧 Frontend URL: http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
           
-          # Create production environment file with hardcoded backend IP
-          # TODO: Update this IP when ECS task restarts
-          ECS_HARDCODED_IP="REPLACE_WITH_ACTUAL_IP"
+          # Get current ECS task IP automatically
+          echo "🔍 Getting current ECS task IP..."
+          ECS_TASK_ARN=$(aws ecs list-tasks \
+            --cluster wherewego-prod-cluster \
+            --service wherewego-prod-service \
+            --query 'taskArns[0]' \
+            --output text 2>/dev/null || echo "")
+          
+          if [ "$ECS_TASK_ARN" != "" ] && [ "$ECS_TASK_ARN" != "None" ]; then
+            ECS_HARDCODED_IP=$(aws ecs describe-tasks \
+              --cluster wherewego-prod-cluster \
+              --tasks $ECS_TASK_ARN \
+              --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+              --output text | xargs -I {} aws ec2 describe-network-interfaces \
+              --network-interface-ids {} \
+              --query 'NetworkInterfaces[0].Association.PublicIp' \
+              --output text 2>/dev/null || echo "")
+          fi
+          
+          # Fallback to placeholder if no IP found
+          if [ "$ECS_HARDCODED_IP" = "" ] || [ "$ECS_HARDCODED_IP" = "None" ]; then
+            ECS_HARDCODED_IP="BACKEND_NOT_RUNNING"
+            echo "⚠️ Warning: ECS task not running, using placeholder IP"
+          else
+            echo "✅ Found ECS IP: $ECS_HARDCODED_IP"
+          fi
           
           cat > .env.production << EOF
           VITE_API_BASE_URL=http://${ECS_HARDCODED_IP}:8080/api
