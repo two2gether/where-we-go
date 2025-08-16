@@ -21,8 +21,8 @@ export const courseRatingService = {
    * POST /api/ratings
    * 기존 평점이 있으면 덮어쓰기로 업데이트됨
    */
-  createOrUpdateCourseRating: async (courseId: number, rating: number): Promise<ApiResponse<CourseRatingResponseDto>> => {
-    const response = await api.post('/ratings', { courseId, rating });
+  createOrUpdateCourseRating: async (ratingData: { courseId: number; rating: number }): Promise<ApiResponse<CourseRatingResponseDto>> => {
+    const response = await api.post('/ratings', ratingData);
     return response.data;
   },
 

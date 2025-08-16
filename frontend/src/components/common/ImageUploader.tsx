@@ -297,6 +297,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               <p className="text-gray-600">
                 {allowDragDrop ? '이미지를 드래그하거나 ' : ''}
                 <button
+                  type="button"
                   onClick={handleButtonClick}
                   className="text-blue-600 hover:text-blue-500 font-medium"
                 >

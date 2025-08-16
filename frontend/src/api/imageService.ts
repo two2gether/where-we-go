@@ -20,6 +20,7 @@ export const imageService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000, // 60초로 타임아웃 증가 (파일 업로드용)
     });
 
     // 백엔드에서 에러가 발생한 경우 data가 null일 수 있음
