@@ -99,7 +99,7 @@
         },
         {
           "name": "KAKAO_REDIRECT_URI",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/kakao/redirect-uri"
+          "value": "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/kakao/callback"
         },
         {
           "name": "GOOGLE_CLIENT_ID",
@@ -111,7 +111,7 @@
         },
         {
           "name": "GOOGLE_REDIRECT_URI",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/redirect-uri"
+          "value": "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/google/callback"
         },
         {
           "name": "TOSS_SECRET_KEY",

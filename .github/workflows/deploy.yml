@@ -418,18 +418,15 @@ jobs:
           GOOGLE_MAPS_API_KEY=$(aws ssm get-parameter --name "/wherewego/google/maps-api-key" --with-decryption --query 'Parameter.Value' --output text)
           GOOGLE_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/google/client-id" --query 'Parameter.Value' --output text)
           
-          # Update Google OAuth redirect URI dynamically based on environment
+          # Hardcoded OAuth redirect URIs for production
+          GOOGLE_REDIRECT_URI="http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/google/callback"
+          KAKAO_REDIRECT_URI="http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/kakao/callback"
+          
+          # Get additional parameters for environment variables
           S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/frontend-bucket" --query 'Parameter.Value' --output text)
           AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
-          FRONTEND_URL="http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
-          GOOGLE_REDIRECT_URI="${FRONTEND_URL}/auth/google/callback"
           
-          echo "🔧 Updating Google OAuth redirect URI to: $GOOGLE_REDIRECT_URI"
-          aws ssm put-parameter \
-            --name "/wherewego/google/redirect-uri" \
-            --value "$GOOGLE_REDIRECT_URI" \
-            --type "String" \
-            --overwrite
+          echo "🔧 Frontend URL: http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
           
           # Create production environment file with verified backend IP
           cat > .env.production << EOF
