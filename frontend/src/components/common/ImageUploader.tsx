@@ -119,7 +119,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       setPreviewUrl(response.imageUrl);
       onUploadComplete(response.imageUrl);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '이미지 업로드에 실패했습니다.';
+      let errorMessage = '이미지 업로드에 실패했습니다.';
+      
+      // 백엔드 ApiResponse 에러 메시지 처리
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } 
+      // imageService에서 던진 에러 메시지 처리
+      else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       onError?.(errorMessage);
     } finally {
       setIsUploading(false);
@@ -179,7 +189,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         setPreviewUrl(null);
         onDeleteComplete?.();
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || '이미지 삭제에 실패했습니다.';
+        let errorMessage = '이미지 삭제에 실패했습니다.';
+        
+        // 백엔드 ApiResponse 에러 메시지 처리
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } 
+        // imageService에서 던진 에러 메시지 처리
+        else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         onError?.(errorMessage);
       }
     } else if (previewUrl && onDeleteComplete) {
@@ -188,7 +208,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         setPreviewUrl(null);
         onDeleteComplete();
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || '이미지 삭제에 실패했습니다.';
+        let errorMessage = '이미지 삭제에 실패했습니다.';
+        
+        // 백엔드 ApiResponse 에러 메시지 처리
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } 
+        // imageService에서 던진 에러 메시지 처리
+        else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         onError?.(errorMessage);
       }
     }

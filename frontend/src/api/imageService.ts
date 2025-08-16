@@ -22,6 +22,11 @@ export const imageService = {
       },
     });
 
+    // 백엔드에서 에러가 발생한 경우 data가 null일 수 있음
+    if (!response.data.data) {
+      throw new Error(response.data.message || '이미지 업로드에 실패했습니다.');
+    }
+
     return response.data.data;
   },
 

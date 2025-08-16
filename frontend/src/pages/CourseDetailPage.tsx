@@ -20,6 +20,7 @@ const CourseDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'info' | 'places' | 'map' | 'comments'>('info');
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false); // 로컬 좋아요 상태
+  const [isBookmarked, setIsBookmarked] = useState(false); // 로컬 북마크 상태
   const queryClient = useQueryClient();
   
   // 위치 정보 가져오기
@@ -36,6 +37,14 @@ const CourseDetailPage: React.FC = () => {
     enabled: !!courseId,
     staleTime: 0,
   });
+
+  // 코스 데이터가 로드되면 좋아요/북마크 상태 초기화
+  React.useEffect(() => {
+    if (course) {
+      setIsLiked(course.isLiked || false);
+      setIsBookmarked(course.isBookmarked || false);
+    }
+  }, [course]);
 
 
   // 평점 정보는 코스 상세 정보에 포함되어 있음 (averageRating, myRating 등)
@@ -64,6 +73,30 @@ const CourseDetailPage: React.FC = () => {
     },
   });
 
+  // 북마크 토글 뮤테이션
+  const bookmarkMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest.post(`/courses/${courseId}/bookmark`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // 응답에서 받은 북마크 상태로 로컬 상태 업데이트
+      if (data && typeof data.bookmarked === 'boolean') {
+        setIsBookmarked(data.bookmarked);
+      } else {
+        // 응답에 bookmarked 정보가 없다면 토글
+        setIsBookmarked(prev => !prev);
+      }
+      // 코스 정보 다시 불러오기
+      queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      alert('북마크가 반영되었습니다.');
+    },
+    onError: (error) => {
+      console.error('북마크 처리 실패:', error);
+      alert('북마크 처리에 실패했습니다.');
+    },
+  });
+
   const handleLike = () => {
     if (!user) {
       alert('로그인이 필요합니다.');
@@ -72,6 +105,16 @@ const CourseDetailPage: React.FC = () => {
     
     // 좋아요 토글 실행
     likeMutation.mutate();
+  };
+
+  const handleBookmark = () => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    
+    // 북마크 토글 실행
+    bookmarkMutation.mutate();
   };
 
   const handleRating = () => {
@@ -297,6 +340,33 @@ const CourseDetailPage: React.FC = () => {
                     : isLiked 
                       ? '좋아요 취소' 
                       : '좋아요'
+                  }
+                </span>
+              </button>
+
+              <button
+                onClick={handleBookmark}
+                disabled={bookmarkMutation.isPending}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isBookmarked 
+                    ? 'bg-blue-50 border-blue-300 text-blue-600 hover:bg-blue-100'
+                    : 'bg-white border-github-border text-github-neutral hover:bg-github-canvas-subtle'
+                }`}
+              >
+                <svg 
+                  className="w-4 h-4" 
+                  fill={isBookmarked ? "currentColor" : "none"} 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                <span>
+                  {bookmarkMutation.isPending 
+                    ? '처리 중...' 
+                    : isBookmarked 
+                      ? '북마크 해제' 
+                      : '북마크'
                   }
                 </span>
               </button>

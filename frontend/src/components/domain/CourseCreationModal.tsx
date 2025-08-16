@@ -31,7 +31,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
   const [description, setDescription] = useState('');
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [region, setRegion] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
   const [orderedPlaceIds, setOrderedPlaceIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -169,7 +169,7 @@ export const CourseCreationModal: React.FC<CourseCreationModalProps> = ({
     setDescription('');
     setSelectedThemes([]);
     setRegion('');
-    setIsPublic(false);
+    setIsPublic(true);
     setOrderedPlaceIds([]);
   };
 
