@@ -282,7 +282,7 @@ jobs:
           echo "✅ Task definition registered: $TASK_DEF_ARN"
           
           # 통합된 인프라 스택에서 필요한 정보 가져오기
-          INFRA_STACK_NAME="wherewego-prod"
+          INFRA_STACK_NAME="wherewego-prod-infrastructure"
           
           # ALB Target Group ARN 가져오기
           TARGET_GROUP_ARN=$(aws cloudformation describe-stacks \
@@ -460,7 +460,7 @@ jobs:
           # Get ALB DNS Name (fixed endpoint)
           echo "🔍 ALB DNS 이름 조회 중..."
           ALB_DNS=$(aws cloudformation describe-stacks \
-            --stack-name "wherewego-prod" \
+            --stack-name "wherewego-prod-infrastructure" \
             --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
             --output text)
           
@@ -605,14 +605,14 @@ jobs:
           
           # 프론트엔드 URL 가져오기
           FRONTEND_URL=$(aws cloudformation describe-stacks \
-            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --stack-name "wherewego-prod-infrastructure" \
             --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
             --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
             
           # ALB DNS 가져오기
           echo "🔍 ALB DNS 확인 중..."
           BACKEND_ALB_DNS=$(aws cloudformation describe-stacks \
-            --stack-name "wherewego-prod" \
+            --stack-name "wherewego-prod-infrastructure" \
             --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
             --output text 2>/dev/null || echo "ALB 조회 실패")
           
