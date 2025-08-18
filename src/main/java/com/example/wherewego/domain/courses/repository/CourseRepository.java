@@ -132,6 +132,67 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		""")
 	Page<Course> findByUserIdAndIsDeletedFalse(@Param("userId") Long userId, Pageable pageable);
 
+	// 전체 코스 조회 (지역 필터 없음)
+	@Query("""
+		    SELECT c FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.isPublic = true
+		      AND c.isDeleted = false
+		""")
+	Page<Course> findAllPublicCourses(Pageable pageable);
+
+	// 전체 코스 중 테마별 조회
+	@Query("""
+		    SELECT c FROM Course c
+		    LEFT JOIN FETCH c.themes t
+		    LEFT JOIN FETCH c.user
+		    WHERE c.isPublic = true
+		      AND c.isDeleted = false
+		      AND t IN (:themes)
+		""")
+	Page<Course> findAllPublicCoursesByThemes(@Param("themes") List<CourseTheme> themes, Pageable pageable);
+
+	// 전체 인기 코스 조회
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    JOIN CourseBookmark b ON b.course = c
+		    WHERE c.isPublic = true
+		      AND c.isDeleted = false
+		      AND b.createdAt BETWEEN :startOfMonth AND :now
+		    GROUP BY c.id
+		    ORDER BY COUNT(b.id) DESC
+		""")
+	Page<Course> findAllPopularCoursesThisMonth(
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
+
+	// 전체 인기 코스 중 테마별 조회
+	@Query("""
+		    SELECT c
+		    FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    JOIN CourseBookmark b ON b.course = c
+		    WHERE c.isPublic = true
+		      AND c.isDeleted = false
+		      AND EXISTS (SELECT t3 FROM c.themes t3 WHERE t3 IN (:themes))
+		      AND b.createdAt BETWEEN :startOfMonth AND :now
+		    GROUP BY c.id
+		    ORDER BY COUNT(b.id) DESC
+		""")
+	Page<Course> findAllPopularCoursesByThemesThisMonth(
+		@Param("themes") List<CourseTheme> themes,
+		@Param("startOfMonth") LocalDateTime startOfMonth,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select c from Course c where c.id = :id")
 	Optional<Course> findByIdForUpdate(@Param("id") Long id);
