@@ -23,7 +23,7 @@ public class AdminInit {
 		if (userRepository.findByEmailAndIsDeletedFalse(adminEmail).isEmpty()) {
 			User admin = User.builder()
 				.email(adminEmail)
-				.password(passwordEncoder.encode("admin"))
+				.password(passwordEncoder.encode("Password123!"))
 				.nickname("관리자")
 				.provider(Provider.LOCAL)
 				.role(UserRole.ADMIN)

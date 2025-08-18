@@ -1,5 +1,7 @@
 package com.example.wherewego.global.exception;
 
+import java.io.IOException;
+
 import com.example.wherewego.global.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +61,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
         log.error("잘못된 요청: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+    }
+
+    /**
+     * IOException 처리
+     * 파일 업로드 등에서 I/O 오류 발생 시 처리
+     *
+     * @param e IOException
+     * @return 공통응답객체를 통한 일괄적인 응답형식  (HTTP 500 Internal Server Error)
+     */
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIOException(IOException e) {
+        log.error("파일 처리 오류: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("파일 처리 중 오류가 발생했습니다."));
     }
 
 
