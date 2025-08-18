@@ -19,11 +19,28 @@ export const courseRatingService = {
   /**
    * 코스 평점 등록/수정
    * POST /api/ratings
-   * 기존 평점이 있으면 덮어쓰기로 업데이트됨
+   * 기존 평점이 있으면 먼저 삭제 후 다시 등록
    */
   createOrUpdateCourseRating: async (ratingData: { courseId: number; rating: number }): Promise<ApiResponse<CourseRatingResponseDto>> => {
-    const response = await api.post('/ratings', ratingData);
-    return response.data;
+    try {
+      // 먼저 평점 등록 시도
+      const response = await api.post('/ratings', ratingData);
+      return response.data;
+    } catch (error: any) {
+      // 409 Conflict (이미 평점 존재) 에러인 경우 삭제 후 다시 등록
+      if (error.response?.status === 409) {
+        // 기존 평점 삭제
+        await api.delete('/ratings', { 
+          data: { courseId: ratingData.courseId },
+          headers: { 'Content-Type': 'application/json' }
+        });
+        // 새로운 평점 등록
+        const response = await api.post('/ratings', ratingData);
+        return response.data;
+      }
+      // 다른 에러는 그대로 던짐
+      throw error;
+    }
   },
 
   /**

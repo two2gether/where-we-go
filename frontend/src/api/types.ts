@@ -166,7 +166,70 @@ export interface CreateCourseRequest {
   }[];
 }
 
-export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
+// 코스 테마 enum (백엔드 CourseTheme과 일치)
+export enum CourseTheme {
+  HEALING = 'HEALING',
+  SENSIBILITY = 'SENSIBILITY',
+  ANNIVERSARY = 'ANNIVERSARY',
+  ROMANTIC = 'ROMANTIC',
+  ACTIVITY = 'ACTIVITY',
+  FOOD_TOUR = 'FOOD_TOUR',
+  CAFE_TOUR = 'CAFE_TOUR',
+  ONE_DAY = 'ONE_DAY',
+  DAILY = 'DAILY',
+  HOT_PLACE = 'HOT_PLACE',
+  DRIVE = 'DRIVE',
+  BEST_SHOT = 'BEST_SHOT',
+  PICNIC = 'PICNIC',
+  TRAVEL = 'TRAVEL',
+  RAINY_DAY = 'RAINY_DAY',
+  REFRESH = 'REFRESH'
+}
+
+// 코스 테마 한국어 이름 매핑
+export const CourseThemeLabels: Record<CourseTheme, string> = {
+  [CourseTheme.HEALING]: '힐링',
+  [CourseTheme.SENSIBILITY]: '감성',
+  [CourseTheme.ANNIVERSARY]: '기념일',
+  [CourseTheme.ROMANTIC]: '로맨틱',
+  [CourseTheme.ACTIVITY]: '액티비티',
+  [CourseTheme.FOOD_TOUR]: '맛집탐방',
+  [CourseTheme.CAFE_TOUR]: '카페투어',
+  [CourseTheme.ONE_DAY]: '당일치기',
+  [CourseTheme.DAILY]: '일상',
+  [CourseTheme.HOT_PLACE]: '핫플',
+  [CourseTheme.DRIVE]: '드라이브',
+  [CourseTheme.BEST_SHOT]: '인생샷',
+  [CourseTheme.PICNIC]: '피크닉',
+  [CourseTheme.TRAVEL]: '여행',
+  [CourseTheme.RAINY_DAY]: '비오는날',
+  [CourseTheme.REFRESH]: '기분전환'
+};
+
+// 백엔드 CourseUpdateRequestDto와 일치하는 코스 수정 요청 타입
+export interface UpdateCourseRequest {
+  title: string;
+  description?: string;
+  themes?: CourseTheme[];
+  region: string;
+  isPublic?: boolean;
+}
+
+// 백엔드 CourseUpdateResponseDto와 일치하는 코스 수정 응답 타입
+export interface UpdateCourseResponse {
+  courseId: number;
+  userId: number;
+  title: string;
+  description?: string;
+  themes: CourseTheme[];
+  region: string;
+  likeCount: number;
+  averageRating: number;
+  viewCount: number;
+  commentCount: number;
+  isPublic: boolean;
+  createdAt: string;
+}
 
 // 코스 댓글 관련 타입 (백엔드 응답 구조에 맞게 수정)
 export interface CourseComment {

@@ -9,6 +9,7 @@ import { GitHubLayout } from '../components/layout/GitHubLayout';
 import CourseMap from '../components/maps/CourseMap';
 import CourseComments from '../components/course/CourseComments';
 import CourseRatingModal from '../components/course/CourseRatingModal';
+import CourseEditForm from '../components/course/CourseEditForm';
 import StarRating from '../components/rating/StarRating';
 import { convertThemesToDisplay } from '../constants/themes';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -20,6 +21,7 @@ const CourseDetailPage: React.FC = () => {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'info' | 'places' | 'map' | 'comments'>('info');
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // 편집 모달 상태
   const [isLiked, setIsLiked] = useState(false); // 로컬 좋아요 상태
   const [isBookmarked, setIsBookmarked] = useState(false); // 로컬 북마크 상태
   const queryClient = useQueryClient();
@@ -65,11 +67,11 @@ const CourseDetailPage: React.FC = () => {
       }
       // 코스 정보 다시 불러오기 (좋아요 수 업데이트를 위해)
       queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-      alert('좋아요가 반영되었습니다.');
     },
     onError: (error) => {
       console.error('좋아요 처리 실패:', error);
-      alert('좋아요 처리에 실패했습니다.');
+      // 에러 시 원래 상태로 롤백
+      setIsLiked(prev => !prev);
     },
   });
 
@@ -91,54 +93,70 @@ const CourseDetailPage: React.FC = () => {
       }
       // 코스 정보 다시 불러오기
       queryClient.invalidateQueries({ queryKey: ['course', courseId] });
-      alert('북마크가 반영되었습니다.');
     },
     onError: (error) => {
       console.error('북마크 처리 실패:', error);
-      alert('북마크 처리에 실패했습니다.');
+      // 에러 시 원래 상태로 롤백
+      setIsBookmarked(prev => !prev);
     },
   });
 
   const handleLike = () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      // 로그인하지 않은 사용자는 아무 동작하지 않음 (버튼이 비활성화됨)
       return;
     }
     
+    // 낙관적 업데이트: 즉시 UI 상태 변경
+    setIsLiked(prev => !prev);
     // 좋아요 토글 실행
     likeMutation.mutate();
   };
 
   const handleBookmark = () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      // 로그인하지 않은 사용자는 아무 동작하지 않음 (버튼이 비활성화됨)
       return;
     }
     
+    // 낙관적 업데이트: 즉시 UI 상태 변경
+    setIsBookmarked(prev => !prev);
     // 북마크 토글 실행
     bookmarkMutation.mutate();
   };
 
   const handleRating = () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      // 로그인하지 않은 사용자는 아무 동작하지 않음 (버튼이 비활성화되어 있어야 함)
       return;
     }
     setIsRatingModalOpen(true);
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: course?.title,
-        text: `${course?.title} - Where We Go`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('링크가 복사되었습니다.');
+
+  const handleEdit = () => {
+    if (!user) {
+      return;
     }
+    setIsEditModalOpen(true);
   };
+
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
+    // 코스 데이터 새로고침은 CourseEditForm에서 처리됨
+    // 추가로 현재 페이지의 쿼리도 다시 실행
+    queryClient.invalidateQueries({ 
+      queryKey: ['course', courseId],
+      refetchType: 'active' // 현재 활성화된 쿼리만 다시 실행
+    });
+  };
+
+  const handleEditCancel = () => {
+    setIsEditModalOpen(false);
+  };
+
+  // 현재 사용자가 코스 작성자인지 확인
+  const isAuthor = user && course && course.authorId === user.id;
 
   if (isLoading) {
     return (
@@ -319,14 +337,28 @@ const CourseDetailPage: React.FC = () => {
 
             {/* 액션 버튼들 */}
             <div className="flex items-center space-x-2 mt-4 md:mt-0">
+              {/* 편집 버튼 (작성자만 표시) */}
+              {isAuthor && (
+                <button
+                  onClick={handleEdit}
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  title="코스 수정"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>편집</span>
+                </button>
+              )}
               <button
                 onClick={handleLike}
-                disabled={likeMutation.isPending}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                disabled={likeMutation.isPending || !user}
+                title={!user ? '로그인 후 좋아요를 누를 수 있습니다' : isLiked ? '좋아요 취소' : '좋아요'}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isLiked 
-                    ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100'
-                    : 'bg-white border-github-border text-github-neutral hover:bg-github-canvas-subtle'
-                }`}
+                    ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100 shadow-sm'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                } ${!user ? 'opacity-50' : ''}`}
               >
                 <svg 
                   className="w-4 h-4" 
@@ -348,12 +380,13 @@ const CourseDetailPage: React.FC = () => {
 
               <button
                 onClick={handleBookmark}
-                disabled={bookmarkMutation.isPending}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                disabled={bookmarkMutation.isPending || !user}
+                title={!user ? '로그인 후 북마크를 사용할 수 있습니다' : isBookmarked ? '북마크 해제' : '북마크'}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isBookmarked 
-                    ? 'bg-blue-50 border-blue-300 text-blue-600 hover:bg-blue-100'
-                    : 'bg-white border-github-border text-github-neutral hover:bg-github-canvas-subtle'
-                }`}
+                    ? 'bg-blue-50 border-blue-300 text-blue-600 hover:bg-blue-100 shadow-sm'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                } ${!user ? 'opacity-50' : ''}`}
               >
                 <svg 
                   className="w-4 h-4" 
@@ -375,9 +408,11 @@ const CourseDetailPage: React.FC = () => {
 
               <button
                 onClick={handleRating}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors hover:bg-github-canvas-subtle ${
+                disabled={!user}
+                title={!user ? '로그인 후 평점을 남길 수 있습니다' : course.myRating ? `현재 평점: ${course.myRating}점` : '평점 주기'}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-colors hover:bg-github-canvas-subtle disabled:opacity-50 disabled:cursor-not-allowed ${
                   course.myRating ? 'bg-yellow-50 border-yellow-300 text-yellow-700' : 'bg-white border-github-border text-github-neutral'
-                }`}
+                } ${!user ? 'opacity-50' : ''}`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -387,15 +422,6 @@ const CourseDetailPage: React.FC = () => {
                 </span>
               </button>
 
-              <button
-                onClick={handleShare}
-                className="flex items-center space-x-2 px-4 py-2 text-github-neutral border border-github-border rounded-md hover:bg-github-canvas-subtle transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                </svg>
-                <span>공유</span>
-              </button>
             </div>
           </div>
         </div>
@@ -599,6 +625,19 @@ const CourseDetailPage: React.FC = () => {
           createdAt: new Date().toISOString()
         } : null}
       />
+
+      {/* 편집 모달 */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <CourseEditForm
+              course={course}
+              onSuccess={handleEditSuccess}
+              onCancel={handleEditCancel}
+            />
+          </div>
+        </div>
+      )}
     </GitHubLayout>
   );
 };

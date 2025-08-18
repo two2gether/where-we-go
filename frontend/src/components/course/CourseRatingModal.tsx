@@ -39,13 +39,17 @@ const CourseRatingModal: React.FC<CourseRatingModalProps> = ({
     mutationFn: (ratingData: CreateCourseRatingRequest) =>
       courseRatingService.createOrUpdateCourseRating(ratingData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course', courseId] }); // 코스 상세 정보 업데이트
+      // 캐시 무효화로 즉시 UI 업데이트
+      queryClient.invalidateQueries({ 
+        queryKey: ['course'], 
+        type: 'all' 
+      });
       handleClose();
-      alert(existingRating ? '평점이 수정되었습니다.' : '평점이 등록되었습니다.');
+      // alert 제거 - 조용히 성공 처리
     },
     onError: (error) => {
       console.error('평점 처리 실패:', error);
-      alert(existingRating ? '평점 수정에 실패했습니다.' : '평점 등록에 실패했습니다.');
+      // 에러는 조용히 처리하고 모달은 열린 상태로 유지
     }
   });
 
@@ -53,13 +57,17 @@ const CourseRatingModal: React.FC<CourseRatingModalProps> = ({
   const deleteMutation = useMutation({
     mutationFn: () => courseRatingService.deleteCourseRating(courseId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course', courseId] }); // 코스 상세 정보 업데이트
+      // 캐시 무효화로 즉시 UI 업데이트
+      queryClient.invalidateQueries({ 
+        queryKey: ['course'], 
+        type: 'all' 
+      });
       handleClose();
-      alert('평점이 삭제되었습니다.');
+      // alert 제거 - 조용히 성공 처리
     },
     onError: (error) => {
       console.error('평점 삭제 실패:', error);
-      alert('평점 삭제에 실패했습니다.');
+      // 에러는 조용히 처리하고 모달은 열린 상태로 유지
     }
   });
 

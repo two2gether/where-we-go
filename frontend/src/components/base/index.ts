@@ -15,3 +15,5 @@ export type { AvatarProps } from './Avatar';
 
 export { Spinner } from './Spinner';
 export type { SpinnerProps } from './Spinner';
+
+export { ImageUpload } from './ImageUpload';

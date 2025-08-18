@@ -5,6 +5,7 @@ import type {
   CourseSearchRequest,
   CreateCourseRequest,
   UpdateCourseRequest,
+  UpdateCourseResponse,
   PageResponse
 } from '../types';
 
@@ -85,9 +86,9 @@ export const courseService = {
     apiRequest.post<Course>('/courses', courseData)
       .then(response => response.data),
 
-  // 코스 수정
-  updateCourse: (id: number, courseData: UpdateCourseRequest): Promise<Course> =>
-    apiRequest.put<Course>(`/courses/${id}`, courseData)
+  // 코스 수정 - 백엔드 PATCH API에 맞게 수정
+  updateCourse: (id: number, courseData: UpdateCourseRequest): Promise<UpdateCourseResponse> =>
+    apiRequest.patch<UpdateCourseResponse>(`/courses/${id}`, courseData)
       .then(response => response.data),
 
   // 코스 삭제

@@ -37,8 +37,8 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
     },
     onError: (error) => {
       console.error('댓글 작성 실패:', error);
-      alert('댓글 작성에 실패했습니다.');
       setIsSubmitting(false);
+      // 에러는 조용히 처리하고, 사용자가 다시 시도할 수 있도록 함
     }
   });
 
@@ -52,7 +52,7 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
     },
     onError: (error) => {
       console.error('댓글 삭제 실패:', error);
-      alert('댓글 삭제에 실패했습니다.');
+      // 에러는 조용히 처리
     }
   });
 
@@ -60,12 +60,12 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
     e.preventDefault();
     
     if (!isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      // 로그인 안내 없이 조용히 return (버튼이 비활성화되어 있어야 함)
       return;
     }
 
     if (!newComment.trim()) {
-      alert('댓글 내용을 입력해주세요.');
+      // 빈 댓글은 버튼이 비활성화되어 있어 여기에 도달하지 않아야 함
       return;
     }
 
@@ -100,27 +100,27 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
     <div className={`${className}`}>
       {/* 댓글 작성 폼 */}
       {isAuthenticated && (
-        <div className="linear-card p-6 mb-6">
-          <h3 className="text-lg font-semibold text-linear-text-primary mb-4">댓글 작성</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">댓글 작성</h3>
           <form onSubmit={handleSubmitComment}>
             <div className="mb-4">
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="이 코스에 대한 의견을 남겨보세요..."
-                className="linear-input resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder-gray-500 dark:placeholder-gray-400"
                 rows={3}
                 maxLength={500}
                 disabled={isSubmitting}
               />
               <div className="flex justify-between items-center mt-3">
-                <span className="text-xs text-linear-text-tertiary">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {newComment.length}/500
                 </span>
                 <button
                   type="submit"
                   disabled={isSubmitting || !newComment.trim()}
-                  className={`linear-button linear-button-primary ${isSubmitting || !newComment.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${isSubmitting || !newComment.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
                 >
                   {isSubmitting ? '작성 중...' : '댓글 작성'}
                 </button>
@@ -131,57 +131,57 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
       )}
 
       {/* 댓글 목록 */}
-      <div className="linear-card">
-        <div className="border-b border-linear-border-primary p-6">
-          <h3 className="text-lg font-semibold text-linear-text-primary">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             댓글 ({commentsData?.totalElements || 0})
           </h3>
         </div>
 
         {isLoading && (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-linear-primary mx-auto mb-3"></div>
-            <p className="text-linear-text-secondary">댓글을 불러오는 중...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+            <p className="text-gray-600 dark:text-gray-400">댓글을 불러오는 중...</p>
           </div>
         )}
 
         {error && (
           <div className="p-8 text-center">
-            <svg className="w-8 h-8 text-linear-error mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
-            <p className="text-linear-error">댓글을 불러오는데 실패했습니다.</p>
+            <p className="text-red-500">댓글을 불러오는데 실패했습니다.</p>
           </div>
         )}
 
         {commentsData?.content && commentsData.content.length > 0 ? (
           <div className="space-y-4 p-6">
             {commentsData.content.map((comment, index) => (
-              <div key={comment.commentId} className={`linear-thread ${index === commentsData.content.length - 1 ? 'mb-0' : ''}`}>
+              <div key={comment.commentId} className={`border-b border-gray-100 dark:border-gray-700 pb-4 ${index === commentsData.content.length - 1 ? 'border-b-0 mb-0' : 'mb-4'}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4 flex-1">
                     <div className="flex-shrink-0">
-                      <div className="linear-avatar">
+                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                         <span>
                           {comment.nickname.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <h4 className="text-sm font-semibold text-linear-text-primary">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {comment.nickname}
                         </h4>
                         {comment.isMine && (
-                          <span className="linear-badge linear-badge-primary text-xs">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium">
                             내 댓글
                           </span>
                         )}
-                        <span className="text-xs text-linear-text-tertiary">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {formatDate(comment.createdAt)}
                         </span>
                       </div>
-                      <p className="text-linear-text-primary whitespace-pre-wrap leading-relaxed">
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
                         {comment.content}
                       </p>
                     </div>
@@ -191,7 +191,7 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
                   {comment.isMine && (
                     <button
                       onClick={() => handleDeleteComment(comment.commentId)}
-                      className="text-linear-text-tertiary hover:text-linear-error p-1 transition-colors"
+                      className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 transition-colors"
                       title="댓글 삭제"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,13 +206,13 @@ const CourseComments: React.FC<CourseCommentsProps> = ({ courseId, className = '
         ) : (
           !isLoading && (
             <div className="p-12 text-center">
-              <svg className="w-12 h-12 text-linear-text-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-linear-text-secondary mb-3">아직 댓글이 없습니다.</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">아직 댓글이 없습니다.</p>
               {!isAuthenticated && (
-                <p className="text-sm text-linear-text-tertiary">
-                  <span className="text-linear-primary hover:text-linear-primary-dark cursor-pointer transition-colors">로그인</span>하고 첫 댓글을 남겨보세요!
+                <p className="text-sm text-gray-500 dark:text-gray-500">
+                  <span className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer transition-colors">로그인</span>하고 첫 댓글을 남겨보세요!
                 </p>
               )}
             </div>
