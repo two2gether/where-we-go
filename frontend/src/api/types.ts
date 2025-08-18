@@ -39,6 +39,13 @@ export interface RegisterRequest {
   confirmPassword: string;
 }
 
+export interface RegisterWithImageRequest {
+  nickname: string;
+  email: string;
+  password: string;
+  profileImageFile?: File;
+}
+
 export interface AuthResponse {
   user: User;
   accessToken: string;

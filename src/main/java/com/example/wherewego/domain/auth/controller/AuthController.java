@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.auth.controller;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.example.wherewego.domain.auth.dto.request.LoginRequestDto;
 import com.example.wherewego.domain.auth.dto.request.SignupRequestDto;
@@ -27,6 +31,7 @@ import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.service.S3Service;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,20 +53,51 @@ public class AuthController {
 	private final UserService userService;
 	private final JwtUtil jwtUtil;
 	private final KakaoOAuthService kakaoOAuthService;
+	private final S3Service s3Service;
 
 	/**
-	 * 새로운 사용자 회원가입을 처리합니다.
+	 * 사용자 회원가입을 처리합니다.
+	 * multipart/form-data 형식으로 통일하여 파일 업로드를 지원합니다.
 	 * 이메일 중복 검사 및 비밀번호 암호화를 수행합니다.
 	 *
-	 * @param request 회원가입 요청 데이터
+	 * @param email 사용자 이메일
+	 * @param password 비밀번호
+	 * @param nickname 닉네임
+	 * @param profileImageFile 프로필 이미지 파일 (선택사항)
 	 * @return 생성된 사용자 정보를 포함한 API 응답
 	 */
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<UserResponseDto> signup(@Validated @RequestBody SignupRequestDto request) {
-		UserResponseDto response = authService.signup(request);
+	public ApiResponse<UserResponseDto> signup(
+			@RequestParam("email") String email,
+			@RequestParam("password") String password,
+			@RequestParam("nickname") String nickname,
+			@RequestParam(value = "profileImageFile", required = false) MultipartFile profileImageFile) {
 
-		return ApiResponse.created("회원 가입 성공", response);
+		try {
+			String profileImageUrl = null;
+			
+			// 프로필 이미지가 업로드된 경우 S3에 저장
+			if (profileImageFile != null && !profileImageFile.isEmpty()) {
+				profileImageUrl = s3Service.uploadImage(profileImageFile, "profiles");
+			}
+			
+			// SignupRequestDto 생성
+			SignupRequestDto request = SignupRequestDto.builder()
+					.email(email)
+					.password(password)
+					.nickname(nickname)
+					.profileImage(profileImageUrl)
+					.build();
+
+			UserResponseDto response = authService.signup(request);
+			return ApiResponse.created("회원 가입 성공", response);
+
+		} catch (IOException e) {
+			return ApiResponse.error("프로필 이미지 업로드 중 오류가 발생했습니다.");
+		} catch (Exception e) {
+			return ApiResponse.error("회원가입 중 오류가 발생했습니다: " + e.getMessage());
+		}
 	}
 
 	/**

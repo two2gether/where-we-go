@@ -14,6 +14,8 @@ export const LoginPage: React.FC = () => {
     name: '',
     confirmPassword: ''
   });
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const navigate = useNavigate();
@@ -42,6 +44,34 @@ export const LoginPage: React.FC = () => {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      
+      // 이미지 미리보기 생성
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setProfileImage(null);
+      setProfileImagePreview(null);
+    }
+  };
+
+  const handleImageRemove = () => {
+    setProfileImage(null);
+    setProfileImagePreview(null);
+    
+    // input 요소의 value를 초기화하여 같은 파일을 다시 선택할 수 있도록 함
+    const fileInput = document.getElementById('profileImage') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
     }
   };
 
@@ -114,13 +144,20 @@ export const LoginPage: React.FC = () => {
         console.log('Login API success');
       } else {
         console.log('Calling register API...');
-        // 회원가입
-        await registerMutation.mutateAsync({
+        // 회원가입 (이미지 포함 여부에 따라 다른 방식)
+        const registerData: any = {
           nickname: formData.name,
           email: formData.email,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
-        });
+        };
+        
+        // 프로필 이미지가 있는 경우 추가
+        if (profileImage) {
+          registerData.profileImageFile = profileImage;
+        }
+        
+        await registerMutation.mutateAsync(registerData);
         console.log('Register API success, now calling login...');
         
         // 회원가입 성공 후 자동 로그인
@@ -166,7 +203,15 @@ export const LoginPage: React.FC = () => {
       name: '',
       confirmPassword: ''
     });
+    setProfileImage(null);
+    setProfileImagePreview(null);
     setErrors({});
+    
+    // input 요소의 value도 초기화
+    const fileInput = document.getElementById('profileImage') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   return (
@@ -212,6 +257,65 @@ export const LoginPage: React.FC = () => {
                 error={errors.name}
                 placeholder="이름을 입력하세요"
               />
+            )}
+
+            {/* Profile Image field (signup only) */}
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-github-accent">
+                  프로필 이미지 (선택사항)
+                </label>
+                <div className="flex items-center space-x-4">
+                  {/* 이미지 미리보기 */}
+                  <div className="flex-shrink-0">
+                    {profileImagePreview ? (
+                      <img
+                        src={profileImagePreview}
+                        alt="프로필 미리보기"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-github-border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gray-200 border-2 border-github-border flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 파일 선택 버튼 */}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      id="profileImage"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="profileImage"
+                      className="inline-flex items-center px-4 py-2 border border-github-border rounded-md shadow-sm text-sm font-medium text-github-accent bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      이미지 선택
+                    </label>
+                    {profileImage && (
+                      <button
+                        type="button"
+                        onClick={handleImageRemove}
+                        className="ml-2 text-sm text-red-600 hover:text-red-500"
+                      >
+                        제거
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-github-neutral-muted">
+                  JPG, PNG 파일만 업로드 가능합니다. (최대 5MB)
+                </p>
+              </div>
             )}
 
             {/* Email field */}

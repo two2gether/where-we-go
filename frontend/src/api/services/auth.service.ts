@@ -3,6 +3,7 @@ import { isTokenExpired, getTokenExpirationDate } from '../../utils/token';
 import type { 
   LoginRequest, 
   RegisterRequest, 
+  RegisterWithImageRequest,
   AuthResponse, 
   LoginResponse,
   User 
@@ -14,10 +15,25 @@ export const authService = {
     apiRequest.post<LoginResponse>('/auth/login', credentials)
       .then(response => response.data),
 
-  // 회원가입  
-  register: (userData: RegisterRequest): Promise<User> =>
-    apiRequest.post<User>('/auth/signup', userData)
-      .then(response => response.data),
+  // 회원가입 (multipart/form-data로 통일)
+  // 참고: confirmPassword는 프론트엔드에서만 검증하고 서버로 전송하지 않음
+  register: (userData: RegisterRequest | RegisterWithImageRequest): Promise<User> => {
+    const formData = new FormData();
+    formData.append('email', userData.email);
+    formData.append('password', userData.password);
+    formData.append('nickname', userData.nickname);
+    
+    // 이미지 파일이 있는 경우에만 추가
+    if ('profileImageFile' in userData && userData.profileImageFile) {
+      formData.append('profileImageFile', userData.profileImageFile);
+    }
+
+    return apiRequest.post<User>('/auth/signup', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }).then(response => response.data);
+  },
 
   // TODO: 백엔드에서 refresh token API 구현 후 활성화
   // refreshToken: (refreshToken: string): Promise<{ accessToken: string }> =>
