@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Build 결과물
+build/
+target/
+
+# IDE 설정
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+
+# Gradle 캐시
+.gradle/
+
+# 테스트 관련
+src/test/
+
+# 로그
+*.log
+
+# 환경변수 파일
+.env
+.env.local
+.env.prod
+
+# Node modules (frontend가 있다면)
+node_modules/
+npm-debug.log*
+
+# 기타
+*.tmp
+*.swp
+*~
+
+# 문서 및 테스트 파일
+*.md
+README*
+blog-posts/
+http/
+sql/
