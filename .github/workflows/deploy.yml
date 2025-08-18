@@ -307,22 +307,23 @@ jobs:
             echo "🔗 Using subnets: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
             echo "🛡️ Using security group: $ECS_SECURITY_GROUP"
           
-            # ECS 서비스 생성
+            # ECS 서비스 생성 (새로 등록된 태스크 정의 ARN 사용)
             aws ecs create-service \
               --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
               --service-name ${{ steps.set-deploy-vars.outputs.service }} \
-              --task-definition ${{ env.CONTAINER_NAME }} \
+              --task-definition "$TASK_DEF_ARN" \
               --desired-count 1 \
               --launch-type FARGATE \
               --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
           else
             echo "🔄 Updating existing ECS service..."
           
-            # 기존 서비스 업데이트
+            # 기존 서비스 업데이트 (새로 등록된 태스크 정의 ARN 사용)
             aws ecs update-service \
               --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
               --service ${{ steps.set-deploy-vars.outputs.service }} \
-              --task-definition ${{ env.CONTAINER_NAME }} \
+              --task-definition "$TASK_DEF_ARN" \
+              --force-new-deployment \
               --desired-count 1
           fi
           
