@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.eventproduct.dto.request.EventProductCreateRequestDto;
@@ -18,6 +20,7 @@ import com.example.wherewego.domain.eventproduct.dto.response.EventProductCreate
 import com.example.wherewego.domain.eventproduct.dto.response.EventProductUpdateResponseDto;
 import com.example.wherewego.domain.eventproduct.service.AdminEventProductService;
 import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.service.S3Service;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,22 +37,49 @@ import lombok.RequiredArgsConstructor;
 public class AdminEventProductController {
 
 	private final AdminEventProductService adminEventProductService;
+	private final S3Service s3Service;
 
 	/**
 	 * 이벤트 상품을 생성합니다.
 	 * 인증된 사용자만 사용 가능합니다.
 	 *
-	 * @param requestDto 이벤트 생성 요청 데이터
+	 * @param productName 상품명
+	 * @param description 상품 설명
+	 * @param price 상품 가격
+	 * @param stock 상품 재고
+	 * @param productImageFile 상품 이미지 파일 (선택사항)
 	 * @param userDetail 인증된 사용자 정보
 	 * @return 생성된 이벤트 상품 정보를 포함한 API 응답
 	 */
-	@PostMapping
+	@PostMapping(consumes = "multipart/form-data")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<EventProductCreateResponseDto> registerEvent(
-		@RequestBody @Valid EventProductCreateRequestDto requestDto,
+		@RequestParam("productName") String productName,
+		@RequestParam("description") String description,
+		@RequestParam("price") Integer price,
+		@RequestParam("stock") Integer stock,
+		@RequestParam(value = "productImage", required = false) MultipartFile productImageFile,
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
+
+		// DTO 생성
+		EventProductCreateRequestDto requestDto = EventProductCreateRequestDto.builder()
+			.productName(productName)
+			.description(description)
+			.price(price)
+			.stock(stock)
+			.build();
+
+		// 이미지 파일이 제공된 경우 S3에 업로드
+		if (productImageFile != null && !productImageFile.isEmpty()) {
+			try {
+				String imageUrl = s3Service.uploadImage(productImageFile, "products");
+				requestDto.setProductImage(imageUrl);
+			} catch (Exception e) {
+				throw new RuntimeException("이미지 업로드에 실패했습니다: " + e.getMessage());
+			}
+		}
 
 		EventProductCreateResponseDto response = adminEventProductService.createEvent(requestDto, userId);
 
@@ -61,17 +91,44 @@ public class AdminEventProductController {
 	 * 관리자만 수정할 수 있습니다.
 	 *
 	 * @param productId 수정할 상품 ID
-	 * @param requestDto 수정할 상품 정보
+	 * @param productName 상품명 (선택사항)
+	 * @param description 상품 설명 (선택사항)
+	 * @param price 상품 가격 (선택사항)
+	 * @param stock 상품 재고 (선택사항)
+	 * @param productImageFile 상품 이미지 파일 (선택사항)
 	 * @param userDetail 인증된 사용자 정보
 	 * @return 수정된 상품 정보를 포함한 API 응답
 	 */
-	@PatchMapping("/{productId}")
+	@PatchMapping(value = "/{productId}", consumes = "multipart/form-data")
 	public ApiResponse<EventProductUpdateResponseDto> updateEvent(
 		@PathVariable Long productId,
-		@RequestBody @Valid EventProductUpdateRequestDto requestDto,
+		@RequestParam(value = "productName", required = false) String productName,
+		@RequestParam(value = "description", required = false) String description,
+		@RequestParam(value = "price", required = false) Integer price,
+		@RequestParam(value = "stock", required = false) Integer stock,
+		@RequestParam(value = "productImage", required = false) MultipartFile productImageFile,
 		@AuthenticationPrincipal CustomUserDetail userDetail
 	) {
 		Long userId = userDetail.getUser().getId();
+
+		// DTO 생성
+		EventProductUpdateRequestDto requestDto = EventProductUpdateRequestDto.builder()
+			.productName(productName)
+			.description(description)
+			.price(price)
+			.stock(stock)
+			.build();
+		
+		// 이미지 파일이 제공된 경우 S3에 업로드
+		if (productImageFile != null && !productImageFile.isEmpty()) {
+			try {
+				String imageUrl = s3Service.uploadImage(productImageFile, "products");
+				requestDto.setProductImage(imageUrl);
+			} catch (Exception e) {
+				throw new RuntimeException("이미지 업로드에 실패했습니다: " + e.getMessage());
+			}
+		}
+		
 		EventProductUpdateResponseDto response = adminEventProductService.updateEventInfo(productId, requestDto,
 			userId);
 

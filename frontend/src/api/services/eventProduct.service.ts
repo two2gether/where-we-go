@@ -59,14 +59,43 @@ export const eventProductService = {
 // 관리자 전용 이벤트 상품 API (실제 백엔드 API 엔드포인트와 매칭)
 export const adminEventProductService = {
   // 이벤트 상품 생성 (백엔드 /api/admin/event-products POST)
-  createEventProduct: async (data: EventProductCreateRequestDto): Promise<ApiResponse<any>> => {
-    const response = await api.post('/admin/event-products', data);
+  createEventProduct: async (data: EventProductCreateRequestDto, imageFile?: File): Promise<ApiResponse<any>> => {
+    const formData = new FormData();
+    formData.append('productName', data.productName);
+    formData.append('description', data.description);
+    formData.append('price', data.price.toString());
+    formData.append('stock', data.stock.toString());
+    
+    if (imageFile) {
+      formData.append('productImage', imageFile);
+    }
+
+    const response = await api.post('/admin/event-products', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   // 이벤트 상품 수정 (백엔드 /api/admin/event-products/{productId} PATCH)
-  updateEventProduct: async (productId: number, data: EventProductUpdateRequestDto): Promise<ApiResponse<any>> => {
-    const response = await api.patch(`/admin/event-products/${productId}`, data);
+  updateEventProduct: async (productId: number, data: EventProductUpdateRequestDto, imageFile?: File): Promise<ApiResponse<any>> => {
+    const formData = new FormData();
+    
+    if (data.productName) formData.append('productName', data.productName);
+    if (data.description) formData.append('description', data.description);
+    if (data.price !== undefined) formData.append('price', data.price.toString());
+    if (data.stock !== undefined) formData.append('stock', data.stock.toString());
+    
+    if (imageFile) {
+      formData.append('productImage', imageFile);
+    }
+
+    const response = await api.patch(`/admin/event-products/${productId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

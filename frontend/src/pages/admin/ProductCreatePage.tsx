@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useEventProductMutations } from '../../hooks';
 import { ProductForm } from '../../components/admin';
 import { GitHubLayout } from '../../components/layout';
-import type { EventProductCreateRequestDto } from '../../api/services/eventProduct.service';
+import { adminEventProductService, type EventProductCreateRequestDto } from '../../api/services/eventProduct.service';
 
 const ProductCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { createEventProduct, isCreating } = useEventProductMutations();
 
-  const handleSubmit = async (data: EventProductCreateRequestDto) => {
+  const handleSubmit = async (data: EventProductCreateRequestDto, imageFile?: File) => {
     try {
-      await createEventProduct(data);
+      await adminEventProductService.createEventProduct(data, imageFile);
       alert('상품이 성공적으로 등록되었습니다!');
       navigate('/admin/products');
     } catch (error: any) {
@@ -36,7 +36,7 @@ const ProductCreatePage: React.FC = () => {
           mode="create"
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={isCreating}
+          isLoading={false}
         />
       </div>
     </GitHubLayout>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Input, Card } from '../base';
+import { Button, Input, Card, ImageUpload } from '../base';
 import type { EventProductCreateRequestDto, EventProductUpdateRequestDto } from '../../api/services/eventProduct.service';
 
 interface ProductFormProps {
@@ -11,7 +11,7 @@ interface ProductFormProps {
     price: number;
     stock: number;
   };
-  onSubmit: (data: EventProductCreateRequestDto | EventProductUpdateRequestDto) => Promise<void>;
+  onSubmit: (data: EventProductCreateRequestDto | EventProductUpdateRequestDto, imageFile?: File) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
   mode: 'create' | 'edit';
@@ -33,6 +33,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageError, setImageError] = useState<string>('');
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -65,7 +67,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
 
     try {
-      await onSubmit(formData);
+      await onSubmit(formData, selectedImageFile || undefined);
     } catch (error) {
       console.error('상품 등록/수정 실패:', error);
     }
@@ -84,6 +86,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         [field]: ''
       }));
     }
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedImageFile(file);
+    setImageError('');
+    
+    // 미리보기를 위해 URL 생성
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        productImage: previewUrl
+      }));
+    }
+  };
+
+  const handleImageError = (error: string) => {
+    setImageError(error);
   };
 
   return (
@@ -119,29 +139,64 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           )}
         </div>
 
-        {/* 상품 이미지 URL */}
+        {/* 상품 이미지 업로드 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            상품 이미지 URL
+            상품 이미지
           </label>
-          <Input
-            type="url"
-            value={formData.productImage}
-            onChange={(e) => handleInputChange('productImage', e.target.value)}
-            placeholder="https://example.com/image.jpg"
-            disabled={isLoading}
-          />
-          {formData.productImage && (
-            <div className="mt-3">
-              <img 
-                src={formData.productImage} 
-                alt="상품 미리보기"
-                className="w-32 h-32 object-cover rounded border"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
+          <div className="space-y-3">
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                if (file) {
+                  // 파일 크기 체크 (10MB)
+                  const maxSize = 10 * 1024 * 1024;
+                  if (file.size > maxSize) {
+                    handleImageError('파일 크기가 10MB를 초과할 수 없습니다.');
+                    return;
+                  }
+                  
+                  // 파일 타입 체크
+                  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                  if (!allowedTypes.includes(file.type)) {
+                    handleImageError('지원하지 않는 이미지 형식입니다. (JPEG, PNG, GIF, WebP만 지원)');
+                    return;
+                  }
+                }
+                handleFileSelect(file);
+              }}
+              disabled={isLoading}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+            />
+            
+            {formData.productImage && (
+              <div className="relative inline-block">
+                <img
+                  src={formData.productImage}
+                  alt="상품 미리보기"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.src = '/images/placeholder.png';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleFileSelect(null);
+                    setFormData(prev => ({ ...prev, productImage: '' }));
+                  }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                  disabled={isLoading}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+          {imageError && (
+            <p className="text-red-500 text-sm mt-1">{imageError}</p>
           )}
         </div>
 
