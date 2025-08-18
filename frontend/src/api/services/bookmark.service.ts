@@ -45,9 +45,34 @@ export const bookmarkService = {
           }
         });
     } else {
-      // 코스 북마크는 기존 방식 사용
-      return apiRequest.post<{ bookmarked: boolean }>('/bookmarks/toggle', bookmarkData)
-        .then(response => response.data);
+      // 코스 북마크는 백엔드의 create/delete API 사용
+      const courseId = bookmarkData.targetId;
+      
+      console.log(`🔄 Attempting to toggle bookmark for course: ${courseId}`);
+      
+      // POST로 시도하고, 실패하면 DELETE 시도 (토글 로직)
+      return apiRequest.post<any>('/bookmarks', { courseId })
+        .then((response) => {
+          console.log('✅ Course bookmark added successfully:', response);
+          return { bookmarked: true };
+        })
+        .catch((error) => {
+          console.log('📝 Course bookmark add failed, trying to remove:', error.response?.status);
+          if (error.response?.status === 409 || error.response?.status === 400) {
+            // 이미 북마크가 있다면 제거
+            return apiRequest.delete<any>('/bookmarks', { data: { courseId } })
+              .then((response) => {
+                console.log('✅ Course bookmark removed successfully:', response);
+                return { bookmarked: false };
+              })
+              .catch((deleteError) => {
+                console.error('❌ Course bookmark remove also failed:', deleteError);
+                throw deleteError;
+              });
+          } else {
+            throw error;
+          }
+        });
     }
   },
 

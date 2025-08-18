@@ -159,10 +159,20 @@ export const courseService = {
   //   apiRequest.get<Course[]>(`/courses/recommendations?limit=${limit}`)
   //     .then(response => response.data),
 
-  // 코스 좋아요/취소
-  toggleLike: (courseId: number): Promise<{ liked: boolean; likeCount: number }> =>
-    apiRequest.post<{ liked: boolean; likeCount: number }>(`/courses/${courseId}/like`)
-      .then(response => response.data),
+  // 코스 좋아요/취소 - 백엔드의 create/delete API 사용
+  toggleLike: (courseId: number): Promise<{ liked: boolean; likeCount: number }> => {
+    // 먼저 좋아요 생성을 시도하고, 실패하면 삭제를 시도하는 토글 로직
+    return apiRequest.post('/likes', { courseId })
+      .then(() => ({ liked: true, likeCount: 1 })) // 좋아요 생성 성공
+      .catch((error) => {
+        if (error.response?.status === 409 || error.response?.status === 400) {
+          // 이미 좋아요가 있다면 삭제 시도
+          return apiRequest.delete('/likes', { data: { courseId } })
+            .then(() => ({ liked: false, likeCount: 0 }));
+        }
+        throw error;
+      });
+  },
 
 
   // TODO: 백엔드에서 고급 코스 기능 API들 구현 후 활성화

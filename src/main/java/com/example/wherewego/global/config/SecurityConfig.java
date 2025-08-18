@@ -66,8 +66,10 @@ public class SecurityConfig {
 				// 공개 코스 조회 API (JWT Filter 거치지만 permitAll)
 				.requestMatchers(HttpMethod.GET, "/api/courses").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
+				
+				// 공개 댓글 조회 API
+				.requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
 				
 				// 공개 장소 조회 API
 				.requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
