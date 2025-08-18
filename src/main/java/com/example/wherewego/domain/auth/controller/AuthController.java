@@ -67,37 +67,29 @@ public class AuthController {
 	 * @return 생성된 사용자 정보를 포함한 API 응답
 	 */
 	@PostMapping("/signup")
-	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<UserResponseDto> signup(
 			@RequestParam("email") String email,
 			@RequestParam("password") String password,
 			@RequestParam("nickname") String nickname,
-			@RequestParam(value = "profileImageFile", required = false) MultipartFile profileImageFile) {
+			@RequestParam(value = "profileImageFile", required = false) MultipartFile profileImageFile) throws IOException {
 
-		try {
-			String profileImageUrl = null;
-			
-			// 프로필 이미지가 업로드된 경우 S3에 저장
-			if (profileImageFile != null && !profileImageFile.isEmpty()) {
-				profileImageUrl = s3Service.uploadImage(profileImageFile, "profiles");
-			}
-			
-			// SignupRequestDto 생성
-			SignupRequestDto request = SignupRequestDto.builder()
-					.email(email)
-					.password(password)
-					.nickname(nickname)
-					.profileImage(profileImageUrl)
-					.build();
-
-			UserResponseDto response = authService.signup(request);
-			return ApiResponse.created("회원 가입 성공", response);
-
-		} catch (IOException e) {
-			return ApiResponse.error("프로필 이미지 업로드 중 오류가 발생했습니다.");
-		} catch (Exception e) {
-			return ApiResponse.error("회원가입 중 오류가 발생했습니다: " + e.getMessage());
+		String profileImageUrl = null;
+		
+		// 프로필 이미지가 업로드된 경우 S3에 저장
+		if (profileImageFile != null && !profileImageFile.isEmpty()) {
+			profileImageUrl = s3Service.uploadImage(profileImageFile, "profiles");
 		}
+		
+		// SignupRequestDto 생성
+		SignupRequestDto request = SignupRequestDto.builder()
+				.email(email)
+				.password(password)
+				.nickname(nickname)
+				.profileImage(profileImageUrl)
+				.build();
+
+		UserResponseDto response = authService.signup(request);
+		return ApiResponse.created("회원 가입 성공", response);
 	}
 
 	/**
