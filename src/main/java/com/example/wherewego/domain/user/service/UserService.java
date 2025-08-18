@@ -18,10 +18,14 @@ import com.example.wherewego.domain.user.dto.UserResponseDto;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.repository.UserRepository;
 import com.example.wherewego.global.exception.CustomException;
+import com.example.wherewego.global.service.S3Service;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 /**
  * 사용자 관리 서비스
@@ -34,6 +38,7 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final TokenBlacklistService tokenBlacklistService;
 	private final PasswordEncoder passwordEncoder;
+	private final S3Service s3Service;
 
 	/**
 	 * 사용자 회원탈퇴를 처리합니다.
@@ -213,6 +218,73 @@ public class UserService {
 	@Transactional
 	public User saveUser(User user) {
 		return userRepository.save(user);
+	}
+
+	/**
+	 * 사용자 프로필 이미지를 업로드하고 업데이트합니다.
+	 * 기존 프로필 이미지가 있다면 S3에서 삭제 후 새 이미지로 교체합니다.
+	 *
+	 * @param userId 사용자 ID
+	 * @param imageFile 업로드할 이미지 파일
+	 * @return 업데이트된 프로필 이미지 URL
+	 * @throws CustomException 사용자를 찾을 수 없거나 이미지 업로드 실패 시
+	 */
+	@Transactional
+	public String updateProfileImage(Long userId, MultipartFile imageFile) {
+		User user = userRepository.findByIdAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		try {
+			// 기존 프로필 이미지가 있다면 S3에서 삭제
+			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+				try {
+					s3Service.deleteImage(user.getProfileImage());
+				} catch (Exception e) {
+					// 기존 이미지 삭제 실패는 로그만 남기고 계속 진행
+					// (이미지가 이미 삭제되었거나 URL이 잘못된 경우가 있을 수 있음)
+					System.err.println("기존 프로필 이미지 삭제 실패 (무시): " + e.getMessage());
+				}
+			}
+
+			// 새 이미지 업로드
+			String newImageUrl = s3Service.uploadImage(imageFile, "profiles");
+			
+			// 사용자 프로필 이미지 URL 업데이트
+			user.changeProfileImage(newImageUrl);
+			userRepository.save(user);
+			
+			return newImageUrl;
+
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+		} catch (Exception e) {
+			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	/**
+	 * 사용자 프로필 이미지를 삭제합니다.
+	 * S3에서 이미지를 삭제하고 DB의 프로필 이미지 URL을 null로 설정합니다.
+	 *
+	 * @param userId 사용자 ID
+	 * @throws CustomException 사용자를 찾을 수 없거나 삭제 실패 시
+	 */
+	@Transactional
+	public void deleteProfileImage(Long userId) {
+		User user = userRepository.findByIdAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+			try {
+				s3Service.deleteImage(user.getProfileImage());
+			} catch (Exception e) {
+				// S3 삭제 실패해도 DB에서는 URL을 삭제
+				System.err.println("S3 이미지 삭제 실패: " + e.getMessage());
+			}
+			
+			user.changeProfileImage(null);
+			userRepository.save(user);
+		}
 	}
 
 }
