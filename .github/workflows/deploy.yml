@@ -468,31 +468,68 @@ jobs:
           
           echo "🔧 Frontend URL: http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
           
-          # Get current ECS task IP automatically
+          # Get current ECS task IP with retry mechanism
           echo "🔍 Getting current ECS task IP..."
-          ECS_TASK_ARN=$(aws ecs list-tasks \
-            --cluster wherewego-prod-cluster \
-            --service wherewego-prod-service \
-            --query 'taskArns[0]' \
-            --output text 2>/dev/null || echo "")
+          ECS_HARDCODED_IP=""
           
-          if [ "$ECS_TASK_ARN" != "" ] && [ "$ECS_TASK_ARN" != "None" ]; then
-            ECS_HARDCODED_IP=$(aws ecs describe-tasks \
+          # Retry logic for getting ECS task IP
+          for i in {1..5}; do
+            echo "⏳ 시도 $i/5: ECS 태스크 조회 중..."
+            
+            # Get task ARNs
+            TASK_ARNS=$(aws ecs list-tasks \
               --cluster wherewego-prod-cluster \
-              --tasks $ECS_TASK_ARN \
-              --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-              --output text | xargs -I {} aws ec2 describe-network-interfaces \
-              --network-interface-ids {} \
-              --query 'NetworkInterfaces[0].Association.PublicIp' \
+              --service-name wherewego-prod-service \
+              --desired-status RUNNING \
+              --query 'taskArns' \
               --output text 2>/dev/null || echo "")
-          fi
+            
+            echo "📋 발견된 태스크 ARNs: $TASK_ARNS"
+            
+            if [ "$TASK_ARNS" != "" ] && [ "$TASK_ARNS" != "None" ] && [ "$TASK_ARNS" != "null" ]; then
+              # Get the first task ARN
+              FIRST_TASK_ARN=$(echo $TASK_ARNS | awk '{print $1}')
+              echo "🎯 사용할 태스크 ARN: $FIRST_TASK_ARN"
+              
+              if [ ${#FIRST_TASK_ARN} -ge 32 ]; then
+                # Get network interface ID
+                NETWORK_INTERFACE_ID=$(aws ecs describe-tasks \
+                  --cluster wherewego-prod-cluster \
+                  --tasks "$FIRST_TASK_ARN" \
+                  --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+                  --output text 2>/dev/null || echo "")
+                
+                echo "🔌 네트워크 인터페이스 ID: $NETWORK_INTERFACE_ID"
+                
+                if [ "$NETWORK_INTERFACE_ID" != "" ] && [ "$NETWORK_INTERFACE_ID" != "None" ]; then
+                  # Get public IP
+                  ECS_HARDCODED_IP=$(aws ec2 describe-network-interfaces \
+                    --network-interface-ids "$NETWORK_INTERFACE_ID" \
+                    --query 'NetworkInterfaces[0].Association.PublicIp' \
+                    --output text 2>/dev/null || echo "")
+                  
+                  if [ "$ECS_HARDCODED_IP" != "" ] && [ "$ECS_HARDCODED_IP" != "None" ] && [ "$ECS_HARDCODED_IP" != "null" ]; then
+                    echo "✅ ECS Public IP 조회 성공: $ECS_HARDCODED_IP"
+                    break
+                  fi
+                fi
+              else
+                echo "⚠️ 태스크 ARN 길이가 부족합니다: ${#FIRST_TASK_ARN}"
+              fi
+            else
+              echo "❌ 실행 중인 태스크를 찾을 수 없습니다"
+            fi
+            
+            echo "⏸️ 30초 대기 후 재시도..."
+            sleep 30
+          done
           
-          # Fallback to placeholder if no IP found
-          if [ "$ECS_HARDCODED_IP" = "" ] || [ "$ECS_HARDCODED_IP" = "None" ]; then
+          # Final check and fallback
+          if [ "$ECS_HARDCODED_IP" = "" ] || [ "$ECS_HARDCODED_IP" = "None" ] || [ "$ECS_HARDCODED_IP" = "null" ]; then
             ECS_HARDCODED_IP="BACKEND_NOT_RUNNING"
-            echo "⚠️ Warning: ECS task not running, using placeholder IP"
+            echo "⚠️ Warning: ECS Public IP 조회 실패, 플레이스홀더 사용: $ECS_HARDCODED_IP"
           else
-            echo "✅ Found ECS IP: $ECS_HARDCODED_IP"
+            echo "🎉 최종 ECS Public IP: $ECS_HARDCODED_IP"
           fi
           
           cat > .env.production << EOF
@@ -619,19 +656,50 @@ jobs:
             
           # 백엔드 URL 가져오기 (ECS Public IP)  
           echo "🔍 최종 ECS Public IP 확인 중..."
-          BACKEND_PUBLIC_IP=$(aws ecs list-tasks \
-            --cluster ${{ needs.deploy.outputs.cluster }} \
-            --service-name ${{ needs.deploy.outputs.service }} \
-            --query 'taskArns[0]' --output text 2>/dev/null | \
-            xargs -I {} aws ecs describe-tasks \
-            --cluster ${{ needs.deploy.outputs.cluster }} \
-            --tasks {} \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text 2>/dev/null | \
-            xargs -I {} aws ec2 describe-network-interfaces \
-            --network-interface-ids {} \
-            --query 'NetworkInterfaces[0].Association.PublicIp' \
-            --output text 2>/dev/null || echo "IP 조회 실패")
+          BACKEND_PUBLIC_IP=""
+          
+          # Simple retry for final verification
+          for i in {1..3}; do
+            echo "🔍 시도 $i/3: 최종 IP 확인 중..."
+            
+            TASK_ARNS=$(aws ecs list-tasks \
+              --cluster ${{ needs.deploy.outputs.cluster }} \
+              --service-name ${{ needs.deploy.outputs.service }} \
+              --desired-status RUNNING \
+              --query 'taskArns' \
+              --output text 2>/dev/null || echo "")
+            
+            if [ "$TASK_ARNS" != "" ] && [ "$TASK_ARNS" != "None" ]; then
+              FIRST_TASK_ARN=$(echo $TASK_ARNS | awk '{print $1}')
+              
+              if [ ${#FIRST_TASK_ARN} -ge 32 ]; then
+                NETWORK_INTERFACE_ID=$(aws ecs describe-tasks \
+                  --cluster ${{ needs.deploy.outputs.cluster }} \
+                  --tasks "$FIRST_TASK_ARN" \
+                  --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+                  --output text 2>/dev/null || echo "")
+                
+                if [ "$NETWORK_INTERFACE_ID" != "" ] && [ "$NETWORK_INTERFACE_ID" != "None" ]; then
+                  BACKEND_PUBLIC_IP=$(aws ec2 describe-network-interfaces \
+                    --network-interface-ids "$NETWORK_INTERFACE_ID" \
+                    --query 'NetworkInterfaces[0].Association.PublicIp' \
+                    --output text 2>/dev/null || echo "")
+                  
+                  if [ "$BACKEND_PUBLIC_IP" != "" ] && [ "$BACKEND_PUBLIC_IP" != "None" ]; then
+                    echo "✅ 최종 IP 확인 성공: $BACKEND_PUBLIC_IP"
+                    break
+                  fi
+                fi
+              fi
+            fi
+            
+            echo "⏸️ 10초 대기 후 재시도..."
+            sleep 10
+          done
+          
+          if [ "$BACKEND_PUBLIC_IP" = "" ] || [ "$BACKEND_PUBLIC_IP" = "None" ]; then
+            BACKEND_PUBLIC_IP="IP 조회 실패"
+          fi
           
           if [[ "$BACKEND_PUBLIC_IP" != "IP 조회 실패" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
             BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080/actuator/health"
