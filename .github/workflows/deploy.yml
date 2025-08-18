@@ -14,54 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/docker-deployment' || github.ref == 'refs/heads/feat/frontend-clean'
-    outputs:
-      frontend: ${{ steps.changes.outputs.frontend }}
-      backend: ${{ steps.changes.outputs.backend }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # 이전 커밋과 비교하기 위해 필요
-
-      - name: Check for changes
-        id: changes
-        run: |
-          # 변경된 파일 목록 가져오기
-          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.sha }})
-          else
-            # 첫 번째 푸시인 경우 모든 파일을 변경된 것으로 간주
-            CHANGED_FILES=$(git ls-files)
-          fi
-          
-          echo "변경된 파일들:"
-          echo "$CHANGED_FILES"
-          
-          # 프론트엔드 변경사항 확인
-          if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
-            echo "✅ 프론트엔드 변경사항 발견"
-            echo "frontend=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ 프론트엔드 변경사항 없음"
-            echo "frontend=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # 백엔드 변경사항 확인
-          if echo "$CHANGED_FILES" | grep -qE "^(src/|build\.gradle|Dockerfile|\.github/workflows/deploy\.yml)"; then
-            echo "✅ 백엔드 변경사항 발견"
-            echo "backend=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ 백엔드 변경사항 없음"
-            echo "backend=false" >> $GITHUB_OUTPUT
-          fi
-
   build:
-    needs: changes
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.backend == 'true'
     outputs:
       image-uri: ${{ steps.build-image.outputs.image }}
       environment: ${{ steps.set-env.outputs.environment }}
@@ -257,47 +211,9 @@ jobs:
           
           echo "📊 정리 후 남은 이미지 개수: $REMAINING_IMAGES"
 
-  notify-skip:
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.backend == 'false' && needs.changes.outputs.frontend == 'false'
-    
-    steps:
-      - name: Notify no changes detected
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{
-            \"attachments\": [{
-              \"color\": \"#36a64f\",
-              \"blocks\": [{
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"✅ *배포 건너뛰기* 💰\\n변경사항이 없어서 배포를 생략했습니다.\"
-                }
-              }, {
-                \"type\": \"section\",
-                \"fields\": [{
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*프론트엔드 변경:*\\n❌ 없음\"
-                }, {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*백엔드 변경:*\\n❌ 없음\"
-                }, {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*절약 효과:*\\n💰 AWS 요금 절약\"
-                }, {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*Branch:*\\n\\`${{ github.ref_name }}\\`\"
-                }]
-              }]
-            }]
-          }" ${{ secrets.SLACK_WEBHOOK }}
-
   deploy:
     runs-on: ubuntu-latest
-    needs: [changes, build]
-    if: needs.changes.outputs.backend == 'true' && needs.build.result == 'success'
+    needs: build
     outputs:
       cluster: ${{ steps.set-deploy-vars.outputs.cluster }}
       service: ${{ steps.set-deploy-vars.outputs.service }}
@@ -481,8 +397,8 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    needs: [changes, build, deploy, verify]
-    if: needs.changes.outputs.frontend == 'true' && always() && needs.verify.result == 'success'
+    needs: [build, deploy, verify]
+    if: always() && needs.verify.result == 'success'
     
     steps:
       - name: Checkout code
@@ -631,8 +547,8 @@ jobs:
 
   verify:
     runs-on: ubuntu-latest
-    needs: [changes, build, deploy]
-    if: always() && needs.changes.outputs.backend == 'true'
+    needs: [build, deploy]
+    if: always()
     
     steps:
       - name: Configure AWS credentials
