@@ -25,7 +25,9 @@ public class WebConfig implements WebMvcConfigurer {
                     "http://localhost:3003",
                     "http://localhost:5173",
                     "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
-                    "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com"
+                    "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
+                    "http://woodiga.duckdns.org",
+                    "https://woodiga.duckdns.org"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
@@ -46,7 +48,9 @@ public class WebConfig implements WebMvcConfigurer {
             "http://localhost:3003",
             "http://localhost:5173",
             "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
-            "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com"
+            "https://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com",
+            "http://woodiga.duckdns.org",
+            "https://woodiga.duckdns.org"
         ));
         
         // 허용할 HTTP 메서드
