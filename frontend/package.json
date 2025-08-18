@@ -1,6 +1,6 @@
 {
   "name": "where-we-go-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Where We Go - 여행 코스 공유 플랫폼 프론트엔드",
   "type": "module",
   "scripts": {
