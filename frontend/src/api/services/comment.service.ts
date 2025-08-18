@@ -10,10 +10,11 @@ import type {
 } from '../types';
 
 export const commentService = {
-  // 코스 댓글 목록 조회 (실제 백엔드 API에 맞춰 수정)
+  // 코스 댓글 목록 조회 (백엔드 API에 맞춰 수정: GET /api/comments?courseId=X)
   getCourseComments: (courseId: string, params: PaginationParams = {}): Promise<PageResponse<CourseComment>> =>
-    apiRequest.get<PageResponse<CourseComment>>(`/courses/${courseId}/comments`, {
+    apiRequest.get<PageResponse<CourseComment>>('/comments', {
       params: {
+        courseId: courseId,
         page: params.page || 0, // 백엔드는 0부터 시작
         size: params.size || 20
       }
@@ -28,19 +29,19 @@ export const commentService = {
       }
     }).then(response => response.data),
 
-  // 코스 댓글 작성 (실제 백엔드 API에 맞춰 수정)
+  // 코스 댓글 작성 (백엔드 API에 맞춰 수정: POST /api/comments with courseId in body)
   createCourseComment: (courseId: string, commentData: CourseCommentRequest): Promise<CourseComment> =>
-    apiRequest.post<CourseComment>(`/courses/${courseId}/comments`, commentData)
+    apiRequest.post<CourseComment>('/comments', { courseId: parseInt(courseId), content: commentData.content })
       .then(response => response.data),
 
-  // 코스 댓글 삭제 (실제 백엔드 API에 맞춰 수정)
+  // 코스 댓글 삭제 (백엔드 API에 맞춰 수정: DELETE /api/comments/{commentId})
   deleteCourseComment: (courseId: string, commentId: number): Promise<void> =>
-    apiRequest.delete<void>(`/courses/${courseId}/comments/${commentId}`)
+    apiRequest.delete<void>(`/comments/${commentId}`)
       .then(response => response.data),
 
-  // 코스 댓글 수정 (실제 백엔드 API에 맞춰 수정)
+  // 코스 댓글 수정 (백엔드 API에 맞춰 수정: PATCH /api/comments/{commentId})
   updateCourseComment: (courseId: string, commentId: number, commentData: CourseCommentRequest): Promise<CourseComment> =>
-    apiRequest.put<CourseComment>(`/courses/${courseId}/comments/${commentId}`, commentData)
+    apiRequest.patch<CourseComment>(`/comments/${commentId}`, { content: commentData.content })
       .then(response => response.data),
 
   // 댓글 작성 (기존 호환성 유지)

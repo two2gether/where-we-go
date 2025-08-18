@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../api/axios';
 import { courseService } from '../api/services/course.service';
+import { bookmarkService } from '../api/services/bookmark.service';
 import { useAuthStore } from '../store';
 import { GitHubLayout } from '../components/layout/GitHubLayout';
 import CourseMap from '../components/maps/CourseMap';
@@ -52,8 +53,7 @@ const CourseDetailPage: React.FC = () => {
   // 좋아요 토글 뮤테이션
   const likeMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest.post(`/courses/${courseId}/like`);
-      return response.data;
+      return courseService.toggleLike(parseInt(courseId!));
     },
     onSuccess: (data) => {
       // 응답에서 받은 좋아요 상태로 로컬 상태 업데이트
@@ -76,8 +76,10 @@ const CourseDetailPage: React.FC = () => {
   // 북마크 토글 뮤테이션
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest.post(`/courses/${courseId}/bookmark`);
-      return response.data;
+      return bookmarkService.toggleBookmark({
+        targetId: courseId!,
+        type: 'COURSE'
+      });
     },
     onSuccess: (data) => {
       // 응답에서 받은 북마크 상태로 로컬 상태 업데이트

@@ -46,7 +46,7 @@ export const bookmarkService = {
         });
     } else {
       // 코스 북마크는 백엔드의 create/delete API 사용
-      const courseId = bookmarkData.targetId;
+      const courseId = parseInt(bookmarkData.targetId); // string을 number로 변환
       
       console.log(`🔄 Attempting to toggle bookmark for course: ${courseId}`);
       
