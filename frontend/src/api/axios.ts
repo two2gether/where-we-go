@@ -15,7 +15,10 @@ declare module 'axios' {
 }
 
 // API Base URL - 환경 변수로 관리 (Vite 프록시 사용)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  // 프로덕션에서 환경변수 실패 시 상대 경로 사용
+  import.meta.env.PROD ? '/api' : 'http://localhost:8080/api'
+);
 
 // Axios 인스턴스 생성
 export const api: AxiosInstance = axios.create({

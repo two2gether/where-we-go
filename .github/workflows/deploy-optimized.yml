@@ -301,11 +301,8 @@ jobs:
           IMAGE_S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/images-bucket" --query 'Parameter.Value' --output text)
           AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
           
-          # 고정 ALB DNS 가져오기
-          ALB_DNS=$(aws cloudformation describe-stacks \
-            --stack-name "wherewego-prod-infrastructure" \
-            --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
-            --output text)
+          # 고정 ALB DNS 가져오기 - GitHub Secrets 사용 (보안)
+          ALB_DNS="${{ secrets.ALB_DNS_NAME }}"
           
           echo "🌐 ALB DNS (고정): $ALB_DNS"
           
