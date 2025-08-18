@@ -170,11 +170,22 @@ jobs:
         run: |
           echo "🧹 ECR 이미지 정리 시작..."
           
-          # 현재 리포지토리의 모든 이미지 태그 가져오기 (latest 제외, 시간순 정렬)
+          # 먼저 전체 이미지 목록 확인
+          ALL_IMAGES=$(aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --query 'imageDetails[*]' \
+            --output json 2>/dev/null || echo "[]")
+          
+          echo "🔍 전체 이미지 정보:"
+          echo "$ALL_IMAGES" | jq -r '.[] | "태그: \(.imageTags // ["<untagged>"] | join(",")) | 푸시일: \(.imagePushedAt)"'
+          
+          # latest가 아닌 태그된 이미지들을 시간순으로 정렬하여 가져오기
           IMAGE_TAGS=$(aws ecr describe-images \
             --repository-name $ECR_REPOSITORY \
-            --query 'sort_by(imageDetails[?imageTagStatus==`TAGGED` && !(imageTags[0]==`latest`)], &imagePushedAt)[*].imageTags[0]' \
-            --output text)
+            --query 'sort_by(imageDetails[?imageTags && imageTags[0] != `latest`], &imagePushedAt)[*].imageTags[0]' \
+            --output text 2>/dev/null || echo "")
+          
+          echo "🏷️ latest 제외 태그들: $IMAGE_TAGS"
           
           # 배열로 변환
           TAGS_ARRAY=($IMAGE_TAGS)
