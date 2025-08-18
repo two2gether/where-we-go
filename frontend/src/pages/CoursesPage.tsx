@@ -8,6 +8,7 @@ import { useCourses, useMyCourses, useToggleCourseLike } from '../hooks/useCours
 import { useDebounce } from '../hooks/useDebounce';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { isGeolocationAvailable, getGeolocationUnavailableReason } from '../utils/geolocation';
 import { useAuthStore } from '../store';
 import { convertThemesToDisplay } from '../constants/themes';
 import type { Course } from '../api/types';
@@ -151,12 +152,13 @@ export const CoursesPage: React.FC = () => {
               <p className="text-sm text-gray-600">
                 내 위치를 설정하면 각 코스까지의 거리를 확인할 수 있습니다.
               </p>
-              <Button
-                variant="primary"
-                size="sm"
-                fullWidth
-                onClick={requestLocation}
-                disabled={isLocationLoading}
+              {isGeolocationAvailable() ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  onClick={requestLocation}
+                  disabled={isLocationLoading}
                 icon={
                   isLocationLoading ? (
                     <Spinner size="sm" />
@@ -169,6 +171,19 @@ export const CoursesPage: React.FC = () => {
               >
                 {isLocationLoading ? '위치 확인 중...' : '내 위치 설정'}
               </Button>
+              ) : (
+                <div className="text-sm text-gray-600 bg-gray-100 p-3 rounded-md border border-gray-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    위치 서비스 사용 불가
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {getGeolocationUnavailableReason()}
+                  </p>
+                </div>
+              )}
               {locationError && (
                 <p className="text-xs text-red-600 mt-2">
                   {locationError}
@@ -386,8 +401,7 @@ export const CoursesPage: React.FC = () => {
                 likeCount={course.likeCount || 0}
                 duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
                 author={course.author || { 
-                  name: course.nickname || user?.username || user?.name || user?.email || '작성자', 
-                  avatar: user?.avatar || user?.profileImage || '' 
+                  name: course.authorName || course.nickname || '작성자'
                 }}
                 isLiked={course.isLiked || false}
                 isBookmarked={course.isBookmarked || false}

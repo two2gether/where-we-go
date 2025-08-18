@@ -68,6 +68,12 @@ export const useLocationStore = create<LocationState>()(
       requestLocation: async () => {
         const { setLoading, setLocation, setError, setPermissionGranted } = get();
 
+        // HTTPS 환경 확인
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          setError('위치 정보는 HTTPS 환경에서만 사용할 수 있습니다. 관리자에게 문의하세요.');
+          return;
+        }
+
         if (!navigator.geolocation) {
           setError('이 브라우저에서는 위치 서비스를 지원하지 않습니다.');
           return;
@@ -83,7 +89,7 @@ export const useLocationStore = create<LocationState>()(
               reject,
               {
                 enableHighAccuracy: true,
-                timeout: 10000,
+                timeout: 15000, // 배포 환경에서 시간 여유
                 maximumAge: 300000, // 5분간 캐시
               }
             );
@@ -100,10 +106,10 @@ export const useLocationStore = create<LocationState>()(
                 errorMessage = '위치 정보 접근이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
                 break;
               case error.POSITION_UNAVAILABLE:
-                errorMessage = '위치 정보를 사용할 수 없습니다.';
+                errorMessage = '위치 정보를 사용할 수 없습니다. GPS가 비활성화되어 있거나 신호가 약할 수 있습니다.';
                 break;
               case error.TIMEOUT:
-                errorMessage = '위치 정보 요청 시간이 초과되었습니다.';
+                errorMessage = '위치 정보 요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
                 break;
             }
           }

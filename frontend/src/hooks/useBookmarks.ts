@@ -6,10 +6,14 @@ import type { Bookmark, BookmarkRequest, PageRequest } from '../api/types';
 export const bookmarkKeys = {
   all: ['bookmarks'] as const,
   lists: () => [...bookmarkKeys.all, 'list'] as const,
-  list: (params: PageRequest & { type?: 'PLACE' | 'COURSE' }) => [...bookmarkKeys.lists(), params] as const,
-  places: () => [...bookmarkKeys.all, 'places'] as const,
-  courses: () => [...bookmarkKeys.all, 'courses'] as const,
-  check: (targetId: string, type: 'PLACE' | 'COURSE') => [...bookmarkKeys.all, 'check', targetId, type] as const,
+  list: (params: PageRequest & { type?: 'PLACE' | 'COURSE' }, userId: number) => 
+    [...bookmarkKeys.lists(), params, 'user', userId] as const, // 북마크 목록은 사용자별
+  places: (userId: number) => 
+    [...bookmarkKeys.all, 'places', 'user', userId] as const, // 북마크한 장소는 사용자별
+  courses: (userId: number) => 
+    [...bookmarkKeys.all, 'courses', 'user', userId] as const, // 북마크한 코스는 사용자별
+  check: (targetId: string, type: 'PLACE' | 'COURSE', userId: number) => 
+    [...bookmarkKeys.all, 'check', targetId, type, 'user', userId] as const, // 북마크 상태는 사용자별
 };
 
 // 북마크 목록 조회
@@ -56,26 +60,54 @@ export const useToggleBookmark = () => {
 
   return useMutation({
     mutationFn: (bookmarkData: BookmarkRequest) => bookmarkService.toggleBookmark(bookmarkData),
-    onSuccess: (result, variables) => {
-      // 북마크 상태 캐시 업데이트
+    onMutate: async (variables) => {
+      // 낙관적 업데이트: 즉시 UI 반영
+      const checkKey = bookmarkKeys.check(variables.targetId, variables.type);
+      await queryClient.cancelQueries({ queryKey: checkKey });
+      
+      const previousData = queryClient.getQueryData(checkKey);
+      
+      // 임시로 북마크 상태 토글
+      queryClient.setQueryData(checkKey, (oldData: any) => ({
+        bookmarked: !oldData?.bookmarked
+      }));
+      
+      return { previousData, checkKey };
+    },
+    onSuccess: (result, variables, context) => {
+      // 서버 응답으로 정확한 데이터 업데이트
       queryClient.setQueryData(
-        bookmarkKeys.check(variables.targetId, variables.type),
+        context.checkKey,
         { bookmarked: result.bookmarked }
       );
       
-      // 북마크 목록 무효화
-      queryClient.invalidateQueries({ queryKey: bookmarkKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookmarkKeys.places() });
-      queryClient.invalidateQueries({ queryKey: bookmarkKeys.courses() });
+      // 현재 사용자의 북마크 목록만 무효화 (다른 사용자에게 영향 없음)
+      queryClient.invalidateQueries({ 
+        queryKey: bookmarkKeys.lists(),
+        exact: false,
+        predicate: (query) => query.queryKey.includes('user')
+      });
       
-      // 장소/코스 목록의 북마크 상태도 업데이트
-      if (variables.type === 'PLACE') {
-        queryClient.invalidateQueries({ queryKey: ['places'] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['courses'] });
-      }
+      queryClient.invalidateQueries({ 
+        queryKey: bookmarkKeys.places(),
+        exact: false,
+        predicate: (query) => query.queryKey.includes('user')
+      });
+      
+      queryClient.invalidateQueries({ 
+        queryKey: bookmarkKeys.courses(),
+        exact: false,
+        predicate: (query) => query.queryKey.includes('user')
+      });
+      
+      // 북마크 상태는 개인적이지만, 목록은 모든 사용자에게 영향 없음
+      // 별도 처리 불필요 (북마크 여부는 개인 상태)
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // 에러 시 이전 상태로 복원
+      if (context?.previousData && context?.checkKey) {
+        queryClient.setQueryData(context.checkKey, context.previousData);
+      }
       console.error('Bookmark toggle failed:', error);
     },
   });

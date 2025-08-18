@@ -126,7 +126,7 @@ jobs:
           BUILD_START=$(date +%s)
           
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\": \"🐳 Docker 이미지 빌드 중... (약 2-3분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          --data "{\"text\": \"🐳 Docker 이미지 빌드 중... (약 2-3분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }} || echo "Slack notification failed, continuing..."
           
           # Docker 이미지 빌드 및 푸시
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .

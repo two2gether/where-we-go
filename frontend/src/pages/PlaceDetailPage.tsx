@@ -73,8 +73,8 @@ const PlaceDetailPage: React.FC = () => {
 
   const handleDirections = () => {
     if (place) {
-      // 카카오맵이나 구글맵으로 길찾기
-      const url = `https://map.kakao.com/link/to/${encodeURIComponent(place.name)},${place.latitude},${place.longitude}`;
+      // 구글맵으로 길찾기
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}&destination_place_id=${encodeURIComponent(place.name)}`;
       window.open(url, '_blank');
     }
   };

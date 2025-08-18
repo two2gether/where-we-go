@@ -186,8 +186,7 @@ const SearchPage: React.FC = () => {
                             likeCount={course.likeCount || 0}
                             duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
                             author={course.author || { 
-                              name: course.nickname || user?.username || user?.name || user?.email || '작성자', 
-                              avatar: user?.avatar || user?.profileImage || '' 
+                              name: course.nickname || user?.username || user?.name || user?.email || '작성자'
                             }}
                             isLiked={course.isLiked || false}
                             isBookmarked={course.isBookmarked || false}
@@ -280,8 +279,7 @@ const SearchPage: React.FC = () => {
                       likeCount={course.likeCount || 0}
                       duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
                       author={course.author || { 
-                        name: course.nickname || user?.username || user?.name || user?.email || '작성자', 
-                        avatar: user?.avatar || user?.profileImage || '' 
+                        name: course.nickname || user?.username || user?.name || user?.email || '작성자'
                       }}
                       isLiked={course.isLiked || false}
                       isBookmarked={course.isBookmarked || false}

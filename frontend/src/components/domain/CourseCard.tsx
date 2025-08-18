@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Badge, Avatar, Button } from '../base';
+import { Card, Badge, Button } from '../base';
 import { useCourseLikes, useCourseBookmarks } from '../../hooks';
 import { useAuthStore } from '../../store/authStore';
 
@@ -13,9 +13,8 @@ export interface CourseCardProps {
   rating: number;
   likeCount: number;
   duration: string;
-  author: {
+  author?: {
     name: string;
-    avatar: string;
   };
   isLiked?: boolean;
   isBookmarked?: boolean;
@@ -155,12 +154,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Avatar src={author?.avatar || ''} name={author?.name || 'Unknown'} size="sm" />
-            <span className="text-sm text-gray-600">{author?.name || 'Unknown'}</span>
-          </div>
+          {author?.name && (
+            <span className="text-sm text-gray-600">{author.name}</span>
+          )}
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-1">
               <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />

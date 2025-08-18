@@ -6,7 +6,7 @@ import type { Course, CourseSearchRequest, CreateCourseRequest, UpdateCourseRequ
 export const courseKeys = {
   all: ['courses'] as const,
   lists: () => [...courseKeys.all, 'list'] as const,
-  list: (params: CourseSearchRequest) => [...courseKeys.lists(), params] as const,
+  list: (params: CourseSearchRequest) => [...courseKeys.lists(), params] as const, // 글로벌 캐시
   details: () => [...courseKeys.all, 'detail'] as const,
   detail: (id: number) => [...courseKeys.details(), id] as const,
   my: () => [...courseKeys.all, 'my'] as const,
@@ -16,6 +16,8 @@ export const courseKeys = {
   themes: () => [...courseKeys.all, 'themes'] as const,
   regions: () => [...courseKeys.all, 'regions'] as const,
   byAuthor: (authorId: number) => [...courseKeys.all, 'author', authorId] as const,
+  // 사용자별 상태 (북마크, 좋아요 여부)
+  userStates: (userId: number) => [...courseKeys.all, 'userStates', userId] as const,
 };
 
 // 코스 목록 조회 (페이지네이션)
@@ -28,10 +30,10 @@ export const useCourses = (
   return useQuery({
     queryKey: courseKeys.list(params),
     queryFn: () => courseService.getCourses(params),
-    staleTime: 5 * 60 * 1000, // 5분
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // 마운트 시 재조회 방지
-    refetchOnReconnect: false, // 재연결 시 재조회 방지
+    staleTime: 1 * 60 * 1000, // 1분으로 단축
+    refetchOnWindowFocus: true, // 창 포커스 시 재조회 활성화
+    refetchOnMount: true, // 마운트 시 재조회 활성화
+    refetchOnReconnect: true, // 재연결 시 재조회 활성화
     enabled, // 조건부 실행
   });
 };
@@ -50,10 +52,10 @@ export const useInfiniteCourses = (params: Omit<CourseSearchRequest, 'page'> = {
       }
       return lastPage.number + 1;
     },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    staleTime: 1 * 60 * 1000, // 1분으로 단축
+    refetchOnWindowFocus: true, // 활성화
+    refetchOnMount: true, // 활성화
+    refetchOnReconnect: true, // 활성화
   });
 };
 
@@ -73,10 +75,10 @@ export const useMyCourses = (params: Omit<CourseSearchRequest, 'authorId'> & { e
   return useQuery({
     queryKey: courseKeys.myList(courseParams),
     queryFn: () => courseService.getMyCourses(courseParams),
-    staleTime: 2 * 60 * 1000, // 2분
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // 마운트 시 재조회 방지
-    refetchOnReconnect: false, // 재연결 시 재조회 방지
+    staleTime: 30 * 1000, // 30초로 단축 (내 코스는 더 자주 업데이트)
+    refetchOnWindowFocus: true, // 활성화
+    refetchOnMount: true, // 마운트 시 재조회 활성화
+    refetchOnReconnect: true, // 재연결 시 재조회 활성화
     enabled, // 조건부 실행
   });
 };
@@ -137,9 +139,10 @@ export const useCreateCourse = () => {
   return useMutation({
     mutationFn: (courseData: CreateCourseRequest) => courseService.createCourse(courseData),
     onSuccess: (newCourse) => {
-      // 관련 쿼리 무효화
+      // 모든 사용자가 새 코스를 볼 수 있도록 글로벌 캐시 무효화
       queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: courseKeys.my() });
+      queryClient.invalidateQueries({ queryKey: courseKeys.popular() });
       
       // 새 코스 캐시에 추가
       queryClient.setQueryData(courseKeys.detail(newCourse.id), newCourse);
@@ -198,20 +201,43 @@ export const useToggleCourseLike = () => {
 
   return useMutation({
     mutationFn: (courseId: number) => courseService.toggleLike(courseId),
+    onMutate: async (courseId) => {
+      // 낙관적 업데이트: 즉시 UI 반영
+      await queryClient.cancelQueries({ queryKey: courseKeys.detail(courseId) });
+      
+      const previousData = queryClient.getQueryData(courseKeys.detail(courseId));
+      
+      // 임시로 좋아요 수 증가/감소 (실제 서버 응답으로 덮어씌워짐)
+      queryClient.setQueryData(courseKeys.detail(courseId), (oldData: Course | undefined) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          likeCount: oldData.likeCount + (oldData.isLiked ? -1 : 1),
+          isLiked: !oldData.isLiked,
+        };
+      });
+      
+      return { previousData };
+    },
     onSuccess: (result, courseId) => {
-      // 코스 상세 캐시 업데이트
+      // 서버 응답으로 정확한 데이터 업데이트
       queryClient.setQueryData(courseKeys.detail(courseId), (oldData: Course | undefined) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
           likeCount: result.likeCount,
+          isLiked: result.isLiked,
         };
       });
       
-      // 코스 목록 캐시 업데이트
+      // 좋아요 개수 변경은 모든 사용자에게 반영되어야 함
       queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
     },
-    onError: (error) => {
+    onError: (error, courseId, context) => {
+      // 에러 시 이전 상태로 복원
+      if (context?.previousData) {
+        queryClient.setQueryData(courseKeys.detail(courseId), context.previousData);
+      }
       console.error('Course like toggle failed:', error);
     },
   });
