@@ -2,7 +2,7 @@ name: Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main, dev, feature/docker-deployment, feat/frontend-clean ]
+    branches: [ main, dev, feature/docker-deployment, feat/frontend-clean, feat/frontend-improvements-clean ]
 
 env:
   AWS_REGION: ap-northeast-2
@@ -281,44 +281,58 @@ jobs:
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "✅ Task definition registered: $TASK_DEF_ARN"
           
+          # 통합된 인프라 스택에서 필요한 정보 가져오기
+          INFRA_STACK_NAME="wherewego-prod"
+          
+          # ALB Target Group ARN 가져오기
+          TARGET_GROUP_ARN=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ECSTargetGroupArn`].OutputValue' \
+            --output text)
+          
+          # Public Subnets 가져오기 (Private Subnet 대신 Public Subnet 사용)
+          PUBLIC_SUBNET1=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+            --output text)
+          
+          PUBLIC_SUBNET2=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+            --output text)
+          
+          PUBLIC_SUBNETS="$PUBLIC_SUBNET1,$PUBLIC_SUBNET2"
+          
+          # ECS Security Group 가져오기
+          ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+            --output text)
+          
+          echo "🎯 Target Group ARN: $TARGET_GROUP_ARN"
+          echo "🔒 Public Subnets: $PUBLIC_SUBNETS"
+          echo "🛡️ ECS Security Group: $ECS_SECURITY_GROUP"
+          
           # 서비스 존재 여부 확인
           SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ steps.set-deploy-vars.outputs.cluster }} --services ${{ steps.set-deploy-vars.outputs.service }} --query 'length(services)' --output text 2>/dev/null || echo "0")
           
           if [[ "$SERVICE_EXISTS" == "0" ]]; then
-            echo "🚀 Creating new ECS service..."
+            echo "🚀 Creating new ECS service with ALB integration..."
           
-            # CloudFormation Outputs에서 리소스 ID 가져오기
-            PUBLIC_SUBNET_1=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
-              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
-              --output text)
-              
-            PUBLIC_SUBNET_2=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
-              --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
-              --output text)
-              
-            ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
-              --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
-              --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
-              --output text)
-              
-            echo "📋 CloudFormation Stack: wherewego-${{ needs.build.outputs.environment }}"
-            echo "🔗 Using subnets: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2"
-            echo "🛡️ Using security group: $ECS_SECURITY_GROUP"
-          
-            # ECS 서비스 생성 (새로 등록된 태스크 정의 ARN 사용)
+            # ECS 서비스 생성 (Public Subnet + ALB Target Group)
             aws ecs create-service \
               --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
               --service-name ${{ steps.set-deploy-vars.outputs.service }} \
               --task-definition "$TASK_DEF_ARN" \
               --desired-count 1 \
               --launch-type FARGATE \
-              --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNET_1,$PUBLIC_SUBNET_2],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+              --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+              --load-balancers "[{\"targetGroupArn\":\"$TARGET_GROUP_ARN\",\"containerName\":\"wherewego-app\",\"containerPort\":8080}]" \
+              --health-check-grace-period-seconds 60
           else
             echo "🔄 Updating existing ECS service..."
           
-            # 기존 서비스 업데이트 (새로 등록된 태스크 정의 ARN 사용)
+            # 기존 서비스 업데이트
             aws ecs update-service \
               --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
               --service ${{ steps.set-deploy-vars.outputs.service }} \
@@ -443,23 +457,14 @@ jobs:
           echo "📦 Frontend S3 Bucket: $S3_BUCKET"
           echo "🖼️ Image S3 Bucket: $IMAGE_S3_BUCKET"
           
-          # Get ECS Task Public IP (after backend verification completed)
-          echo "🔍 안정화된 ECS 서비스에서 Public IP 조회 중..."
-          ECS_PUBLIC_IP=$(aws ecs list-tasks \
-            --cluster ${{ needs.deploy.outputs.cluster }} \
-            --service-name ${{ needs.deploy.outputs.service }} \
-            --query 'taskArns[0]' --output text | \
-            xargs -I {} aws ecs describe-tasks \
-            --cluster ${{ needs.deploy.outputs.cluster }} \
-            --tasks {} \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text | \
-            xargs -I {} aws ec2 describe-network-interfaces \
-            --network-interface-ids {} \
-            --query 'NetworkInterfaces[0].Association.PublicIp' \
+          # Get ALB DNS Name (fixed endpoint)
+          echo "🔍 ALB DNS 이름 조회 중..."
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-prod" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
             --output text)
           
-          echo "🌐 최종 ECS Public IP: $ECS_PUBLIC_IP"
+          echo "🌐 ALB DNS: $ALB_DNS"
           
           # Build frontend with production environment variables
           cd frontend
@@ -480,72 +485,10 @@ jobs:
           
           echo "🔧 Frontend URL: http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
           
-          # Get current ECS task IP with retry mechanism
-          echo "🔍 Getting current ECS task IP..."
-          ECS_HARDCODED_IP=""
-          
-          # Retry logic for getting ECS task IP
-          for i in {1..5}; do
-            echo "⏳ 시도 $i/5: ECS 태스크 조회 중..."
-            
-            # Get task ARNs
-            TASK_ARNS=$(aws ecs list-tasks \
-              --cluster wherewego-prod-cluster \
-              --service-name wherewego-prod-service \
-              --desired-status RUNNING \
-              --query 'taskArns' \
-              --output text 2>/dev/null || echo "")
-            
-            echo "📋 발견된 태스크 ARNs: $TASK_ARNS"
-            
-            if [ "$TASK_ARNS" != "" ] && [ "$TASK_ARNS" != "None" ] && [ "$TASK_ARNS" != "null" ]; then
-              # Get the first task ARN
-              FIRST_TASK_ARN=$(echo $TASK_ARNS | awk '{print $1}')
-              echo "🎯 사용할 태스크 ARN: $FIRST_TASK_ARN"
-              
-              if [ ${#FIRST_TASK_ARN} -ge 32 ]; then
-                # Get network interface ID
-                NETWORK_INTERFACE_ID=$(aws ecs describe-tasks \
-                  --cluster wherewego-prod-cluster \
-                  --tasks "$FIRST_TASK_ARN" \
-                  --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-                  --output text 2>/dev/null || echo "")
-                
-                echo "🔌 네트워크 인터페이스 ID: $NETWORK_INTERFACE_ID"
-                
-                if [ "$NETWORK_INTERFACE_ID" != "" ] && [ "$NETWORK_INTERFACE_ID" != "None" ]; then
-                  # Get public IP
-                  ECS_HARDCODED_IP=$(aws ec2 describe-network-interfaces \
-                    --network-interface-ids "$NETWORK_INTERFACE_ID" \
-                    --query 'NetworkInterfaces[0].Association.PublicIp' \
-                    --output text 2>/dev/null || echo "")
-                  
-                  if [ "$ECS_HARDCODED_IP" != "" ] && [ "$ECS_HARDCODED_IP" != "None" ] && [ "$ECS_HARDCODED_IP" != "null" ]; then
-                    echo "✅ ECS Public IP 조회 성공: $ECS_HARDCODED_IP"
-                    break
-                  fi
-                fi
-              else
-                echo "⚠️ 태스크 ARN 길이가 부족합니다: ${#FIRST_TASK_ARN}"
-              fi
-            else
-              echo "❌ 실행 중인 태스크를 찾을 수 없습니다"
-            fi
-            
-            echo "⏸️ 30초 대기 후 재시도..."
-            sleep 30
-          done
-          
-          # Final check and fallback
-          if [ "$ECS_HARDCODED_IP" = "" ] || [ "$ECS_HARDCODED_IP" = "None" ] || [ "$ECS_HARDCODED_IP" = "null" ]; then
-            ECS_HARDCODED_IP="BACKEND_NOT_RUNNING"
-            echo "⚠️ Warning: ECS Public IP 조회 실패, 플레이스홀더 사용: $ECS_HARDCODED_IP"
-          else
-            echo "🎉 최종 ECS Public IP: $ECS_HARDCODED_IP"
-          fi
+          echo "✅ ALB를 통한 백엔드 연결 설정 완료"
           
           cat > .env.production << EOF
-          VITE_API_BASE_URL=http://${ECS_HARDCODED_IP}:8080/api
+          VITE_API_BASE_URL=http://${ALB_DNS}/api
           VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
           VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
           VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
@@ -569,7 +512,7 @@ jobs:
           
           # Final success notification with URLs
           FRONTEND_URL="http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
-          BACKEND_HEALTH_URL="http://${ECS_PUBLIC_IP}:8080/actuator/health"
+          BACKEND_HEALTH_URL="http://${ALB_DNS}/actuator/health"
           
           curl -X POST -H 'Content-type: application/json' \
           --data "{
@@ -666,60 +609,20 @@ jobs:
             --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
             --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
             
-          # 백엔드 URL 가져오기 (ECS Public IP)  
-          echo "🔍 최종 ECS Public IP 확인 중..."
-          BACKEND_PUBLIC_IP=""
+          # ALB DNS 가져오기
+          echo "🔍 ALB DNS 확인 중..."
+          BACKEND_ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-prod" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
+            --output text 2>/dev/null || echo "ALB 조회 실패")
           
-          # Simple retry for final verification
-          for i in {1..3}; do
-            echo "🔍 시도 $i/3: 최종 IP 확인 중..."
-            
-            TASK_ARNS=$(aws ecs list-tasks \
-              --cluster ${{ needs.deploy.outputs.cluster }} \
-              --service-name ${{ needs.deploy.outputs.service }} \
-              --desired-status RUNNING \
-              --query 'taskArns' \
-              --output text 2>/dev/null || echo "")
-            
-            if [ "$TASK_ARNS" != "" ] && [ "$TASK_ARNS" != "None" ]; then
-              FIRST_TASK_ARN=$(echo $TASK_ARNS | awk '{print $1}')
-              
-              if [ ${#FIRST_TASK_ARN} -ge 32 ]; then
-                NETWORK_INTERFACE_ID=$(aws ecs describe-tasks \
-                  --cluster ${{ needs.deploy.outputs.cluster }} \
-                  --tasks "$FIRST_TASK_ARN" \
-                  --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-                  --output text 2>/dev/null || echo "")
-                
-                if [ "$NETWORK_INTERFACE_ID" != "" ] && [ "$NETWORK_INTERFACE_ID" != "None" ]; then
-                  BACKEND_PUBLIC_IP=$(aws ec2 describe-network-interfaces \
-                    --network-interface-ids "$NETWORK_INTERFACE_ID" \
-                    --query 'NetworkInterfaces[0].Association.PublicIp' \
-                    --output text 2>/dev/null || echo "")
-                  
-                  if [ "$BACKEND_PUBLIC_IP" != "" ] && [ "$BACKEND_PUBLIC_IP" != "None" ]; then
-                    echo "✅ 최종 IP 확인 성공: $BACKEND_PUBLIC_IP"
-                    break
-                  fi
-                fi
-              fi
-            fi
-            
-            echo "⏸️ 10초 대기 후 재시도..."
-            sleep 10
-          done
-          
-          if [ "$BACKEND_PUBLIC_IP" = "" ] || [ "$BACKEND_PUBLIC_IP" = "None" ]; then
-            BACKEND_PUBLIC_IP="IP 조회 실패"
-          fi
-          
-          if [[ "$BACKEND_PUBLIC_IP" != "IP 조회 실패" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
-            BACKEND_URL="http://${BACKEND_PUBLIC_IP}:8080/actuator/health"
-            echo "✅ Backend Public IP: $BACKEND_PUBLIC_IP"
+          if [[ "$BACKEND_ALB_DNS" != "ALB 조회 실패" && "$BACKEND_ALB_DNS" != "" ]]; then
+            BACKEND_URL="http://${BACKEND_ALB_DNS}/actuator/health"
+            echo "✅ Backend ALB DNS: $BACKEND_ALB_DNS"
             echo "🔗 Backend Health Check: $BACKEND_URL"
           else
-            BACKEND_URL="Backend IP 조회 중... (서비스 시작 대기)"
-            echo "⚠️ Backend Public IP 조회 실패 또는 아직 할당되지 않음"
+            BACKEND_URL="ALB DNS 조회 실패"
+            echo "⚠️ ALB DNS 조회 실패"
           fi
           
           # URL 정보 GitHub Actions 요약에 출력
