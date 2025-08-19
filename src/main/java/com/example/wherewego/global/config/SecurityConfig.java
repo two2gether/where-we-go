@@ -41,7 +41,8 @@ public class SecurityConfig {
 		return http
 			.securityMatcher(
 				"/health", "/actuator/health",
-				"/api/auth/**", "/error"
+				"/api/auth/**", "/error",
+				"/api/payments/callback"  // 토스 결제 콜백 엔드포인트 인증 제외
 			)
 			.authorizeHttpRequests(auth -> auth
 				.anyRequest().permitAll()
