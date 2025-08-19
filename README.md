@@ -149,7 +149,36 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 <img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
 
 ## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
-- 동시 좋아요 처리 (Race Condition 방지)
+- # 🚀 동시 좋아요 처리 (Race Condition 방지)
+
+## ① 문제 정의
+
+- 동시에 같은 코스에 여러 사용자가 좋아요를 누르면  
+  - 중복 레코드 시도 또는 `likeCount`가 실제와 어긋나는 **Race Condition** 발생 가능.
+
+## ② 원인 분석
+
+- `(userId, courseId)` 조합의 **중복 삽입 경쟁**
+- 코스별 좋아요 수를 **동시에 증가**시키는 업데이트 충돌
+
+## ③ 구현 내용 설명
+
+### 🔧 해결 과정
+- **행 단위 비관적 락**  
+  → `CourseRepository.findByIdForUpdate(@Lock(PESSIMISTIC_WRITE))`로 코스 row 잠금  
+
+- **DB 유니크 제약**  
+  → `CourseLike`에 `uniqueConstraints (user_id, course_id)`  
+
+- **MySQL 원자 동작 활용**  
+  → `INSERT IGNORE`로 중복 삽입을 DB가 무시하도록 처리  
+  (`CourseLikeRepository.insertIgnoreLike`)  
+
+- **카운트 원자 업데이트**  
+  ```sql
+  update Course c 
+  set c.likeCount = c.likeCount + 1 
+  where c.id = :courseId
 - 재고 감소 (동시 주문 시 과판매/실패 방지)
 - 1인당 중복 구매 제한
 - 캐싱 도입을 통한 API 응답 속도 및 시스템 안정성 개선
@@ -158,3 +187,19 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 - Spring Security Multiple FilterChain 적용
 - Spring AOP Self-invocation
 - Jackson 역직렬화 오류
+  재시도 로직
+→ PessimisticLockingFailureException 발생 시 최대 4회, 20ms*(i+1) 백오프 재시도
+
+캐시 일관성 유지
+→ 생성 성공 시 Redis 키
+course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
+
+알림 발행
+→ notificationService.triggerLikeNotification(user, course) 호출
+
+④ 결과와 효과
+
+✅ 중복 좋아요 방지: 유니크 + INSERT IGNORE로 DB 차원에서 차단
+✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
+✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
+✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
