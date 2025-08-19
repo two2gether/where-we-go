@@ -187,19 +187,19 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 - Spring Security Multiple FilterChain 적용
 - Spring AOP Self-invocation
 - Jackson 역직렬화 오류
-  재시도 로직
+- 재시도 로직
 → PessimisticLockingFailureException 발생 시 최대 4회, 20ms*(i+1) 백오프 재시도
 
-캐시 일관성 유지
+- 캐시 일관성 유지
 → 생성 성공 시 Redis 키
 course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 
-알림 발행
+- 알림 발행
 → notificationService.triggerLikeNotification(user, course) 호출
 
 ## ④ 결과와 효과
 
-✅ 중복 좋아요 방지: 유니크 + INSERT IGNORE로 DB 차원에서 차단
-✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
-✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
-✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
+- ✅ 중복 좋아요 방지: 유니크 + INSERT IGNORE로 DB 차원에서 차단
+- ✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
+- ✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
+- ✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
