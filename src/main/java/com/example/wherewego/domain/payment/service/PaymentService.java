@@ -195,8 +195,8 @@ public class PaymentService {
 		order.markAsPaid();
 		orderService.updateOrder(order);
 
-		// 4. DTO → 엔티티 매핑 및 저장
-		Payment payment = paymentRepository.findById(requestDto.getPaymentId())
+		// 4. orderNo로 결제 정보 조회 (paymentId 대신 orderNo 사용)
+		Payment payment = paymentRepository.findByOrderNo(requestDto.getOrderNo())
 			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 		payment.markAsDone(); // 결제 상태 변경
 		log.info("결제 상태 - {}", payment.getPaymentStatus());
