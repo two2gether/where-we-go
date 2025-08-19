@@ -149,7 +149,8 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 <img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
 
 ## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
-- ## 🚀 동시 좋아요 처리 (Race Condition 방지)
+
+ ## 🚀 동시 좋아요 처리 (Race Condition 방지)
 
 ### ① 문제 정의
 
@@ -205,7 +206,7 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 - ✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
 
 
-- ## 🔐 Spring Security Multiple FilterChain 적용
+  ## 🔐 Spring Security Multiple FilterChain 적용
 
 ### ① 문제 상황
 - 새로운 **공개 API 추가 시 403 에러 발생**
