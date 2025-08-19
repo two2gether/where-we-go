@@ -205,6 +205,7 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 - ✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
 - ✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
 
+---
 
   ## 🔐 Spring Security Multiple FilterChain 적용
 
@@ -213,7 +214,6 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 - `SecurityConfig` + `JwtFilter` 두 곳에 **중복 설정 필요**
 - `JwtFilter`가 `SecurityConfig`보다 먼저 실행되어 `permitAll()` 무시
 
----
 
 ### ② 문제 분석
 - 기존 구조: **Single FilterChain**
