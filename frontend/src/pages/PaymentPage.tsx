@@ -47,6 +47,12 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         
         setOrderDetail(order);
         
+        const callbackUrl = import.meta.env.VITE_PAYMENT_CALLBACK_URL;
+        console.log('🔍 환경변수 확인:', {
+          VITE_PAYMENT_CALLBACK_URL: callbackUrl,
+          전체환경변수: import.meta.env
+        });
+        
         const paymentRequestData = {
           orderNo: order.orderNo,
           amount: order.totalPrice,
@@ -56,7 +62,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           retCancelUrl: `${window.location.origin}/payment/fail`,
           autoExecute: true,
           // GitHub Secrets를 통한 안전한 콜백 URL 설정
-          resultCallback: import.meta.env.VITE_PAYMENT_CALLBACK_URL,
+          resultCallback: callbackUrl,
           callbackVersion: 'V2',
           quantity: order.quantity
         };

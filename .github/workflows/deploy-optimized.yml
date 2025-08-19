@@ -124,12 +124,11 @@ jobs:
         if: needs.detect-changes.outputs.backend == 'true'
         run: chmod +x gradlew
 
-      - name: Build Frontend (conditional)
-        if: needs.detect-changes.outputs.frontend == 'true'
+      - name: Build Frontend (환경변수 주입 테스트용 강제 빌드)
         env:
           VITE_PAYMENT_CALLBACK_URL: ${{ secrets.VITE_PAYMENT_CALLBACK_URL }}
         run: |
-          echo "🎨 프론트엔드 빌드 중..."
+          echo "🎨 프론트엔드 빌드 중... (환경변수: ${VITE_PAYMENT_CALLBACK_URL})"
           cd frontend && npm ci && npm run build && cd ..
 
       - name: Build with Gradle (conditional)
