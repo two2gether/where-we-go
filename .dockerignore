@@ -9,6 +9,7 @@ target/
 # IDE 설정
 .idea/
 .vscode/
+.claude/
 *.iws
 *.iml
 *.ipr
@@ -24,21 +25,46 @@ src/test/
 
 # 환경변수 파일
 .env
-.env.local
-.env.prod
+.env.*
+!.env.example
 
-# Node modules (frontend가 있다면)
+# 프론트엔드 (별도 배포)
+frontend/
+
+# AWS 설정 파일들 (런타임에 불필요)
+aws/
+.ebextensions/
+
+
+# 테스트/개발 파일들
+http/
+sql/
+
+# Node modules
 node_modules/
 npm-debug.log*
 
-# 기타
-*.tmp
-*.swp
-*~
+# 이미지/미디어 파일
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
 
-# 문서 및 테스트 파일
+# 설정 파일들
+*.yaml
+*.yml
+!src/main/resources/**/*.yml
+
+# 문서 파일들
 *.md
 README*
 blog-posts/
-http/
-sql/
+
+# 기타 임시 파일
+*.tmp
+*.swp
+*~
+.DS_Store
+Thumbs.db
