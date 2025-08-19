@@ -149,19 +149,19 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 <img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
 
 ## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
-- # 🚀 동시 좋아요 처리 (Race Condition 방지)
+- ## 🚀 동시 좋아요 처리 (Race Condition 방지)
 
-## ① 문제 정의
+### ① 문제 정의
 
 - 동시에 같은 코스에 여러 사용자가 좋아요를 누르면  
   - 중복 레코드 시도 또는 `likeCount`가 실제와 어긋나는 **Race Condition** 발생 가능.
 
-## ② 원인 분석
+### ② 원인 분석
 
 - `(userId, courseId)` 조합의 **중복 삽입 경쟁**
 - 코스별 좋아요 수를 **동시에 증가**시키는 업데이트 충돌
 
-## ③ 구현 내용 설명
+### ③ 구현 내용 설명
 
 ### 🔧 해결 과정
 - **행 단위 비관적 락**  
@@ -197,14 +197,15 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 - 알림 발행
 → notificationService.triggerLikeNotification(user, course) 호출
 
-## ④ 결과와 효과
+### ④ 결과와 효과
 
 - ✅ 중복 좋아요 방지: 유니크 + INSERT IGNORE로 DB 차원에서 차단
 - ✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
 - ✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
 - ✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
 
-## 🔐 Spring Security Multiple FilterChain 적용
+
+- ## 🔐 Spring Security Multiple FilterChain 적용
 
 ### ① 문제 상황
 - 새로운 **공개 API 추가 시 403 에러 발생**
@@ -236,7 +237,6 @@ public SecurityFilterChain privateApiFilterChain(HttpSecurity http) throws Excep
             .build();
 }
 
----
 
 ### ③ 문제 해결
 
@@ -249,8 +249,6 @@ public SecurityFilterChain privateApiFilterChain(HttpSecurity http) throws Excep
 
 - **AuthService**  
   - `CustomException` 패턴 통일  
-
----
 
 ### ✅ 개선 결과
 - 공개 API 추가 시 **SecurityConfig에서만 관리** 가능 → 유지보수 용이  
