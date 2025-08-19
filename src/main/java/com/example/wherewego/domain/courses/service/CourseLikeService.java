@@ -165,7 +165,7 @@ public class CourseLikeService {
 		}
 
 		//place가져오기
-		List<Long> courseIds = pagedLikeList.getContent().stream().map(CourseLike::getId).toList();
+		List<Long> courseIds = pagedLikeList.getContent().stream().map(like -> like.getCourse().getId()).toList();
 
 		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
 			courseIds);

@@ -247,11 +247,11 @@ api.interceptors.response.use(
     }
 );
 
-// API 응답 타입 정의
+// API 응답 타입 정의 (백엔드 응답 구조에 맞게 수정)
 export interface ApiResponse<T = any> {
-    success: boolean;
     data: T;
     message?: string;
+    timestamp?: string;
     errorCode?: string;
 }
 

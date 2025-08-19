@@ -99,6 +99,11 @@ export const useToggleBookmark = () => {
         exact: false,
         predicate: (query) => query.queryKey.includes('user')
       });
+
+      // MyPage 관련 쿼리들도 무효화 (통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
+      queryClient.invalidateQueries({ queryKey: ['my-bookmarks'] });
+      queryClient.invalidateQueries({ queryKey: ['my-course-bookmarks'] });
       
       // 북마크 상태는 개인적이지만, 목록은 모든 사용자에게 영향 없음
       // 별도 처리 불필요 (북마크 여부는 개인 상태)

@@ -20,13 +20,16 @@ export default defineConfig({
   },
 
   server: {
-    port: 3000,
-    host: true,
+    port: 5173, // 로컬 개발용 - 권한 문제 없음
+    host: true, // 네트워크 테스트를 위한 외부 접근 허용
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, options) => {
+          console.log(`🔗 API Proxy: ${options.target}/api`);
+        }
       },
     },
     headers: {
@@ -55,8 +58,8 @@ export default defineConfig({
   },
 
   preview: {
-    port: 3000,
-    host: true,
+    port: 4173, // preview용 별도 포트
+    host: true, // 빌드 결과 미리보기용
   },
 
   test: {

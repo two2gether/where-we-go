@@ -44,6 +44,9 @@ export const useCreateComment = () => {
       queryClient.invalidateQueries({ 
         queryKey: ['my-comments'] 
       });
+      
+      // MyPage 관련 쿼리들도 무효화 (댓글 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
     },
     onError: (error) => {
       console.error('Failed to create comment:', error);
@@ -91,6 +94,9 @@ export const useDeleteComment = () => {
       queryClient.removeQueries({ 
         queryKey: ['comments', commentId] 
       });
+      
+      // MyPage 관련 쿼리들도 무효화 (댓글 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
     },
     onError: (error) => {
       console.error('Failed to delete comment:', error);

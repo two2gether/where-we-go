@@ -32,7 +32,7 @@ const EventProductsPage: React.FC = () => {
         console.log('주문 생성 응답:', order);
         
         // 응답 구조 확인
-        const orderId = order?.data?.orderId || order?.orderId;
+        const orderId = order?.data?.orderId;
         console.log('추출된 orderId:', orderId);
         
         if (orderId) {
@@ -77,9 +77,9 @@ const EventProductsPage: React.FC = () => {
     );
   }
 
-  const products = productsResponse?.content || [];
-  const hasNextPage = productsResponse && !productsResponse.last;
-  const hasPreviousPage = productsResponse && !productsResponse.first;
+  const products = productsResponse?.data?.content || [];
+  const hasNextPage = productsResponse?.data && !productsResponse.data.last;
+  const hasPreviousPage = productsResponse?.data && !productsResponse.data.first;
 
   return (
     <GitHubLayout

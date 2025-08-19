@@ -52,6 +52,10 @@ public class CourseListResponseDto {
 	 */
 	private int likeCount;
 	/**
+	 * 코스 북마크 수
+	 */
+	private int bookmarkCount;
+	/**
 	 * 코스 평균 평점
 	 */
 	private double averageRating;

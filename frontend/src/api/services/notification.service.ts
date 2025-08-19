@@ -7,61 +7,35 @@ import type {
 } from '../types';
 
 export const notificationService = {
-  // 알림 목록 조회
+  // 알림 목록 조회 - apiRequest가 이미 래퍼 처리함
   getNotifications: (params: PaginationParams = {}): Promise<PageResponse<Notification>> =>
-    apiRequest.get<PageResponse<Notification>>('/notifications', {
+    apiRequest.get<any>('/users/mypage/notifications', {
       params: {
-        page: (params.page || 0) + 1, // 백엔드는 1부터 시작
-        size: params.size || 20
+        page: params.page || 0, // Spring Data는 0부터 시작
+        size: params.size || 10,
+        sort: 'createdAt,desc'
       }
-    }).then(response => response.data),
+    }).then(response => {
+      // apiRequest가 이미 response.data를 반환하므로 한번만 .data 접근
+      return response.data;
+    }),
 
-  // 읽지 않은 알림 개수 조회
+  // 읽지 않은 알림 개수 조회 - apiRequest가 이미 래퍼 처리함
   getUnreadCount: (): Promise<number> =>
-    apiRequest.get<number>('/notifications/unread-count')
-      .then(response => response.data),
+    apiRequest.get<any>('/notifications/unread-count')
+      .then(response => {
+        // apiRequest가 이미 response.data를 반환하므로 한번만 .data 접근
+        return response.data || 0;
+      }),
 
-  // 알림 읽음 처리
+  // 알림 읽음 처리 - apiRequest가 이미 래퍼 처리함
   markAsRead: (notificationId: number): Promise<void> =>
-    apiRequest.put<void>(`/notifications/${notificationId}/read`)
+    apiRequest.patch<any>(`/users/mypage/notifications/${notificationId}`)
       .then(response => response.data),
 
-  // 모든 알림 읽음 처리
-  markAllAsRead: (): Promise<void> =>
-    apiRequest.put<void>('/notifications/read-all')
+  // 읽은 알림 전체 삭제 - apiRequest가 이미 래퍼 처리함
+  deleteReadNotifications: (): Promise<void> =>
+    apiRequest.delete<any>('/users/mypage/notifications/read')
       .then(response => response.data),
 
-  // 알림 삭제
-  deleteNotification: (notificationId: number): Promise<void> =>
-    apiRequest.delete<void>(`/notifications/${notificationId}`)
-      .then(response => response.data),
-
-  // 모든 알림 삭제
-  deleteAllNotifications: (): Promise<void> =>
-    apiRequest.delete<void>('/notifications/all')
-      .then(response => response.data),
-
-  // 알림 설정 조회
-  getNotificationSettings: (): Promise<NotificationRequest> =>
-    apiRequest.get<NotificationRequest>('/notifications/settings')
-      .then(response => response.data),
-
-  // 알림 설정 업데이트
-  updateNotificationSettings: (settings: NotificationRequest): Promise<NotificationRequest> =>
-    apiRequest.put<NotificationRequest>('/notifications/settings', settings)
-      .then(response => response.data),
-
-  // 특정 타입의 알림 조회
-  getNotificationsByType: (type: string, params: PaginationParams = {}): Promise<PageResponse<Notification>> =>
-    apiRequest.get<PageResponse<Notification>>(`/notifications/type/${type}`, {
-      params: {
-        page: (params.page || 0) + 1,
-        size: params.size || 20
-      }
-    }).then(response => response.data),
-
-  // 최근 알림 조회 (상위 N개)
-  getRecentNotifications: (limit: number = 5): Promise<Notification[]> =>
-    apiRequest.get<Notification[]>(`/notifications/recent?limit=${limit}`)
-      .then(response => response.data),
 };

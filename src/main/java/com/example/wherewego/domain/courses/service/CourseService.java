@@ -151,7 +151,10 @@ public class CourseService {
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		// 4-3. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		// 4-3. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+		
+		// 4-4. 사용자별 상태 정보 조회 (로그인한 경우에만)
 		Map<Long, Boolean> userLikes = new HashMap<>();
 		Map<Long, Boolean> userBookmarks = new HashMap<>();  
 		Map<Long, Double> userRatings = new HashMap<>();
@@ -174,7 +177,7 @@ public class CourseService {
 			});
 		}
 
-		// 4-4. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 + 사용자별 상태 포함
+		// 4-5. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 + 사용자별 상태 포함
 		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
 				// 해당 코스의 장소 순서 가져오기 (이미 조회된 데이터에서)
@@ -195,9 +198,12 @@ public class CourseService {
 				Boolean isLiked = userLikes.get(courseId);
 				Boolean isBookmarked = userBookmarks.get(courseId);
 				Double myRating = userRatings.get(courseId);
+				
+				// 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
 
-				// 매퍼로 DTO 변환 (사용자별 상태 포함)
-				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating);
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
@@ -442,7 +448,18 @@ public class CourseService {
 			.map(Course::getId)
 			.toList();
 
-		// 5. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		// 4-1. 🔧 Lazy Loading 해결: themes를 명시적으로 로딩
+		if (!courseIds.isEmpty()) {
+			coursePage.getContent().forEach(course -> {
+				// themes 컬렉션 강제 초기화 (Hibernate.initialize 대신 size() 호출)
+				course.getThemes().size();
+			});
+		}
+
+		// 5. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+		
+		// 6. 사용자별 상태 정보 조회 (로그인한 경우에만)
 		Map<Long, Boolean> userLikes = new HashMap<>();
 		Map<Long, Boolean> userBookmarks = new HashMap<>();
 		Map<Long, Double> userRatings = new HashMap<>();
@@ -484,9 +501,12 @@ public class CourseService {
 				Boolean isLiked = userLikes.get(courseId);
 				Boolean isBookmarked = userBookmarks.get(courseId);
 				Double myRating = userRatings.get(courseId);
+				
+				// 🔖 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
 
-				// 매퍼로 DTO 변환 (사용자별 상태 포함)
-				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating);
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
@@ -507,12 +527,37 @@ public class CourseService {
 	private boolean isAllRegion(String region) {
 		return region == null || region.trim().isEmpty() || "전체".equals(region.trim());
 	}
+	
+	/**
+	 * 여러 코스의 북마크 수를 한 번에 조회합니다. (N+1 문제 해결)
+	 *
+	 * @param courseIds 북마크 수를 조회할 코스 ID 목록
+	 * @return 코스 ID를 키로 하고 북마크 수를 값으로 하는 Map
+	 */
+	private Map<Long, Integer> getBookmarkCountsForCourses(List<Long> courseIds) {
+		if (courseIds == null || courseIds.isEmpty()) {
+			return new HashMap<>();
+		}
+		
+		List<Object[]> results = courseBookmarkRepository.countBookmarksByCourseIds(courseIds);
+		Map<Long, Integer> bookmarkCounts = new HashMap<>();
+		
+		// 결과를 Map으로 변환
+		for (Object[] result : results) {
+			Long courseId = (Long) result[0];
+			Long count = (Long) result[1];
+			bookmarkCounts.put(courseId, count.intValue());
+		}
+		
+		return bookmarkCounts;
+	}
 
 	/**
 	 * 내가 만든 코스 목록 조회
 	 *
 	 * 사용자가 직접 생성한 코스 목록을 페이징하여 조회합니다.
 	 * 각 코스에 포함된 장소 정보도 함께 반환합니다.
+	 * N+1 쿼리 문제를 해결하기 위해 배치 로딩을 사용합니다.
 	 *
 	 * @param userId 조회할 사용자 ID (코스 생성자)
 	 * @param currentUserId 현재 로그인한 사용자 ID (null 가능)
@@ -529,6 +574,13 @@ public class CourseService {
 			.map(Course::getId)
 			.toList();
 
+		// 2-1. 🔧 Lazy Loading 방지: themes를 명시적으로 로딩 (안전장치)
+		if (!courseIds.isEmpty()) {
+			coursePage.getContent().forEach(course -> {
+				course.getThemes().size(); // themes 컬렉션 강제 초기화
+			});
+		}
+
 		// 3. 장소 순서 정보 일괄 조회
 		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
 			courseIds);
@@ -537,7 +589,10 @@ public class CourseService {
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		// 5. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		// 5. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+
+		// 6. 사용자별 상태 정보 조회 (로그인한 경우에만)
 		Map<Long, Boolean> userLikes = new HashMap<>();
 		Map<Long, Boolean> userBookmarks = new HashMap<>();
 		Map<Long, Double> userRatings = new HashMap<>();
@@ -560,7 +615,7 @@ public class CourseService {
 			});
 		}
 
-		// 6. 각 Course → CourseListResponseDto로 변환 (장소 포함 + 사용자별 상태)
+		// 7. 각 Course → CourseListResponseDto로 변환 (장소 포함 + 사용자별 상태 + 북마크 수)
 		List<CourseListResponseDto> dtoList = coursePage.getContent().stream()
 			.map(course -> {
 				List<PlacesOrder> orders = placeOrdersByCourse.getOrDefault(course.getId(), new ArrayList<>());
@@ -572,13 +627,16 @@ public class CourseService {
 				Boolean isLiked = userLikes.get(courseId);
 				Boolean isBookmarked = userBookmarks.get(courseId);
 				Double myRating = userRatings.get(courseId);
+				
+				// 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
 
-				// 매퍼로 DTO 변환 (사용자별 상태 포함)
-				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating);
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
-		// 7. 최종 페이지 생성 및 반환
+		// 8. 최종 페이지 생성 및 반환
 		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 		return PagedResponse.from(dtoPage);
 	}

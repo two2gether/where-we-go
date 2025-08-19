@@ -12,7 +12,8 @@ export const useCourseLikes = () => {
     onSuccess: (data, courseId) => {
       // 관련 쿼리들 무효화
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      queryClient.invalidateQueries({ queryKey: ['users', 'my', 'likes'] });
+      // 🔧 수정: 올바른 쿼리 키 사용
+      queryClient.invalidateQueries({ queryKey: ['user', 'course-likes'] });
       
       // 특정 코스 상세 정보 무효화
       queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
@@ -23,14 +24,39 @@ export const useCourseLikes = () => {
   // 코스 좋아요 삭제
   const removeCourseLikeMutation = useMutation({
     mutationFn: (courseId: number) => courseLikeService.removeCourseLike(courseId),
+    onMutate: async (courseId) => {
+      // 🚀 Optimistic update: 즉시 UI 업데이트
+      await queryClient.cancelQueries({ queryKey: ['user', 'course-likes'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['user', 'course-likes'] });
+      
+      // 좋아요 목록에서 해당 코스 제거
+      queryClient.setQueriesData({ queryKey: ['user', 'course-likes'] }, (old: any) => {
+        if (!old?.content) return old;
+        return {
+          ...old,
+          content: old.content.filter((like: any) => like.courseListDto.courseId !== courseId),
+          totalElements: old.totalElements - 1
+        };
+      });
+      
+      return { previousData };
+    },
     onSuccess: (data, courseId) => {
       // 관련 쿼리들 무효화
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      queryClient.invalidateQueries({ queryKey: ['users', 'my', 'likes'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'course-likes'] });
       
       // 특정 코스 상세 정보 무효화
       queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'popular'] });
+    },
+    onError: (err, courseId, context) => {
+      // 에러 시 이전 상태로 복원
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
     }
   });
 

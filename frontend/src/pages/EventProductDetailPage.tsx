@@ -4,6 +4,7 @@ import { useEventProductDetail, useOrders } from '../hooks';
 import { Button, Spinner, Card, Badge } from '../components/base';
 import { GitHubLayout } from '../components/layout';
 import { useAuthStore } from '../store/authStore';
+import { formatDate } from '../utils/dateUtils';
 
 const EventProductDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const EventProductDetailPage: React.FC = () => {
         console.log('주문 생성 응답:', order);
         
         // 응답 구조 확인
-        const orderId = order?.data?.orderId || order?.orderId;
+        const orderId = order?.data?.orderId;
         console.log('추출된 orderId:', orderId);
         
         if (orderId) {
@@ -65,14 +66,6 @@ const EventProductDetailPage: React.FC = () => {
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('ko-KR');
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   };
 
   if (isLoading) {

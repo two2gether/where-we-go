@@ -482,16 +482,14 @@ export interface CreateCourseRatingRequest {
 
 // CourseRatingSummary 타입도 제거 (코스 상세 정보에 포함됨)
 
-// 알림 관련 타입
+// 알림 관련 타입 (백엔드 NotificationResponseDto에 맞게 수정)
 export interface Notification {
-  id: number;
-  type: 'COMMENT' | 'LIKE' | 'BOOKMARK' | 'SYSTEM';
-  title: string;
-  content: string;
-  isRead: boolean;
-  relatedId?: number;
-  relatedType?: 'COURSE' | 'PLACE' | 'COMMENT';
-  createdAt: string;
+  notificationId: number;  // Long notificationId
+  receiverId: number;      // Long receiverId  
+  type: 'LIKE' | 'COMMENT'; // NotificationType enum
+  message: string;         // String message (백엔드에서는 content가 아닌 message)
+  isRead: boolean;         // boolean isRead
+  createdAt: string;       // LocalDateTime createdAt
 }
 
 // 북마크 관련 타입 (백엔드 응답 구조에 맞게 수정)

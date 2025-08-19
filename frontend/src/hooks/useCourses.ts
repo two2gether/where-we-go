@@ -232,6 +232,10 @@ export const useToggleCourseLike = () => {
       
       // 좋아요 개수 변경은 모든 사용자에게 반영되어야 함
       queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+      
+      // MyPage 관련 쿼리들도 무효화 (통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
+      queryClient.invalidateQueries({ queryKey: ['my-course-likes'] });
     },
     onError: (error, courseId, context) => {
       // 에러 시 이전 상태로 복원

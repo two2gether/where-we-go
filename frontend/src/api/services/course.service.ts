@@ -18,24 +18,22 @@ export const courseService = {
       sort: params.sort || 'createdAt,desc' // sort 파라미터 지원 추가
     };
 
-    // 백엔드에서 region 처리 (null, 빈값, "전체" 모두 전체 조회로 처리됨)
+    // 🔧 수정: 전체 검색 시 region 파라미터를 아예 보내지 않음
     if (params.region && params.region !== '전체') {
       queryParams.region = params.region;
-    } else {
-      // "전체"이거나 없는 경우 백엔드에 "전체" 전달 (백엔드에서 처리)
-      queryParams.region = '전체';
     }
+    // "전체"이거나 없는 경우 region 파라미터를 생략 (백엔드에서 null로 처리됨)
 
     // themes가 있을 때만 추가 (백엔드는 CourseTheme enum 배열 형태)
     if (params.theme) {
       queryParams.themes = params.theme;
     }
 
-    // GET 요청으로 변경 - 올바른 엔드포인트 사용
+    // GET 요청으로 변경 - apiRequest가 이미 래퍼 처리함
     return apiRequest.get<any>('/courses', { params: queryParams })
       .then(response => {
-        // 백엔드 ApiResponse 구조: { success: boolean, message: string, data: PagedResponse }
-        const actualData = response.data?.data || response.data;
+        // apiRequest가 이미 response.data를 반환하므로 한번만 .data 접근
+        const actualData = response.data;
         
         // 응답 데이터 검증
         if (!actualData) {
@@ -139,20 +137,56 @@ export const courseService = {
       size: limit
     };
 
-    // 백엔드에서 region 처리 (null, 빈값, "전체" 모두 전체 조회로 처리됨)
+    // 🔧 수정: 전체 검색 시 region 파라미터를 아예 보내지 않음
     if (region && region !== '전체') {
       pageParams.region = region;
-    } else {
-      // "전체"이거나 없는 경우 백엔드에 "전체" 전달 (백엔드에서 처리)
-      pageParams.region = '전체';
     }
+    // "전체"이거나 없는 경우 region 파라미터를 생략 (백엔드에서 null로 처리됨)
 
     if (themes && themes.length > 0) {
       pageParams.themes = themes.join(',');
     }
 
     return apiRequest.get<any>('/courses/popular', { params: pageParams })
-      .then(response => response.data.data); // ApiResponse<PagedResponse<T>> 구조
+      .then(response => {
+        // 🔍 인기코스 API 응답 디버깅 (개발 환경에서만)
+        if (import.meta.env?.DEV) {
+          console.group('🔥 인기코스 API Raw 응답');
+          console.log('📋 Request params:', pageParams);
+          console.log('📊 Full response:', response);
+          console.log('📊 Response data:', response.data);
+          
+          if (response.data?.content && Array.isArray(response.data.content)) {
+            console.log('📊 인기코스 개수:', response.data.content.length);
+            
+            response.data.content.forEach((course, index) => {
+              console.group(`🔥 인기코스 ${index + 1}: ${course.title}`);
+              console.log('📋 전체 코스 데이터:', course);
+              console.log('🗺️ Places 데이터:', course.places);
+              console.log('🗺️ Places 개수:', course.places?.length || 0);
+              
+              if (course.places && course.places.length > 0) {
+                course.places.forEach((place, pIndex) => {
+                  console.log(`  🗺️ 장소 ${pIndex + 1}:`, {
+                    name: place.name,
+                    imageUrl: place.imageUrl,
+                    hasImageUrl: !!place.imageUrl
+                  });
+                });
+              } else {
+                console.warn('⚠️ 인기코스에 장소 데이터가 없습니다!');
+              }
+              console.groupEnd();
+            });
+          } else {
+            console.error('❌ 인기코스 content 배열이 없거나 유효하지 않음');
+          }
+          
+          console.groupEnd();
+        }
+        
+        return response.data;
+      }); // apiRequest가 이미 래퍼 처리함
   },
 
   // TODO: 백엔드에서 추천 코스 API 구현 후 활성화

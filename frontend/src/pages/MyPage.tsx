@@ -10,10 +10,10 @@ import {
   useMyCourses,
   useMyCourseBookmarks,
   useMyCourseLikes,
-  useMyNotifications,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead
 } from '../hooks/useUser';
+import { useNotifications } from '../hooks/useNotifications';
 import LinearLayout from '../components/layout/LinearLayout';
 import { ProfileImageUploader } from '../components/common/ProfileImageUploader';
 import type { MyPageUpdateRequest, WithdrawRequest } from '../api/types';
@@ -40,7 +40,8 @@ const MyPage: React.FC = () => {
   const { data: coursesData } = useMyCourses(0, 20);
   const { data: courseBookmarksData } = useMyCourseBookmarks(0, 20);
   const { data: likesData } = useMyCourseLikes(0, 10);
-  const { data: notificationsData } = useMyNotifications(0, 10);
+  // 백엔드 알림 API 복원 완료
+  const { data: notificationsData } = useNotifications({ page: 0, size: 10 });
 
   // 폼 상태
   const [editForm, setEditForm] = useState({
@@ -341,8 +342,9 @@ const MyPage: React.FC = () => {
       {/* 프로필 섹션 */}
       {renderProfileSection()}
       
-      {/* 통계 카드 그리드 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+      {/* 통계 카드 그리드 - 한 줄로 표시: 댓글 → 리뷰 → 장소북마크 → 내코스 → 코스북마크 → 좋아요 → 알림 */}
+      <div className="grid grid-cols-7 gap-4 mb-8">
+        {/* 댓글 */}
         <div 
           className="p-4 rounded text-center"
           style={{
@@ -371,6 +373,7 @@ const MyPage: React.FC = () => {
           </div>
         </div>
         
+        {/* 리뷰 */}
         <div 
           className="p-4 rounded text-center"
           style={{
@@ -399,34 +402,7 @@ const MyPage: React.FC = () => {
           </div>
         </div>
         
-        <div 
-          className="p-4 rounded text-center"
-          style={{
-            background: 'var(--notion-white)',
-            border: '1px solid var(--notion-gray-light)',
-            borderRadius: '8px'
-          }}
-        >
-          <div 
-            style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: 'var(--notion-blue)',
-              marginBottom: '4px'
-            }}
-          >
-            {statsData.courses}
-          </div>
-          <div 
-            style={{
-              fontSize: '12px',
-              color: 'var(--notion-text-light)'
-            }}
-          >
-            🚀 내 코스
-          </div>
-        </div>
-        
+        {/* 장소 북마크 */}
         <div 
           className="p-4 rounded text-center"
           style={{
@@ -451,16 +427,48 @@ const MyPage: React.FC = () => {
               color: 'var(--notion-text-light)'
             }}
           >
-            💾 장소 북마크
+            💾 장소북마크
           </div>
         </div>
         
+        {/* 내 코스 */}
         <div 
           className="p-4 rounded text-center"
           style={{
             background: 'var(--notion-white)',
             border: '1px solid var(--notion-gray-light)',
             borderRadius: '8px'
+          }}
+        >
+          <div 
+            style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: 'var(--notion-blue)',
+              marginBottom: '4px'
+            }}
+          >
+            {statsData.courses}
+          </div>
+          <div 
+            style={{
+              fontSize: '12px',
+              color: 'var(--notion-text-light)'
+            }}
+          >
+            🚀 내코스
+          </div>
+        </div>
+        
+        {/* 코스 북마크 */}
+        <Link
+          to="/bookmarks?tab=courses"
+          className="block p-4 rounded text-center transition-colors"
+          style={{
+            background: 'var(--notion-white)',
+            border: '1px solid var(--notion-gray-light)',
+            borderRadius: '8px',
+            textDecoration: 'none'
           }}
         >
           <div 
@@ -479,10 +487,11 @@ const MyPage: React.FC = () => {
               color: 'var(--notion-text-light)'
             }}
           >
-            📚 코스 북마크
+            📚 코스북마크
           </div>
-        </div>
+        </Link>
         
+        {/* 좋아요 */}
         <div 
           className="p-4 rounded text-center"
           style={{
@@ -511,12 +520,15 @@ const MyPage: React.FC = () => {
           </div>
         </div>
         
-        <div 
-          className="p-4 rounded text-center"
+        {/* 알림 */}
+        <Link
+          to="/notifications"
+          className="block p-4 rounded text-center transition-colors"
           style={{
             background: 'var(--notion-white)',
             border: '1px solid var(--notion-gray-light)',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            textDecoration: 'none'
           }}
         >
           <div 
@@ -537,11 +549,11 @@ const MyPage: React.FC = () => {
           >
             📢 알림
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* 콘텐츠 그리드 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 콘텐츠 그리드 - 3x3 배열로 변경: 댓글 → 리뷰 → 장소북마크 → 내코스 → 코스북마크 → 좋아요 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 최근 댓글 */}
         <div 
           className="p-6 rounded-lg"
@@ -563,7 +575,7 @@ const MyPage: React.FC = () => {
               💬 최근 댓글
             </h3>
             <Link 
-              to="/courses"
+              to="/my/comments"
               style={{
                 fontSize: '14px',
                 color: 'var(--notion-blue)',
@@ -627,7 +639,7 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 내 코스 */}
+        {/* 최근 리뷰 */}
         <div 
           className="p-6 rounded-lg"
           style={{
@@ -645,23 +657,23 @@ const MyPage: React.FC = () => {
                 margin: 0
               }}
             >
-              🚀 내 코스
+              📝 최근 리뷰
             </h3>
             <Link 
-              to="/places"
+              to="/my/reviews"
               style={{
                 fontSize: '14px',
                 color: 'var(--notion-blue)',
                 textDecoration: 'none'
               }}
             >
-              코스 만들기 →
+              더보기 →
             </Link>
           </div>
           <div className="space-y-3">
-            {coursesData?.content?.slice(0, 3).map((course) => (
+            {reviewsData?.content?.slice(0, 3).map((review) => (
               <div 
-                key={course.courseId}
+                key={review.reviewId}
                 className="p-3 rounded"
                 style={{
                   background: 'var(--notion-gray-bg)',
@@ -670,7 +682,7 @@ const MyPage: React.FC = () => {
                 }}
               >
                 <Link 
-                  to={`/courses/${course.courseId}`}
+                  to={`/places/${review.place.placeId}`}
                   style={{
                     fontSize: '14px',
                     fontWeight: '500',
@@ -678,18 +690,17 @@ const MyPage: React.FC = () => {
                     textDecoration: 'none'
                   }}
                 >
-                  {course.title}
+                  {review.place.name}
                 </Link>
                 <p 
                   style={{
                     fontSize: '13px',
                     color: 'var(--notion-text-light)',
-                    marginTop: '4px'
+                    marginTop: '4px',
+                    lineHeight: '1.4'
                   }}
                 >
-                  {course.description && course.description.length > 50 
-                    ? `${course.description.slice(0, 50)}...` 
-                    : course.description || '설명 없음'}
+                  {review.content.length > 60 ? `${review.content.slice(0, 60)}...` : review.content}
                 </p>
                 <div 
                   className="flex items-center space-x-3 mt-2"
@@ -698,18 +709,17 @@ const MyPage: React.FC = () => {
                     color: 'var(--notion-text-light)'
                   }}
                 >
-                  <span>❤️ {course.likeCount || 0}</span>
-                  <span>💬 {course.commentCount || 0}</span>
-                  <span>{new Date(course.createdAt).toLocaleDateString()}</span>
+                  <span>⭐ {review.rating}</span>
+                  <span>{new Date(review.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
-            {(!coursesData?.content || coursesData.content.length === 0) && (
+            {(!reviewsData?.content || reviewsData.content.length === 0) && (
               <div 
                 className="text-center py-8"
                 style={{ color: 'var(--notion-text-light)' }}
               >
-                만든 코스가 없습니다.
+                작성한 리뷰가 없습니다.
               </div>
             )}
           </div>
@@ -736,7 +746,7 @@ const MyPage: React.FC = () => {
               💾 장소 북마크
             </h3>
             <Link 
-              to="/places"
+              to="/bookmarks?tab=places"
               style={{
                 fontSize: '14px',
                 color: 'var(--notion-blue)',
@@ -800,6 +810,182 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
+        {/* 내 코스 */}
+        <div 
+          className="p-6 rounded-lg"
+          style={{
+            background: 'var(--notion-white)',
+            border: '1px solid var(--notion-gray-light)',
+            borderRadius: '8px'
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: 'var(--notion-text)',
+                margin: 0
+              }}
+            >
+              🚀 내 코스
+            </h3>
+            <Link 
+              to="/my/courses"
+              style={{
+                fontSize: '14px',
+                color: 'var(--notion-blue)',
+                textDecoration: 'none'
+              }}
+            >
+              더보기 →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {coursesData?.content?.slice(0, 3).map((course) => (
+              <div 
+                key={course.courseId}
+                className="p-3 rounded"
+                style={{
+                  background: 'var(--notion-gray-bg)',
+                  border: '1px solid var(--notion-gray-light)',
+                  borderRadius: '6px'
+                }}
+              >
+                <Link 
+                  to={`/courses/${course.courseId}`}
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: 'var(--notion-text)',
+                    textDecoration: 'none'
+                  }}
+                >
+                  {course.title}
+                </Link>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--notion-text-light)',
+                    marginTop: '4px'
+                  }}
+                >
+                  {course.description && course.description.length > 50 
+                    ? `${course.description.slice(0, 50)}...` 
+                    : course.description || '설명 없음'}
+                </p>
+                <div 
+                  className="flex items-center space-x-3 mt-2"
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--notion-text-light)'
+                  }}
+                >
+                  <span>❤️ {course.likeCount || 0}</span>
+                  <span>💬 {course.commentCount || 0}</span>
+                  <span>{new Date(course.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+            {(!coursesData?.content || coursesData.content.length === 0) && (
+              <div 
+                className="text-center py-8"
+                style={{ color: 'var(--notion-text-light)' }}
+              >
+                만든 코스가 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 코스 북마크 */}
+        <div 
+          className="p-6 rounded-lg"
+          style={{
+            background: 'var(--notion-white)',
+            border: '1px solid var(--notion-gray-light)',
+            borderRadius: '8px'
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: 'var(--notion-text)',
+                margin: 0
+              }}
+            >
+              📚 코스 북마크
+            </h3>
+            <Link 
+              to="/bookmarks?tab=courses"
+              style={{
+                fontSize: '14px',
+                color: 'var(--notion-blue)',
+                textDecoration: 'none'
+              }}
+            >
+              더보기 →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {courseBookmarksData?.content?.slice(0, 3).map((courseBookmark) => (
+              <div 
+                key={courseBookmark.courseId}
+                className="p-3 rounded"
+                style={{
+                  background: 'var(--notion-gray-bg)',
+                  border: '1px solid var(--notion-gray-light)',
+                  borderRadius: '6px'
+                }}
+              >
+                <Link 
+                  to={`/courses/${courseBookmark.courseId}`}
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: 'var(--notion-text)',
+                    textDecoration: 'none'
+                  }}
+                >
+                  {courseBookmark.title}
+                </Link>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--notion-text-light)',
+                    marginTop: '4px'
+                  }}
+                >
+                  {courseBookmark.description && courseBookmark.description.length > 50 
+                    ? `${courseBookmark.description.slice(0, 50)}...` 
+                    : courseBookmark.description || '설명 없음'}
+                </p>
+                <div 
+                  className="flex items-center space-x-3 mt-2"
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--notion-text-light)'
+                  }}
+                >
+                  <span>⭐ {courseBookmark.averageRating.toFixed(1)}</span>
+                  <span>❤️ {courseBookmark.likeCount}</span>
+                  <span>📍 {courseBookmark.region}</span>
+                </div>
+              </div>
+            ))}
+            {(!courseBookmarksData?.content || courseBookmarksData.content.length === 0) && (
+              <div 
+                className="text-center py-8"
+                style={{ color: 'var(--notion-text-light)' }}
+              >
+                북마크한 코스가 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 좋아요한 코스 */}
         <div 
           className="p-6 rounded-lg"
@@ -821,7 +1007,7 @@ const MyPage: React.FC = () => {
               💖 좋아요한 코스
             </h3>
             <Link 
-              to="/courses"
+              to="/my/likes"
               style={{
                 fontSize: '14px',
                 color: 'var(--notion-blue)',

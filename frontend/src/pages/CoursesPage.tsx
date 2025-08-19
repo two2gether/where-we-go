@@ -399,13 +399,13 @@ export const CoursesPage: React.FC = () => {
                 theme={course.themes?.[0] ? convertThemesToDisplay([course.themes[0]])[0] || course.themes[0] : course.theme || ''}
                 rating={course.averageRating || course.rating || 0}
                 likeCount={course.likeCount || 0}
+                bookmarkCount={course.bookmarkCount || 0}
                 duration={course.duration || (course.places ? `${course.places.length}개 장소` : '')}
                 author={course.author || { 
                   name: course.authorName || course.nickname || '작성자'
                 }}
                 isLiked={course.isLiked || false}
                 isBookmarked={course.isBookmarked || false}
-                onLike={handleLike}
                 onViewDetails={handleViewDetails}
               />
             </div>

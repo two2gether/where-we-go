@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.courses.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,5 @@ public interface CourseRatingRepository extends JpaRepository<CourseRating, Long
 	// 평점 계산 (JPQL) - null이면 0반환
 	@Query("SELECT COALESCE(AVG(r.rating), 0) FROM CourseRating r WHERE r.course.id = :courseId")
 	double findAverageByCourseId(@Param("courseId") Long courseId);
+
 }

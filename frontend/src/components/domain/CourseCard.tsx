@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, Badge, Button } from '../base';
-import { useCourseLikes, useCourseBookmarks } from '../../hooks';
+import { Card, Badge } from '../base';
+import { useCourseLikes } from '../../hooks';
 import { useAuthStore } from '../../store/authStore';
 
 export interface CourseCardProps {
@@ -12,6 +12,7 @@ export interface CourseCardProps {
   theme: string;
   rating: number;
   likeCount: number;
+  bookmarkCount?: number;
   duration: string;
   author?: {
     name: string;
@@ -31,6 +32,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   theme,
   rating,
   likeCount,
+  bookmarkCount = 0,
   duration,
   author,
   isLiked = false,
@@ -40,7 +42,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 }) => {
   const { user } = useAuthStore();
   const { toggleCourseLike, isToggling: isLikeToggling } = useCourseLikes();
-  const { toggleCourseBookmark, isToggling: isBookmarkToggling } = useCourseBookmarks();
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -55,18 +56,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     }
   };
 
-  const handleBookmark = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
-    try {
-      await toggleCourseBookmark(id, isBookmarked);
-    } catch (error) {
-      console.error('북마크 처리 실패:', error);
-    }
-  };
 
   const handleViewDetails = () => {
     onViewDetails?.(id);
@@ -85,6 +74,18 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           src={thumbnail}
           alt={title}
           className="w-full h-48 object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            if (target.src !== 'https://via.placeholder.com/400x300?text=No+Image') {
+              console.warn(`❌ 이미지 로드 실패 - 코스 "${title}":`, target.src);
+              target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+            }
+          }}
+          onLoad={() => {
+            if (import.meta.env.DEV) {
+              console.log(`✅ 이미지 로드 성공 - 코스 "${title}":`, thumbnail);
+            }
+          }}
         />
         <div className="absolute bottom-3 right-3">
           <Badge variant="primary" size="sm">
@@ -105,22 +106,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </button>
-        <button
-          onClick={handleBookmark}
-          disabled={isBookmarkToggling}
-          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors disabled:opacity-50"
-        >
-          <svg 
-            className={`w-5 h-5 transition-colors ${
-              isBookmarked ? 'text-blue-500 fill-current' : 'text-gray-600 hover:text-blue-500'
-            }`} 
-            fill={isBookmarked ? 'currentColor' : 'none'} 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
       </div>
@@ -153,17 +138,17 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           {author?.name && (
             <span className="text-sm text-gray-600">{author.name}</span>
           )}
           
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-4 ml-auto">
             <div className="flex items-center gap-1">
               <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
-              <span className="text-sm font-medium">{rating}</span>
+              <span className="text-sm font-medium">{rating.toFixed(1)}</span>
             </div>
             <div className="flex items-center gap-1">
               <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
@@ -171,12 +156,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               </svg>
               <span className="text-sm">{likeCount}</span>
             </div>
+            <div className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 7h3a1 1 0 0 1 1 1v11a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V8a1 1 0 0 1 1-1h3V6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v1zM9 6v1h6V6a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2z"/>
+              </svg>
+              <span className="text-sm">{bookmarkCount}</span>
+            </div>
           </div>
         </div>
-        
-        <Button variant="primary" size="md" fullWidth onClick={handleViewDetails}>
-          코스 자세히 보기
-        </Button>
       </div>
     </Card>
   );

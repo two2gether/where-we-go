@@ -1,20 +1,19 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GitHubLayout } from '../layout';
-import { useCourses } from '../../hooks/useCourses';
+import { useCourses, usePopularCourses } from '../../hooks/useCourses';
 import { usePlaces } from '../../hooks/usePlaces';
 import { useLocationStore } from '../../store/locationStore';
 import { isGeolocationAvailable, getGeolocationUnavailableReason } from '../../utils/geolocation';
 import { Button, Spinner } from '../base';
 
 const HomePage = () => {
-  // 실제 데이터 가져오기 - 좋아요 순으로 정렬된 인기 코스 조회
-  const { data: coursesData } = useCourses({ 
-    page: 0, 
-    size: 3, 
-    sort: 'likeCount,desc' // 좋아요 순 정렬
-  });
+  // 실제 백엔드 인기 코스 API 사용 (북마크 수 기반 인기도)
+  const { data: popularCoursesData, isLoading: isPopularLoading } = usePopularCourses('전체', [], 3);
   const { data: placesData } = usePlaces({ page: 0, size: 10 });
+  
+  // 전체 통계용 일반 코스 데이터도 가져옴
+  const { data: allCoursesData } = useCourses({ page: 0, size: 1 });
   
   // 위치 스토어에서 상태 가져오기
   const { latitude, longitude, isPermissionGranted, isLoading, error, requestLocation } = useLocationStore();
@@ -24,17 +23,17 @@ const HomePage = () => {
 
 
   // 실제 통계 데이터 계산
-  const totalCourses = coursesData?.totalElements || 0;
+  const totalCourses = allCoursesData?.totalElements || 0;
   const totalPlaces = placesData?.totalElements || 0;
-  const popularCourses = coursesData?.content || [];
+  const popularCourses = popularCoursesData?.content || [];
 
   // 디버깅을 위한 데이터 출력 (개발 환경에서만)
   React.useEffect(() => {
-    if (import.meta.env.DEV && coursesData) {
-      console.log('HomePage coursesData:', coursesData);
+    if (import.meta.env.DEV && popularCoursesData) {
+      console.log('HomePage popularCoursesData:', popularCoursesData);
       console.log('HomePage popularCourses:', popularCourses);
     }
-  }, [coursesData, popularCourses]);
+  }, [popularCoursesData, popularCourses]);
 
   return (
     <GitHubLayout
@@ -119,7 +118,7 @@ const HomePage = () => {
                 marginBottom: '8px'
               }}
             >
-              {popularCourses.reduce((sum, course) => sum + (course.likeCount || 0), 0)}+
+              {popularCourses.reduce((sum, course) => sum + (course.bookmarkCount || 0), 0)}+
             </div>
             <div 
               style={{
@@ -128,7 +127,7 @@ const HomePage = () => {
                 color: 'var(--notion-text-light)'
               }}
             >
-              총 좋아요
+              총 북마크
             </div>
           </div>
           <div 
@@ -617,7 +616,7 @@ const HomePage = () => {
                   margin: 0
                 }}
               >
-                🔥 인기 코스
+                🔖 북마크 인기 코스
               </h3>
               <Link 
                 to="/courses" 
@@ -701,9 +700,9 @@ const HomePage = () => {
                         </span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <span>📊</span>
+                        <span>🔖</span>
                         <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--notion-text)' }}>
-                          {course.ratingCount || 0}
+                          {course.bookmarkCount || 0}
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--notion-text-light)' }}>

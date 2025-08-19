@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseBookmarkService } from '../api/services';
 import { useAuthStore } from '../store/authStore';
+import { userKeys } from './useUser';
 
 export const useCourseBookmarks = () => {
   const queryClient = useQueryClient();
@@ -17,6 +18,13 @@ export const useCourseBookmarks = () => {
       // 특정 코스 상세 정보 무효화
       queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'popular'] });
+      
+      // MyPage 관련 쿼리들도 무효화 (북마크 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: userKeys.mypage() });
+      queryClient.invalidateQueries({ queryKey: userKeys.courseBookmarks() });
+      
+      // BookmarksPage의 user-bookmarks 쿼리도 무효화
+      queryClient.invalidateQueries({ queryKey: ['user-bookmarks'] });
     }
   });
 
@@ -31,6 +39,13 @@ export const useCourseBookmarks = () => {
       // 특정 코스 상세 정보 무효화
       queryClient.invalidateQueries({ queryKey: ['courses', courseId] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'popular'] });
+      
+      // MyPage 관련 쿼리들도 무효화 (북마크 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: userKeys.mypage() });
+      queryClient.invalidateQueries({ queryKey: userKeys.courseBookmarks() });
+      
+      // BookmarksPage의 user-bookmarks 쿼리도 무효화
+      queryClient.invalidateQueries({ queryKey: ['user-bookmarks'] });
     }
   });
 

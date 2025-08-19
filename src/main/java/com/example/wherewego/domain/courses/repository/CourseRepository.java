@@ -82,7 +82,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    LEFT JOIN FETCH c.themes
 		    LEFT JOIN FETCH c.user
 		    JOIN CourseBookmark b ON b.course = c
 		    WHERE c.region LIKE CONCAT('%', :region, '%')
@@ -102,7 +101,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    LEFT JOIN FETCH c.themes
 		    LEFT JOIN FETCH c.user
 		    JOIN CourseBookmark b ON b.course = c
 		    WHERE c.region LIKE CONCAT('%', :region, '%')
@@ -157,7 +155,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    LEFT JOIN FETCH c.themes
 		    LEFT JOIN FETCH c.user
 		    JOIN CourseBookmark b ON b.course = c
 		    WHERE c.isPublic = true
@@ -176,7 +173,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Query("""
 		    SELECT c
 		    FROM Course c
-		    LEFT JOIN FETCH c.themes
 		    LEFT JOIN FETCH c.user
 		    JOIN CourseBookmark b ON b.course = c
 		    WHERE c.isPublic = true

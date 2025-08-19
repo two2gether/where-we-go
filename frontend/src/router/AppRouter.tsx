@@ -17,6 +17,8 @@ import PlaceDetailPage from '../pages/PlaceDetailPage';
 import CourseDetailPage from '../pages/CourseDetailPage';
 import { BookmarksPage } from '../pages/BookmarksPage';
 import OrdersPage from '../pages/OrdersPage';
+import OrderDetailPage from '../pages/OrderDetailPage';
+import NotificationsPage from '../pages/NotificationsPage';
 import EventProductsPage from '../pages/EventProductsPage';
 import EventProductDetailPage from '../pages/EventProductDetailPage';
 import SearchPage from '../pages/SearchPage';
@@ -24,6 +26,10 @@ import ProductManagePage from '../pages/admin/ProductManagePage';
 import ProductCreatePage from '../pages/admin/ProductCreatePage';
 import ProductEditPage from '../pages/admin/ProductEditPage';
 import SocialLoginCallback from '../components/auth/SocialLoginCallback';
+import MyCommentsPage from '../pages/MyCommentsPage';
+import MyReviewsPage from '../pages/MyReviewsPage';
+import MyCoursesPage from '../pages/MyCoursesPage';
+import MyLikesPage from '../pages/MyLikesPage';
 
 // 임시 페이지 컴포넌트들
 const PageSkeleton = () => (
@@ -171,6 +177,43 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'my',
+        children: [
+          {
+            path: 'comments',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <MyCommentsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'reviews',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <MyReviewsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'courses',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <MyCoursesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'likes',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <MyLikesPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+      {
         path: 'bookmarks',
         element: (
           <Suspense fallback={<PageSkeleton />}>
@@ -180,9 +223,30 @@ const router = createBrowserRouter([
       },
       {
         path: 'orders',
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <OrdersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ':orderId',
+            element: (
+              <Suspense fallback={<PageSkeleton />}>
+                <OrderDetailPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+      {
+        path: 'notifications',
         element: (
           <Suspense fallback={<PageSkeleton />}>
-            <OrdersPage />
+            <NotificationsPage />
           </Suspense>
         ),
       },

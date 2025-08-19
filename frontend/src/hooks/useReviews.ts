@@ -82,6 +82,9 @@ export const useCreateReview = () => {
         newReview
       );
       
+      // MyPage 관련 쿼리들도 무효화 (리뷰 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
+      
       console.log('✅ Cache invalidation completed');
     },
     onError: (error) => {
@@ -123,6 +126,9 @@ export const useUpdateReview = () => {
       // 특정 장소에 대한 내 리뷰 캐시 업데이트
       queryClient.setQueryData(reviewKeys.myForPlace(placeId), updatedReview);
       
+      // MyPage 관련 쿼리들도 무효화 (리뷰 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
+      
       console.log('✅ Cache invalidation completed');
     },
     onError: (error) => {
@@ -160,6 +166,9 @@ export const useDeleteReview = () => {
       
       // 특정 장소에 대한 내 리뷰 캐시 제거
       queryClient.removeQueries({ queryKey: reviewKeys.myForPlace(placeId) });
+      
+      // MyPage 관련 쿼리들도 무효화 (리뷰 통계 업데이트를 위해)
+      queryClient.invalidateQueries({ queryKey: ['mypage'] });
       
       console.log('✅ Cache invalidation completed');
     },

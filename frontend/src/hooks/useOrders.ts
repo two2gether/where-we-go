@@ -36,11 +36,10 @@ export const useOrders = () => {
   };
 };
 
-export const useMyOrders = (page = 0, size = 10) => {
+export const useMyOrders = (page = 0, size = 10, status?: string) => {
   return useQuery({
-    queryKey: ['orders', 'my', page, size],
-    queryFn: () => orderService.getMyOrders(page, size),
-    select: (data) => data.data
+    queryKey: ['orders', 'my', page, size, status],
+    queryFn: () => orderService.getMyOrders(page, size, status)
   });
 };
 
@@ -48,7 +47,6 @@ export const useOrderDetail = (orderId: number) => {
   return useQuery({
     queryKey: ['orders', orderId],
     queryFn: () => orderService.getOrderDetail(orderId),
-    select: (data) => data.data,
     enabled: !!orderId
   });
 };

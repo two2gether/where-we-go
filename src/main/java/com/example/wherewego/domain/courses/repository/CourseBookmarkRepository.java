@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.courses.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -16,6 +17,14 @@ public interface CourseBookmarkRepository extends JpaRepository<CourseBookmark, 
 	boolean existsByUserIdAndCourseId(Long userId, Long courseId);
 
 	Optional<CourseBookmark> findByUserIdAndCourseId(Long userId, Long courseId);
+	
+	// 특정 코스의 북마크 수 조회
+	int countByCourseId(Long courseId);
+	
+	// 여러 코스의 북마크 수를 한 번에 조회 (N+1 해결)
+	@Query("SELECT cb.course.id, COUNT(cb) FROM CourseBookmark cb " +
+	       "WHERE cb.course.id IN :courseIds GROUP BY cb.course.id")
+	List<Object[]> countBookmarksByCourseIds(@Param("courseIds") List<Long> courseIds);
 
 	// 북마크 목록 페이징 조회 (bookmarkCreatedAt 내림차순 정렬)
 	Page<CourseBookmark> findByUserId(Long userId, Pageable pageable);
@@ -31,4 +40,5 @@ public interface CourseBookmarkRepository extends JpaRepository<CourseBookmark, 
 			"WHERE cb.user.id = :userId " +
 			"ORDER BY cb.createdAt DESC")
 	Page<CourseBookmark> findByUserIdWithCourseAndUser(@Param("userId") Long userId, Pageable pageable);
+
 }

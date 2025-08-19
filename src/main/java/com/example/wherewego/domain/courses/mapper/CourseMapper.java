@@ -57,7 +57,7 @@ public class CourseMapper {
 	}
 
 	public static CourseListResponseDto toListWithPlacesAndUserStatus(Course course, List<CoursePlaceInfo> places, 
-			Boolean isLiked, Boolean isBookmarked, Double myRating) {
+			Boolean isLiked, Boolean isBookmarked, Double myRating, Integer bookmarkCount) {
 		return CourseListResponseDto.builder()
 			.courseId(course.getId())
 			.nickname(course.getUser().getNickname())
@@ -66,6 +66,7 @@ public class CourseMapper {
 			.themes(course.getThemes())
 			.region(course.getRegion())
 			.likeCount(course.getLikeCount())
+			.bookmarkCount(bookmarkCount != null ? bookmarkCount : 0)
 			.averageRating(course.getAverageRating())
 			.isPublic(course.getIsPublic())
 			.createdAt(course.getCreatedAt())

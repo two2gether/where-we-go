@@ -38,6 +38,36 @@ const SettingsIcon = () => (
   </svg>
 );
 
+const MessageIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+
+const ReviewIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14,2 14,8 20,8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10,9 9,9 8,9"/>
+  </svg>
+);
+
+const RouteIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="6" cy="19" r="3"/>
+    <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>
+    <circle cx="18" cy="5" r="3"/>
+  </svg>
+);
+
+const HeartIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+
 interface LinearLayoutProps {
   children: React.ReactNode;
   title?: string;
@@ -57,7 +87,14 @@ export const LinearLayout: React.FC<LinearLayoutProps> = ({
     { icon: MapIcon, href: '/courses', label: '코스 탐색' },
     { icon: BookmarkIcon, href: '/places', label: '장소 검색' },
     { icon: UserIcon, href: '/mypage', label: '마이페이지' },
-    { icon: SettingsIcon, href: '/settings', label: '설정' },
+  ];
+
+  const myActivityItems = [
+    { icon: MessageIcon, href: '/my/comments', label: '내 댓글' },
+    { icon: ReviewIcon, href: '/my/reviews', label: '내 리뷰' },
+    { icon: RouteIcon, href: '/my/courses', label: '내 코스' },
+    { icon: HeartIcon, href: '/my/likes', label: '좋아요한 코스' },
+    { icon: BookmarkIcon, href: '/bookmarks', label: '북마크' },
   ];
 
   return (
@@ -131,6 +168,54 @@ export const LinearLayout: React.FC<LinearLayoutProps> = ({
               <span>{label}</span>
             </Link>
           ))}
+        </div>
+
+        {/* 내 활동 섹션 */}
+        <div 
+          className="mt-8"
+          style={{
+            borderTop: '1px solid var(--notion-gray-light)',
+            paddingTop: '16px'
+          }}
+        >
+          <div 
+            style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: 'var(--notion-text-light)',
+              marginBottom: '8px',
+              paddingLeft: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}
+          >
+            내 활동
+          </div>
+          <div className="flex flex-col space-y-1">
+            {myActivityItems.map(({ icon: Icon, href, label }) => (
+              <Link
+                key={href}
+                to={href}
+                className={`linear-sidebar-item ${currentPath === href ? 'active' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  color: currentPath === href ? 'var(--notion-text)' : 'var(--notion-text-light)',
+                  backgroundColor: currentPath === href ? 'var(--notion-gray-bg)' : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: currentPath === href ? '500' : '400',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Icon />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </aside>
 

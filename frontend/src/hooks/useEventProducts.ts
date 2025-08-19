@@ -9,8 +9,7 @@ import type {
 export const useEventProducts = (page = 0, size = 10) => {
   return useQuery({
     queryKey: ['eventProducts', 'active', page, size],
-    queryFn: () => eventProductService.getActiveEventProducts(page, size),
-    select: (data) => data.data
+    queryFn: () => eventProductService.getActiveEventProducts(page, size)
   });
 };
 
@@ -18,7 +17,6 @@ export const useEventProductDetail = (eventProductId: number) => {
   return useQuery({
     queryKey: ['eventProducts', eventProductId],
     queryFn: () => eventProductService.getEventProductDetail(eventProductId),
-    select: (data) => data.data,
     enabled: !!eventProductId
   });
 };
@@ -27,8 +25,7 @@ export const useEventProductDetail = (eventProductId: number) => {
 export const useAdminEventProducts = (page = 0, size = 10) => {
   return useQuery({
     queryKey: ['admin', 'eventProducts', page, size],
-    queryFn: () => eventProductService.getActiveEventProducts(page, size),
-    select: (data) => data.data
+    queryFn: () => eventProductService.getActiveEventProducts(page, size)
   });
 };
 

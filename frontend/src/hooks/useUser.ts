@@ -134,9 +134,26 @@ export const useMyCourseLikes = (page: number = 0, size: number = 10) => {
       console.log('🔍 좋아요한 코스 API 호출:', { page, size });
       const result = await userService.getMyCourseLikes(page, size);
       console.log('🔍 좋아요한 코스 API 응답:', result);
+      
+      // 각 코스의 이미지 정보 상세 로깅
+      if (result?.content && Array.isArray(result.content)) {
+        result.content.forEach((like, index) => {
+          console.log(`🔍 좋아요 코스 ${index + 1}:`, {
+            courseId: like.courseListDto?.courseId,
+            title: like.courseListDto?.title,
+            places: like.courseListDto?.places,
+            placesCount: like.courseListDto?.places?.length,
+            firstPlaceImage: like.courseListDto?.places?.[0]?.imageUrl
+          });
+        });
+      }
+      
       return result;
     },
-    staleTime: 5 * 60 * 1000, // 5분
+    staleTime: 0, // 캐시 비활성화 (임시)
+    cacheTime: 0, // 캐시 시간 0으로 설정 (임시)
+    refetchOnMount: true, // 마운트시 항상 새로 가져오기
+    refetchOnWindowFocus: true, // 창 포커스시 새로 가져오기
     onError: (error) => {
       console.error('🚨 좋아요한 코스 API 에러:', error);
     },

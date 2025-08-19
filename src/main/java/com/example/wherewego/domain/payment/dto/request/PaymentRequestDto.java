@@ -21,9 +21,8 @@ public class PaymentRequestDto {
 	private Long paymentId;
 
 	/**
-	 * 가맹점 API Key (절대 노출 금지)
+	 * 가맹점 API Key (백엔드에서 자동으로 설정됨)
 	 */
-	@NotBlank(message = "API 키는 필수입니다.")
 	private String apiKey;
 
 	/**

@@ -1,5 +1,6 @@
 package com.example.wherewego.domain.courses.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -41,5 +42,6 @@ public interface CourseLikeRepository extends JpaRepository<CourseLike, Long> {
 		    where l.user.id = :userId and l.course.id = :courseId
 		""")
 	Long findId(@Param("userId") Long userId, @Param("courseId") Long courseId);
+
 
 }

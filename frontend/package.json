@@ -5,10 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "npm run env:local && vite",
+    "dev:aws": "npm run env:aws && vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "env:local": "node scripts/switch-env.js local",
+    "env:aws": "node scripts/switch-env.js aws",
+    "docker:up": "cd .. && docker-compose up -d mysql redis && echo 'MySQL, Redis 컨테이너가 시작되었습니다. 백엔드를 ./gradlew bootRun으로 실행하거나 docker-compose up app을 사용하세요.'",
+    "docker:down": "cd .. && docker-compose down",
+    "docker:logs": "cd .. && docker-compose logs -f app",
+    "docker:full-up": "cd .. && docker-compose up -d && echo '전체 스택이 시작되었습니다. 프론트엔드는 npm run dev:local로 실행하세요.'"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
