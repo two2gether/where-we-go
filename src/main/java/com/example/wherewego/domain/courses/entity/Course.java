@@ -139,13 +139,6 @@ public class Course extends BaseEntity {
 	private Integer dailyScore = 0;
 
 	/**
-	 * 삭제 여부
-	 */
-	@Column(name = "is_deleted", nullable = false)
-	@Builder.Default
-	private Boolean isDeleted = false;
-
-	/**
 	 * 공개 여부 (기본값: 비공개)
 	 */
 	@Column(name = "is_public", nullable = false)

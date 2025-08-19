@@ -290,7 +290,7 @@ public class CourseService {
 		Long userId
 	) {
 		// 1. 코스 조회하기
-		Course findCourse = courseRepository.findByIdWithThemes(courseId)
+		Course findCourse = courseRepository.findByIdWithThemesIncludeDeleted(courseId)
 			.orElseThrow(() -> new CustomException(ErrorCode.COURSE_NOT_FOUND));
 
 		// 2. 사용자 권한 체크 - 본인 코스만 삭제할 수 있게
