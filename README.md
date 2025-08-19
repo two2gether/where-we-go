@@ -148,26 +148,13 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 
 <img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
 
-## 6. 성능 개선 & 트러블슈팅
-
-
-
-//////////////////////////////////////////////////////////////////////
-###   개발 가이드
-
-#### 커밋 컨벤션
-
-```
-feat: 새로운 기능 추가
-fix: 버그 수정
-refactor: 코드 리팩토링
-test: 테스트 코드 추가/수정
-docs: 문서 수정
-style: 코드 스타일 수정
-```
-
-#### 브랜치 전략
-
-- `main`: 운영 환경 브랜치
-- `dev`: 개발 환경 브랜치
-- `feat/*`: 기능 개발 브랜치
+## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
+- 동시 좋아요 처리 (Race Condition 방지)
+- 재고 감소 (동시 주문 시 과판매/실패 방지)
+- 1인당 중복 구매 제한
+- 캐싱 도입을 통한 API 응답 속도 및 시스템 안정성 개선
+- Places 시스템 + 환불 시스템
+- 콜백 중복 처리 개선
+- Spring Security Multiple FilterChain 적용
+- Spring AOP Self-invocation
+- Jackson 역직렬화 오류
