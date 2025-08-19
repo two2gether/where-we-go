@@ -2,7 +2,10 @@ name: Optimized Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main, dev, feature/docker-deployment, feat/frontend-clean, feat/frontend-improvements-clean ]
+    branches: [ main ]  # PR 머지 시 main 브랜치로 배포
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]  # PR이 머지되었을 때만
 
 env:
   AWS_REGION: ap-northeast-2

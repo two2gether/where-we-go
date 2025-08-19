@@ -1,6 +1,28 @@
 version: '3.8'
 
 services:
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: wherewego-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=wherewego
+      - MYSQL_USER=wherewego
+      - MYSQL_PASSWORD=1234
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - wherewego-network
+
   # Redis 캐시 서버
   redis:
     image: redis:7.2-alpine
@@ -11,7 +33,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -20,18 +42,21 @@ services:
 
   # Spring Boot 애플리케이션
   app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: wherewego-app
     ports:
       - "8080:8080"
     environment:
-      # 데이터베이스 설정 (RDS 연결)
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=${DB_URL}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      # 로컬 개발 환경 설정
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/wherewego?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=wherewego
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQL8Dialect
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       
       # Redis 설정
       - SPRING_DATA_REDIS_HOST=redis
@@ -51,10 +76,12 @@ services:
       # 결제 설정
       - TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -64,6 +91,7 @@ services:
 
 volumes:
   redis_data:
+  mysql_data:
 
 networks:
   wherewego-network:

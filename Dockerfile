@@ -39,7 +39,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/api/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # JVM 메모리 최적화 옵션 포함
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
