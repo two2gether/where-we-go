@@ -47,10 +47,12 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         
         setOrderDetail(order);
         
-        const callbackUrl = import.meta.env.VITE_PAYMENT_CALLBACK_URL;
+        const callbackUrl = import.meta.env.VITE_PAYMENT_CALLBACK_URL || 
+                           'http://wherewego-prod-alb-1343640395.ap-northeast-2.elb.amazonaws.com/api/payments/callback';
         console.log('🔍 환경변수 확인:', {
-          VITE_PAYMENT_CALLBACK_URL: callbackUrl,
-          전체환경변수: import.meta.env
+          VITE_PAYMENT_CALLBACK_URL: import.meta.env.VITE_PAYMENT_CALLBACK_URL,
+          전체환경변수: import.meta.env,
+          최종사용URL: callbackUrl
         });
         
         const paymentRequestData = {
@@ -61,7 +63,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           retUrl: `${window.location.origin}/payment/success`,
           retCancelUrl: `${window.location.origin}/payment/fail`,
           autoExecute: true,
-          // GitHub Secrets를 통한 안전한 콜백 URL 설정
+          // 환경변수 우선, 실패시 하드코딩 폴백
           resultCallback: callbackUrl,
           callbackVersion: 'V2',
           quantity: order.quantity
