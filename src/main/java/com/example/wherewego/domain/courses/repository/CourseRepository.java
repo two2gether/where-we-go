@@ -70,6 +70,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	Page<Course> findByRegionStartsWithAndIsPublicTrue(@Param("region") String region,
 		Pageable pageable);
 
+	// 일반 조회용
 	@Query("""
 		    SELECT c FROM Course c
 		    LEFT JOIN FETCH c.themes
@@ -78,6 +79,15 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		            AND c.isDeleted = false
 		""")
 	Optional<Course> findByIdWithThemes(@Param("courseId") Long courseId);
+
+	// 소프트 삭제용 조회
+	@Query("""
+		    SELECT c FROM Course c
+		    LEFT JOIN FETCH c.themes
+		    LEFT JOIN FETCH c.user
+		    WHERE c.id = :courseId
+		""")
+	Optional<Course> findByIdWithThemesIncludeDeleted(@Param("courseId") Long courseId);
 
 	@Query("""
 		    SELECT c
