@@ -124,11 +124,12 @@ jobs:
         if: needs.detect-changes.outputs.backend == 'true'
         run: chmod +x gradlew
 
-      - name: Build Frontend (환경변수 주입 테스트용 강제 빌드)
+      - name: Build Frontend (환경변수 주입)
         env:
           VITE_PAYMENT_CALLBACK_URL: ${{ secrets.VITE_PAYMENT_CALLBACK_URL }}
         run: |
-          echo "🎨 프론트엔드 빌드 중... (환경변수: ${VITE_PAYMENT_CALLBACK_URL})"
+          echo "🎨 프론트엔드 빌드 중..."
+          echo "콜백 URL 설정 확인: ✅"
           cd frontend && npm ci && npm run build && cd ..
 
       - name: Build with Gradle (conditional)
@@ -305,10 +306,12 @@ jobs:
           IMAGE_S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/images-bucket" --query 'Parameter.Value' --output text)
           AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
           
-          # 고정 ALB DNS 가져오기 - GitHub Secrets 사용 (보안)
+          # GitHub Secrets에서 콜백 URL 가져오기
+          CALLBACK_URL="${{ secrets.VITE_PAYMENT_CALLBACK_URL }}"
           ALB_DNS="${{ secrets.ALB_DNS_NAME }}"
           
           echo "🌐 ALB DNS (고정): $ALB_DNS"
+          echo "🔗 콜백 URL: $CALLBACK_URL"
           
           # 환경변수 설정
           cd frontend
@@ -320,6 +323,7 @@ jobs:
           
           cat > .env.production << EOF
           VITE_API_BASE_URL=http://${ALB_DNS}/api
+          VITE_PAYMENT_CALLBACK_URL=${CALLBACK_URL}
           VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
           VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
           VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}

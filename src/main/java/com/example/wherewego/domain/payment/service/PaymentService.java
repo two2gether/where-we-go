@@ -125,15 +125,10 @@ public class PaymentService {
 			.quantity(requestDto.getQuantity())
 			.build();
 
-		log.info("토스 결제 API 요청 - orderNo: {}, amount: {}, apiKey 설정됨: {}", 
-			tossRequestDto.getOrderNo(), tossRequestDto.getAmount(), tossRequestDto.getApiKey() != null);
-		
-		try {
-			log.error("🔥 토스 콜백 설정 - resultCallback: {}, callbackVersion: {}", 
-				tossRequestDto.getResultCallback(), tossRequestDto.getCallbackVersion());
-		} catch (Exception e) {
-			log.error("❌ 콜백 설정 로그 출력 중 예외: {}", e.getMessage(), e);
-		}
+		log.info("토스 결제 API 요청 - orderNo: {}, amount: {}", 
+			tossRequestDto.getOrderNo(), tossRequestDto.getAmount());
+		log.debug("결제 요청 상세 - callback: {}, version: {}", 
+			tossRequestDto.getResultCallback(), tossRequestDto.getCallbackVersion());
 
 		// 5. WebClient로 토스 결제 API POST 요청
 		PaymentResponseDto responseDto = tossWebClient.post()
@@ -198,11 +193,10 @@ public class PaymentService {
 		// 4. orderNo로 결제 정보 조회 (paymentId 대신 orderNo 사용)
 		Payment payment = paymentRepository.findByOrderNo(requestDto.getOrderNo())
 			.orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-		payment.markAsDone(); // 결제 상태 변경
-		log.info("결제 상태 - {}", payment.getPaymentStatus());
+		payment.markAsDone();
 		paymentRepository.save(payment);
 
-		log.info("결제 승인 완료 - 주문번호: {}, 금액: {}", requestDto.getOrderNo(), requestDto.getPaidAmount());
+		log.info("결제 승인 완료 - orderNo: {}, amount: {}", requestDto.getOrderNo(), requestDto.getPaidAmount());
 	}
 
 	/**

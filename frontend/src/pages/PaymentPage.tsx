@@ -18,7 +18,6 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
   
   const orderId = searchParams.get('orderId');
   
-  console.log('PaymentPage - 인증 상태:', { isAuthenticated, hasToken: !!token, user: user?.nickname });
   const [orderDetail, setOrderDetail] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,17 +42,20 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         const orderResponse = await getOrderDetail(parseInt(orderId));
         const order = orderResponse.data;
         
-        console.log('주문 정보 조회 성공:', order);
         
         setOrderDetail(order);
         
-        const callbackUrl = import.meta.env.VITE_PAYMENT_CALLBACK_URL || 
-                           'http://wherewego-prod-alb-1343640395.ap-northeast-2.elb.amazonaws.com/api/payments/callback';
-        console.log('🔍 환경변수 확인:', {
-          VITE_PAYMENT_CALLBACK_URL: import.meta.env.VITE_PAYMENT_CALLBACK_URL,
-          전체환경변수: import.meta.env,
-          최종사용URL: callbackUrl
-        });
+        // 콜백 URL 설정 - 빌드 시 GitHub Secrets에서 주입된 환경변수 사용
+        const callbackUrl = import.meta.env.VITE_PAYMENT_CALLBACK_URL;
+        
+        if (!callbackUrl) {
+          console.error('결제 콜백 URL이 설정되지 않았습니다:', import.meta.env);
+          alert('결제 시스템 설정 오류입니다. 잠시 후 다시 시도해주세요.');
+          navigate('/events');
+          return;
+        }
+        
+        console.log('콜백 URL 설정됨:', callbackUrl.substring(0, 30) + '...');
         
         const paymentRequestData = {
           orderNo: order.orderNo,
@@ -69,7 +71,6 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           quantity: order.quantity
         };
         
-        console.log('결제 데이터 생성:', paymentRequestData);
         setPaymentData(paymentRequestData);
       } catch (error) {
         console.error('주문 정보 조회 실패:', error);
@@ -94,19 +95,13 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
       return;
     }
     
-    console.log('결제 요청 데이터:', paymentData);
-    
     try {
-      console.log('결제 API 호출 시작...');
       const response = await createPaymentMutation.mutateAsync(paymentData);
-      console.log('결제 API 응답:', response);
       
       // 토스페이먼츠 결제 페이지로 리다이렉트
       if (response.code === 0 && response.checkoutPage) {
-        console.log('결제 페이지로 리다이렉트:', response.checkoutPage);
         window.location.href = response.checkoutPage;
       } else {
-        console.error('결제 페이지 생성 실패:', response);
         const errorMsg = response.msg || '결제 페이지를 생성할 수 없습니다.';
         alert(`결제 실패: ${errorMsg}`);
       }
