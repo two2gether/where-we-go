@@ -126,6 +126,8 @@ jobs:
 
       - name: Build Frontend (conditional)
         if: needs.detect-changes.outputs.frontend == 'true'
+        env:
+          VITE_PAYMENT_CALLBACK_URL: ${{ secrets.VITE_PAYMENT_CALLBACK_URL }}
         run: |
           echo "🎨 프론트엔드 빌드 중..."
           cd frontend && npm ci && npm run build && cd ..
