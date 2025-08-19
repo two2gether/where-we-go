@@ -203,3 +203,56 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 - ✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
 - ✅ 일시적 충돌 회복: 재시도로 사용자 체감 오류 감소
 - ✅ UX 개선: 좋아요 수가 안정적으로 즉시 반영
+
+## 🔐 Spring Security Multiple FilterChain 적용
+
+### ① 문제 상황
+- 새로운 **공개 API 추가 시 403 에러 발생**
+- `SecurityConfig` + `JwtFilter` 두 곳에 **중복 설정 필요**
+- `JwtFilter`가 `SecurityConfig`보다 먼저 실행되어 `permitAll()` 무시
+
+---
+
+### ② 문제 분석
+- 기존 구조: **Single FilterChain**
+- 개선 방향: **Multiple FilterChain**
+
+```java
+@Bean
+@Order(1)  // 공개 API용 - JWT Filter 없음
+public SecurityFilterChain publicApiFilterChain(HttpSecurity http) throws Exception {
+    return http
+            .securityMatcher("/api/auth/**", "/health")
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .build();
+}
+
+@Bean
+@Order(2)  // 인증 API용 - JWT Filter 있음
+public SecurityFilterChain privateApiFilterChain(HttpSecurity http) throws Exception {
+    return http
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+            .build();
+}
+
+---
+
+### ③ 문제 해결
+
+- **SecurityConfig**  
+  - Single → Multiple FilterChain 구조로 분리  
+
+- **JwtFilter**  
+  - `@Component` 제거  
+  - 역할 단순화 → 토큰 검증만 담당  
+
+- **AuthService**  
+  - `CustomException` 패턴 통일  
+
+---
+
+### ✅ 개선 결과
+- 공개 API 추가 시 **SecurityConfig에서만 관리** 가능 → 유지보수 용이  
+- `permitAll()` 정상 반영 → 불필요한 403 에러 제거  
+- 인증/비인증 로직 명확히 분리 → 가독성 및 확장성 증가 
