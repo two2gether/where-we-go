@@ -14,7 +14,7 @@ export interface OrderCreateResponseDto {
 }
 
 // 주문 상태 타입 (백엔드 OrderStatus enum과 매칭)
-export type OrderStatus = 'PENDING' | 'READY' | 'DONE' | 'FAILED' | 'REFUNDED';
+export type OrderStatus = 'PENDING' | 'READY' | 'DONE' | 'FAILED' | 'REFUNDED' | 'CANCELED';
 
 // 내 주문 응답 DTO (백엔드 MyOrderResponseDto와 매칭)
 export interface MyOrderResponseDto {
@@ -54,9 +54,14 @@ export const orderService = {
   },
 
   // 내 주문 목록 조회
-  getMyOrders: async (page = 0, size = 10): Promise<ApiResponse<PagedResponse<MyOrderResponseDto>>> => {
-    const response = await api.get('/orders/mypage', {
-      params: { page, size }
+  getMyOrders: async (page = 0, size = 10, status?: string): Promise<ApiResponse<PagedResponse<MyOrderResponseDto>>> => {
+    const params: any = { page, size };
+    if (status) {
+      params.status = status;
+    }
+    
+    const response = await api.get('/users/mypage/orders', {
+      params
     });
     return response.data;
   },

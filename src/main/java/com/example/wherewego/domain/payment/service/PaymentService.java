@@ -75,6 +75,13 @@ public class PaymentService {
 	 */
 	@Transactional
 	public PaymentResponseDto requestPayment(PaymentRequestDto requestDto, Long userId) {
+		// 환경변수 확인
+		if (tossSecretKey == null || tossSecretKey.trim().isEmpty()) {
+			log.error("토스 시크릿 키가 설정되지 않았습니다!");
+			throw new CustomException(ErrorCode.TOSS_PAYMENT_FAILED);
+		}
+		log.info("토스 시크릿 키 설정 확인: {}...", tossSecretKey.length() > 10 ? tossSecretKey.substring(0, 10) + "***" : "짧은키");
+
 		// 1. 주문 조회
 		Order order = orderService.getOrderByOrderNo(requestDto.getOrderNo());
 
@@ -101,31 +108,52 @@ public class PaymentService {
 		}
 		product.decreaseStock(quantity); // 재고 감소 (엔티티 내부 로직)
 
-		// 4. Basic 인증 헤더 생성 (API 키 base64 인코딩)
-		String encodedAuth = Base64.getEncoder()
-			.encodeToString((tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
+		// 4. API 키를 백엔드에서 설정
+		PaymentRequestDto tossRequestDto = PaymentRequestDto.builder()
+			.paymentId(requestDto.getPaymentId())
+			.apiKey(tossSecretKey)
+			.orderNo(requestDto.getOrderNo())
+			.amount(requestDto.getAmount())
+			.amountTaxFree(requestDto.getAmountTaxFree())
+			.productDesc(requestDto.getProductDesc())
+			.retUrl(requestDto.getRetUrl())
+			.retCancelUrl(requestDto.getRetCancelUrl())
+			.autoExecute(requestDto.isAutoExecute())
+			.resultCallback(requestDto.getResultCallback())
+			.callbackVersion(requestDto.getCallbackVersion())
+			.productId(requestDto.getProductId())
+			.quantity(requestDto.getQuantity())
+			.build();
+
+		log.info("토스 결제 API 요청 - orderNo: {}, amount: {}, apiKey 설정됨: {}", 
+			tossRequestDto.getOrderNo(), tossRequestDto.getAmount(), tossRequestDto.getApiKey() != null);
 
 		// 5. WebClient로 토스 결제 API POST 요청
 		PaymentResponseDto responseDto = tossWebClient.post()
 			.uri(TOSS_PAYMENTS_ENDPOINT) // API 경로 설정(/api/v2/payments)
-			.header(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth) // 인증 헤더
 			.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE) // Content-Type 설정
-			.bodyValue(requestDto) // 요청 바디 설정 (JSON 형태로 자동 변환)
+			.bodyValue(tossRequestDto) // 요청 바디 설정 (JSON 형태로 자동 변환)
 			.retrieve() // 응답 수신 준비
 			.onStatus(HttpStatusCode::isError, clientResponse -> {
 				// HTTP 상태 코드가 4xx 또는 5xx면 예외 처리
 				log.error("토스 결제 HTTP 오류 발생: {}", clientResponse.statusCode());
-				return clientResponse.createException();
+				return clientResponse.bodyToMono(String.class)
+					.flatMap(errorBody -> {
+						log.error("토스 API 오류 응답: {}", errorBody);
+						return Mono.error(new CustomException(ErrorCode.TOSS_PAYMENT_FAILED));
+					});
 			})
 			.bodyToMono(PaymentResponseDto.class) // 응답 JSON을 DTO로 매핑
 			.block(); // 동기 방식으로 응답 대기
 
-		log.info("결제페이지: {}", responseDto.getCheckoutPage());
+		log.info("토스 결제 API 응답 - checkoutPage: {}", responseDto != null ? responseDto.getCheckoutPage() : "null");
 
 		// 6. 응답 본문의 code가 0이 아닌 경우 (토스 자체 실패 응답)
-		if (responseDto.getCode() != 0) {
+		if (responseDto == null || responseDto.getCode() != 0) {
 			log.error("토스 결제 실패: code={}, msg={}, errorCode={}",
-				responseDto.getCode(), responseDto.getMsg(), responseDto.getErrorCode());
+				responseDto != null ? responseDto.getCode() : "null",
+				responseDto != null ? responseDto.getMsg() : "응답이 null",
+				responseDto != null ? responseDto.getErrorCode() : "null");
 			throw new CustomException(ErrorCode.TOSS_PAYMENT_FAILED);
 		}
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Badge, Button } from '../base';
+import { formatDate } from '../../utils/dateUtils';
 import type { MyOrderResponseDto } from '../../api/services/order.service';
 
 interface OrderCardProps {
@@ -20,9 +21,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       case 'DONE':
         return 'success';
       case 'PENDING':
+      case 'READY':
         return 'warning';
-      case 'CANCELLED':
+      case 'FAILED':
+      case 'CANCELED':
         return 'error';
+      case 'REFUNDED':
+        return 'default';
       default:
         return 'default';
     }
@@ -30,24 +35,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'DONE':
-        return '완료';
       case 'PENDING':
-        return '대기중';
-      case 'CANCELLED':
-        return '취소됨';
+        return '결제 대기중';
+      case 'READY':
+        return '결제 준비완료';
+      case 'DONE':
+        return '결제 성공';
+      case 'FAILED':
+        return '결제 실패';
+      case 'REFUNDED':
+        return '환불 완료';
+      case 'CANCELED':
+        return '미결제';
       default:
         return status;
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   const formatPrice = (amount: number) => {
     return amount.toLocaleString('ko-KR');
@@ -88,7 +92,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 className="text-sm"
                 style={{ color: 'var(--notion-text-light)' }}
               >
-                주문일: {formatDate(order.createdAt)}
+                주문일: {formatDate(order.orderedAt)}
               </p>
             </div>
           </div>
@@ -99,18 +103,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             style={{
               backgroundColor: 
                 order.status === 'DONE' ? 'var(--notion-green-bg)' :
-                order.status === 'PENDING' ? 'var(--notion-yellow-bg)' :
-                order.status === 'CANCELLED' ? 'var(--notion-red-bg)' :
+                (order.status === 'PENDING' || order.status === 'READY') ? 'var(--notion-yellow-bg)' :
+                (order.status === 'FAILED' || order.status === 'CANCELED') ? 'var(--notion-red-bg)' :
                 'var(--notion-gray-bg)',
               color: 
                 order.status === 'DONE' ? 'var(--notion-green)' :
-                order.status === 'PENDING' ? 'var(--notion-yellow)' :
-                order.status === 'CANCELLED' ? 'var(--notion-red)' :
+                (order.status === 'PENDING' || order.status === 'READY') ? 'var(--notion-yellow)' :
+                (order.status === 'FAILED' || order.status === 'CANCELED') ? 'var(--notion-red)' :
                 'var(--notion-text-light)',
               border: '1px solid ' + (
                 order.status === 'DONE' ? 'var(--notion-green-light)' :
-                order.status === 'PENDING' ? 'var(--notion-yellow-light)' :
-                order.status === 'CANCELLED' ? 'var(--notion-red-light)' :
+                (order.status === 'PENDING' || order.status === 'READY') ? 'var(--notion-yellow-light)' :
+                (order.status === 'FAILED' || order.status === 'CANCELED') ? 'var(--notion-red-light)' :
                 'var(--notion-gray-light)')
             }}
           >
@@ -156,7 +160,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             >
               상세보기
             </Button>
-            {order.status === 'PENDING' && onCancel && (
+            {(order.status === 'PENDING' || order.status === 'READY') && onCancel && (
               <Button
                 variant="outline"
                 size="sm"

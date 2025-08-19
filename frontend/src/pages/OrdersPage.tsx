@@ -1,15 +1,34 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMyOrders, useOrders } from '../hooks';
 import { OrderCard } from '../components/order';
 import { Button, Spinner, Card } from '../components/base';
 import { GitHubLayout } from '../components/layout';
+import type { OrderStatus } from '../api/services/order.service';
 
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(0);
-  const { data: ordersResponse, isLoading, error } = useMyOrders(currentPage, 10);
+  
+  // URL에서 status 파라미터 읽기 - 백엔드 OrderStatus enum 값 직접 사용
+  const statusParam = searchParams.get('status');
+  const currentStatus: OrderStatus | undefined = 
+    (statusParam as OrderStatus) || undefined; // 전체 주문
+
+  const { data: ordersResponse, isLoading, error } = useMyOrders(currentPage, 10, currentStatus);
+  
+  // 각 탭별 count를 위한 별도 쿼리들
+  const { data: allOrdersResponse } = useMyOrders(0, 1, undefined);
+  const { data: processingOrdersResponse } = useMyOrders(0, 1, 'PENDING');
+  const { data: completedOrdersResponse } = useMyOrders(0, 1, 'DONE');
+  
   const { deleteOrder } = useOrders();
+
+  // 상태가 변경될 때마다 페이지를 0으로 리셋
+  React.useEffect(() => {
+    setCurrentPage(0);
+  }, [statusParam]);
 
   const handleViewDetail = (orderId: number) => {
     navigate(`/orders/${orderId}`);
@@ -27,15 +46,40 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  const orders = ordersResponse?.content || [];
-  const hasNextPage = ordersResponse && !ordersResponse.last;
-  const hasPreviousPage = ordersResponse && !ordersResponse.first;
+  const orders = ordersResponse?.data?.content || [];
+  const hasNextPage = ordersResponse?.data && !ordersResponse.data.last;
+  const hasPreviousPage = ordersResponse?.data && !ordersResponse.data.first;
 
-  // GitHub 스타일 탭 구성
+  // 탭 클릭 핸들러
+  const handleTabClick = (status?: string) => {
+    setCurrentPage(0); // 페이지를 처음으로 리셋
+    if (status) {
+      setSearchParams({ status });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  // 상태별 주문 개수 표시를 위한 탭 구성
   const tabs = [
-    { label: '전체 주문', href: '/orders', active: true, count: orders.length },
-    { label: '진행중인 주문', href: '/orders?status=processing', active: false },
-    { label: '완료된 주문', href: '/orders?status=completed', active: false },
+    { 
+      label: '전체 주문', 
+      onClick: () => handleTabClick(), 
+      active: !statusParam, 
+      count: allOrdersResponse?.data?.totalElements || 0
+    },
+    { 
+      label: '진행중인 주문', 
+      onClick: () => handleTabClick('PENDING'), 
+      active: statusParam === 'PENDING',
+      count: processingOrdersResponse?.data?.totalElements || 0
+    },
+    { 
+      label: '완료된 주문', 
+      onClick: () => handleTabClick('DONE'), 
+      active: statusParam === 'DONE',
+      count: completedOrdersResponse?.data?.totalElements || 0
+    },
   ];
 
   return (

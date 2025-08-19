@@ -13,6 +13,8 @@ import com.example.wherewego.domain.payment.entity.Payment;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	boolean existsByOrderNo(String orderNo);
+	
+	Optional<Payment> findByOrderNo(String orderNo);
 
 	/**
 	 * 특정 주문의 결제 정보를 조회합니다. (주문 정보와 함께 JOIN FETCH)

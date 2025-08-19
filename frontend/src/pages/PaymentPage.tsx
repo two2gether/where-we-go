@@ -48,7 +48,6 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         setOrderDetail(order);
         
         const paymentRequestData = {
-          apiKey: import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_dummy',
           orderNo: order.orderNo,
           amount: order.totalPrice,
           amountTaxFree: 0,
@@ -56,6 +55,8 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           retUrl: `${window.location.origin}/payment/success`,
           retCancelUrl: `${window.location.origin}/payment/fail`,
           autoExecute: true,
+          // ALB 콜백 URL 설정 (환경변수로 안전하게 관리)
+          resultCallback: import.meta.env.VITE_PAYMENT_CALLBACK_URL,
           callbackVersion: 'V2',
           quantity: order.quantity
         };
