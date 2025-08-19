@@ -2,7 +2,7 @@ name: Optimized Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main ]  # PR 머지 시 main 브랜치로 배포
+    branches: [ main, feat/frontend-improvements-clean ]  # 테스트용 브랜치 추가
   pull_request:
     branches: [ main ]
     types: [ closed ]  # PR이 머지되었을 때만
