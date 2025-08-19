@@ -127,6 +127,8 @@ public class PaymentService {
 
 		log.info("토스 결제 API 요청 - orderNo: {}, amount: {}, apiKey 설정됨: {}", 
 			tossRequestDto.getOrderNo(), tossRequestDto.getAmount(), tossRequestDto.getApiKey() != null);
+		log.info("토스 콜백 설정 - resultCallback: {}, callbackVersion: {}", 
+			tossRequestDto.getResultCallback(), tossRequestDto.getCallbackVersion());
 
 		// 5. WebClient로 토스 결제 API POST 요청
 		PaymentResponseDto responseDto = tossWebClient.post()
