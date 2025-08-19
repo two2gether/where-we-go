@@ -55,8 +55,8 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           retUrl: `${window.location.origin}/payment/success`,
           retCancelUrl: `${window.location.origin}/payment/fail`,
           autoExecute: true,
-          // ALB 콜백 URL 설정 (환경변수로 안전하게 관리)
-          resultCallback: import.meta.env.VITE_PAYMENT_CALLBACK_URL,
+          // 동적 콜백 URL 생성 (현재 도메인 기반)
+          resultCallback: `${window.location.protocol}//${window.location.host}/api/payments/callback`,
           callbackVersion: 'V2',
           quantity: order.quantity
         };
