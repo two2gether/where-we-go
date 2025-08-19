@@ -197,7 +197,7 @@ course-like-list::userId:{userId}:* 패턴 삭제로 목록 캐시 무효화
 알림 발행
 → notificationService.triggerLikeNotification(user, course) 호출
 
-④ 결과와 효과
+## ④ 결과와 효과
 
 ✅ 중복 좋아요 방지: 유니크 + INSERT IGNORE로 DB 차원에서 차단
 ✅ 정확한 카운트: 잠금 + 원자식 업데이트로 likeCount 일치
