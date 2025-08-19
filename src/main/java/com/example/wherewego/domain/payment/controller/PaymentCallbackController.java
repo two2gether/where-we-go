@@ -12,7 +12,9 @@ import com.example.wherewego.domain.payment.service.PaymentService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/payments")
@@ -31,7 +33,12 @@ public class PaymentCallbackController {
 	public void paymentCallback(
 		@RequestBody @Valid CallbackRequestDto requestDto
 	) {
+		log.info("🎉 토스페이 콜백 수신됨! orderNo: {}, status: {}", requestDto.getOrderNo(), requestDto.getStatus());
+		log.info("콜백 데이터: {}", requestDto);
+		
 		// 비즈니스 로직 처리: 주문 상태 변경, 결제 정보 저장 등
 		paymentService.processPaymentApproval(requestDto);
+		
+		log.info("✅ 콜백 처리 완료!");
 	}
 }
