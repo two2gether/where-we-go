@@ -136,6 +136,14 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 
 - 이벤트 상품 주문 / 결제 / 취소 / 환불
 
+## 3. [API 명세서](https://www.notion.so/teamsparta/2322dc3ef5148183b842f8f93282dba2?v=2322dc3ef5148140ba5c000c1469c739&source=copy_link)
+
+<img width="479" height="970" alt="image" src="https://github.com/user-attachments/assets/0583cb05-b564-4bfa-a83c-acde225bf911" />
+
+## 4. ERD
+
+<img width="2051" height="387" alt="image" src="https://github.com/user-attachments/assets/0b958036-4ecc-4905-a485-de4e20bf555a" />
+
 
 //////////////////////////////////////////////////////////////////////
 ###   개발 가이드
