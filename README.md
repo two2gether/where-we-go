@@ -237,7 +237,7 @@ public SecurityFilterChain privateApiFilterChain(HttpSecurity http) throws Excep
             .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
             .build();
 }
-
+```
 
 ### ③ 문제 해결
 
