@@ -146,7 +146,7 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 
 ## 5. [아키텍처](https://www.notion.so/teamsparta/Where-We-Go-23b2dc3ef514807a970deadce5bf8484?source=copy_link)
 
-<img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
+<img src="https://github.com/user-attachments/assets/11833298-d8f0-4278-bc44-69cdc748add1" style="width:600px;" />
 
 ## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
 
