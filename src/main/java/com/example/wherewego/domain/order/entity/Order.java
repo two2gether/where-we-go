@@ -13,10 +13,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,13 +31,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Table(
-	name = "orders",
-	uniqueConstraints = {
-		@UniqueConstraint(
-			name = "uk_user_product_status",
-			columnNames = {"user_id", "product_id", "status"}
-		)
-	}
+    name = "orders",
+    indexes = {
+        // 검색 성능을 위한 복합 인덱스 (unique하지 않음)
+        @Index(name = "idx_user_product_status", columnList = "user_id, product_id, status"),
+        // 개별 인덱스들
+        @Index(name = "idx_user_orders", columnList = "user_id"),
+        @Index(name = "idx_order_status", columnList = "status")
+    }
 )
 public class Order extends BaseEntity {
 	/**
