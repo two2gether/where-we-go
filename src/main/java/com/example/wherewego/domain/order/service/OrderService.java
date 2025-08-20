@@ -170,11 +170,11 @@ public class OrderService {
 	}
 
 	/**
-	 * 주문을 취소(삭제)합니다.
+	 * 주문을 취소합니다.
 	 *
-	 * @param orderId 삭제할 주문 ID
-	 * @param userId 삭제를 요청한 사용자 ID
-	 * @throws CustomException 주문을 찾을 수 없거나 삭제 권한이 없는 경우
+	 * @param orderId 취소할 주문 ID
+	 * @param userId 취소를 요청한 사용자 ID
+	 * @throws CustomException 주문을 찾을 수 없거나 취소 권한이 없는 경우
 	 */
 	@Transactional
 	public void cancelOrder(Long orderId, Long userId) {
@@ -189,10 +189,14 @@ public class OrderService {
 		Long productId = findOrder.getEventProduct().getId();
 		int quantity = findOrder.getQuantity();
 
+		// 3. 재고 복구
 		eventProductRepository.increaseStock(productId, quantity);
+
+		// 4. Payment 상태를 EXPIRED로 변경 (READY 상태인 경우만)
 		paymentRepository.markExpiredIfReady(orderId);
 
-		// 3. 삭제하기 (DB삭제)
-		orderRepository.delete(findOrder);
+		// 5. Order 상태를 CANCELED로 변경 (물리적 삭제 대신)
+		findOrder.updateStatus(OrderStatus.CANCELED);
+		orderRepository.save(findOrder);
 	}
 }
