@@ -97,16 +97,8 @@ public class PaymentService {
 			.build();
 		paymentRepository.save(payment); // DB에 저장
 
-		// 3. 재고 확인 + 감소 처리
-		EventProduct product = order.getEventProduct(); // 주문한 상품
-		int quantity = order.getQuantity(); // 주문 수량
-
-		if (product.getStock() < quantity) {
-			log.error("재고 부족 - productId: {}, 남은 재고: {}, 요청 수량: {}",
-				product.getId(), product.getStock(), quantity);
-			throw new CustomException(ErrorCode.EVENT_PRODUCT_OUT_OF_STOCK);
-		}
-		product.decreaseStock(quantity); // 재고 감소 (엔티티 내부 로직)
+		// 3. 주문 상태 확인 (이미 주문 생성 시 재고 처리 완료)
+		// 재고 감소는 Order 서비스에서 이미 처리되었으므로 여기서는 제거
 
 		// 4. API 키를 백엔드에서 설정
 		PaymentRequestDto tossRequestDto = PaymentRequestDto.builder()
