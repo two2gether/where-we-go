@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetailsService;
 import com.example.wherewego.domain.auth.security.JwtAuthenticationFilter;
@@ -28,6 +29,7 @@ public class SecurityConfig {
 	private final CustomUserDetailsService userDetailsService;
 	private final JwtUtil jwtUtil;
 	private final TokenBlacklistService tokenBlacklistService;
+	private final CorsConfigurationSource corsConfigurationSource;
 
 	/**
 	 * 공개 API용 Security Filter Chain (인증 불필요)
@@ -39,12 +41,15 @@ public class SecurityConfig {
 		return http
 			.securityMatcher(
 				"/health", "/actuator/health",
-				"/api/auth/**", "/error"
+				"/api/auth/**", "/error",
+				"/api/payments/callback"  // 토스 결제 콜백 엔드포인트 인증 제외
 			)
 			.authorizeHttpRequests(auth -> auth
 				.anyRequest().permitAll()
 			)
 			.csrf(csrf -> csrf.disable())
+			// CORS 설정
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))
 			.sessionManagement(session ->
 				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			)
@@ -62,14 +67,22 @@ public class SecurityConfig {
 				// 공개 코스 조회 API (JWT Filter 거치지만 permitAll)
 				.requestMatchers(HttpMethod.GET, "/api/courses").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/*").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/courses/*/comments").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/courses/popular").permitAll()
+				
+				// 공개 댓글 조회 API
+				.requestMatchers(HttpMethod.GET, "/api/comments").permitAll()
+				
+				// 공개 장소 조회 API
+				.requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/places/search").permitAll()
 
 				// 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
 			.csrf(csrf -> csrf.disable())
+			// CORS 설정
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))
 			.sessionManagement(session ->
 				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			)

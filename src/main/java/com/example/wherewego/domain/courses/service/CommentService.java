@@ -78,7 +78,7 @@ public class CommentService {
 		// 캐시 삭제
 		deleteCache(courseId, userId);
 
-		return toDto(comment);
+		return CommentResponseDto.of(comment);
 	}
 
 	/**
@@ -140,7 +140,7 @@ public class CommentService {
 		// 캐시 삭제
 		deleteCache(comment.getCourse().getId(), userId);
 
-		return toDto(comment);
+		return CommentResponseDto.of(comment);
 	}
 
 	/**
@@ -154,6 +154,20 @@ public class CommentService {
 	@Transactional(readOnly = true)
 	@Cacheable(value = "course-comment-list", key = "@cacheKeyUtil.generateCourseCommentListKey(#courseId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable) {
+		return getCommentsByCourse(courseId, pageable, null);
+	}
+
+	/**
+	 * 특정 코스의 댓글 목록을 페이징하여 조회합니다.
+	 * 최신 댓글 순으로 정렬되며, 현재 사용자 정보를 포함하여 isMine 필드를 설정합니다.
+	 *
+	 * @param courseId 댓글을 조회할 코스 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @param currentUserId 현재 요청한 사용자 ID (null 가능)
+	 * @return 페이징된 댓글 목록 (isMine 필드 포함)
+	 */
+	@Transactional(readOnly = true)
+	public PagedResponse<CommentResponseDto> getCommentsByCourse(Long courseId, Pageable pageable, Long currentUserId) {
 
 		// 코스 존재 여부 확인
 		courseRepository.findById(courseId)
@@ -162,9 +176,9 @@ public class CommentService {
 		//JPA Repository를 통해 댓글 목록을 조회
 		Page<Comment> commentPage = commentRepository.findAllByCourseIdOrderByCreatedAtDesc(courseId, pageable);
 
-		//조회된 댓글 엔티티들을 DTO로 변환
-		//현재 클래스(CommentService)의 인스턴스(this)인 toDto() 참조
-		Page<CommentResponseDto> dtoPage = commentPage.map(this::toDto);
+		//조회된 댓글 엔티티들을 DTO로 변환 (currentUserId 포함)
+		Page<CommentResponseDto> dtoPage = commentPage.map(comment -> CommentResponseDto.of(comment, currentUserId));
+		log.debug("댓글 목록 조회 완료 - 조회된 댓글 수: {}", dtoPage.getTotalElements());
 
 		return PagedResponse.from(dtoPage);
 	}
@@ -179,19 +193,22 @@ public class CommentService {
 	 */
 	@Cacheable(value = "user-comment-list", key = "@cacheKeyUtil.generateUserCommentListKey(#userId, #pageable.pageNumber, #pageable.pageSize)")
 	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable) {
-		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
-		Page<CommentResponseDto> dtoPage = page.map(this::toDto);
-		return PagedResponse.from(dtoPage);
+		return getCommentsByUser(userId, pageable, null);
 	}
 
 	/**
-	 * Comment 엔티티를 CommentResponseDto로 변환합니다.
+	 * 특정 사용자가 작성한 댓글 목록을 페이징하여 조회합니다.
+	 * 최신 댓글 순으로 정렬되며, 현재 사용자 정보를 포함하여 isMine 필드를 설정합니다.
 	 *
-	 * @param comment 변환할 Comment 엔티티
-	 * @return 변환된 CommentResponseDto
+	 * @param userId 댓글 작성자 ID
+	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
+	 * @param currentUserId 현재 요청한 사용자 ID (null 가능)
+	 * @return 페이징된 댓글 목록 (isMine 필드 포함)
 	 */
-	private CommentResponseDto toDto(Comment comment) {
-		return CommentResponseDto.of(comment);
+	public PagedResponse<CommentResponseDto> getCommentsByUser(Long userId, Pageable pageable, Long currentUserId) {
+		Page<Comment> page = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable);
+		Page<CommentResponseDto> dtoPage = page.map(comment -> CommentResponseDto.of(comment, currentUserId));
+		return PagedResponse.from(dtoPage);
 	}
 
 	/**

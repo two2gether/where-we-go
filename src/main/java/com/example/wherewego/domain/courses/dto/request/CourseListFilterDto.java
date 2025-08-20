@@ -18,9 +18,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CourseListFilterDto {
 	/**
-	 * 필터링할 지역 정보
+	 * 필터링할 지역 정보 (null이면 전체 조회)
 	 */
-	@NotBlank(message = "지역은 필수입니다.")
 	private String region;
 	/**
 	 * 필터링할 코스 테마 목록

@@ -1,0 +1,686 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches: [ main, dev, feature/docker-deployment, feat/frontend-clean, feat/frontend-improvements-clean ]
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: wherewego-app
+  CONTAINER_NAME: wherewego-app
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image-uri: ${{ steps.build-image.outputs.image }}
+      environment: ${{ steps.set-env.outputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Notify build start
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$ENV_ICON *WhereWeGo Build Started* 🔨\\n빌드를 시작합니다...\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\\n${{ github.actor }}\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Frontend
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🎨 프론트엔드 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          cd frontend
+          npm ci
+          npm run build
+          cd ..
+
+      - name: Build with Gradle
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"⚙️ Gradle 빌드 중... (약 1-2분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          ./gradlew clean build -x test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Build
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          BUILD_START=$(date +%s)
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🐳 Docker 이미지 빌드 중... (약 2-3분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }} || echo "Slack notification failed, continuing..."
+          
+          # Docker 이미지 빌드 및 푸시
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          # latest 태그도 푸시
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *빌드 완료!* ✅\\n배포 준비가 완료되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*빌드 시간:*\\n⏱️ ${BUILD_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*다음 단계:*\\n🚀 배포 시작 예정\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Cleanup old ECR images
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          echo "🧹 ECR 이미지 정리 시작..."
+          
+          # 먼저 전체 이미지 목록 확인
+          ALL_IMAGES=$(aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --query 'imageDetails[*]' \
+            --output json 2>/dev/null || echo "[]")
+          
+          echo "🔍 전체 이미지 정보:"
+          echo "$ALL_IMAGES" | jq -r '.[] | "태그: \(.imageTags // ["<untagged>"] | join(",")) | 푸시일: \(.imagePushedAt)"'
+          
+          # latest가 아닌 태그된 이미지들을 시간순으로 정렬하여 가져오기
+          IMAGE_TAGS=$(aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --query 'sort_by(imageDetails[?imageTags && imageTags[0] != `latest`], &imagePushedAt)[*].imageTags[0]' \
+            --output text 2>/dev/null || echo "")
+          
+          echo "🏷️ latest 제외 태그들: $IMAGE_TAGS"
+          
+          # 배열로 변환
+          TAGS_ARRAY=($IMAGE_TAGS)
+          TOTAL_IMAGES=${#TAGS_ARRAY[@]}
+          
+          echo "📊 총 이미지 개수 (latest 제외): $TOTAL_IMAGES"
+          
+          # 최근 3개 이상인 경우에만 삭제 진행
+          if [ $TOTAL_IMAGES -gt 3 ]; then
+            DELETE_COUNT=$((TOTAL_IMAGES - 3))
+            echo "🗑️ 삭제할 이미지 개수: $DELETE_COUNT"
+            
+            # 가장 오래된 이미지들 삭제
+            for (( i=0; i<$DELETE_COUNT; i++ )); do
+              TAG_TO_DELETE=${TAGS_ARRAY[$i]}
+              echo "🗑️ 삭제 중: $TAG_TO_DELETE"
+              
+              aws ecr batch-delete-image \
+                --repository-name $ECR_REPOSITORY \
+                --image-ids imageTag=$TAG_TO_DELETE \
+                || echo "⚠️ 이미지 삭제 실패: $TAG_TO_DELETE"
+            done
+            
+            echo "✅ ECR 정리 완료! 최신 3개 이미지 + latest 태그 유지"
+          else
+            echo "✅ 이미지 개수가 3개 이하입니다. 정리가 필요하지 않습니다."
+          fi
+          
+          # 정리 후 상태 확인
+          REMAINING_IMAGES=$(aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --query 'length(imageDetails[?imageTagStatus==`TAGGED`])' \
+            --output text)
+          
+          echo "📊 정리 후 남은 이미지 개수: $REMAINING_IMAGES"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      cluster: ${{ steps.set-deploy-vars.outputs.cluster }}
+      service: ${{ steps.set-deploy-vars.outputs.service }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for deployment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set deployment variables
+        id: set-deploy-vars
+        run: |
+          echo "cluster=wherewego-prod-cluster" >> $GITHUB_OUTPUT
+          echo "service=wherewego-prod-service" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Notify deployment start
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#ff9500\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🚀 *배포 시작!* ⚡\\n새 버전을 서버에 배포 중...\"
+                }
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+
+      - name: Update task definition and start deployment
+        run: |
+          DEPLOY_START=$(date +%s)
+          
+          # ECR URI를 태스크 정의에 반영
+          sed "s|ECR_URI_PLACEHOLDER|${{ needs.build.outputs.image-uri }}|g" aws/task-definition.json > temp-task-definition.json
+          
+          # 태스크 정의 등록
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://temp-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "✅ Task definition registered: $TASK_DEF_ARN"
+          
+          # 통합된 인프라 스택에서 필요한 정보 가져오기
+          INFRA_STACK_NAME="wherewego-prod-infrastructure"
+          
+          # ALB Target Group ARN 가져오기
+          TARGET_GROUP_ARN=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ECSTargetGroupArn`].OutputValue' \
+            --output text)
+          
+          # Public Subnets 가져오기 (Private Subnet 대신 Public Subnet 사용)
+          PUBLIC_SUBNET1=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet1`].OutputValue' \
+            --output text)
+          
+          PUBLIC_SUBNET2=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`PublicSubnet2`].OutputValue' \
+            --output text)
+          
+          PUBLIC_SUBNETS="$PUBLIC_SUBNET1,$PUBLIC_SUBNET2"
+          
+          # ECS Security Group 가져오기
+          ECS_SECURITY_GROUP=$(aws cloudformation describe-stacks \
+            --stack-name "$INFRA_STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ECSSecurityGroup`].OutputValue' \
+            --output text)
+          
+          echo "🎯 Target Group ARN: $TARGET_GROUP_ARN"
+          echo "🔒 Public Subnets: $PUBLIC_SUBNETS"
+          echo "🛡️ ECS Security Group: $ECS_SECURITY_GROUP"
+          
+          # 서비스 존재 여부 확인
+          SERVICE_EXISTS=$(aws ecs describe-services --cluster ${{ steps.set-deploy-vars.outputs.cluster }} --services ${{ steps.set-deploy-vars.outputs.service }} --query 'length(services)' --output text 2>/dev/null || echo "0")
+          
+          if [[ "$SERVICE_EXISTS" == "0" ]]; then
+            echo "🚀 Creating new ECS service with ALB integration..."
+          
+            # ECS 서비스 생성 (Public Subnet + ALB Target Group)
+            aws ecs create-service \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service-name ${{ steps.set-deploy-vars.outputs.service }} \
+              --task-definition "$TASK_DEF_ARN" \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$PUBLIC_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+              --load-balancers "[{\"targetGroupArn\":\"$TARGET_GROUP_ARN\",\"containerName\":\"wherewego-app\",\"containerPort\":8080}]" \
+              --health-check-grace-period-seconds 60
+          else
+            echo "🔄 Updating existing ECS service..."
+          
+            # 기존 서비스 업데이트
+            aws ecs update-service \
+              --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+              --service ${{ steps.set-deploy-vars.outputs.service }} \
+              --task-definition "$TASK_DEF_ARN" \
+              --force-new-deployment \
+              --desired-count 1
+          fi
+          
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          
+          # 임시 파일 정리
+          rm temp-task-definition.json
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"⚡ *배포 시작됨!* 🎯\\n서비스가 업데이트되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*배포 시간:*\\n⏱️ ${DEPLOY_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+          
+          # 접속 URL 조회
+          FRONTEND_URL=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-${{ needs.build.outputs.environment }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
+            --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
+          
+          # 백엔드 Public IP 조회
+          BACKEND_PUBLIC_IP=$(aws ecs list-tasks \
+            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+            --service-name ${{ steps.set-deploy-vars.outputs.service }} \
+            --query 'taskArns[0]' --output text 2>/dev/null | \
+            xargs -I {} aws ecs describe-tasks \
+            --cluster ${{ steps.set-deploy-vars.outputs.cluster }} \
+            --tasks {} \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text 2>/dev/null | \
+            xargs -I {} aws ec2 describe-network-interfaces \
+            --network-interface-ids {} \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text 2>/dev/null || echo "조회중")
+            
+          if [[ "$BACKEND_PUBLIC_IP" != "조회중" && "$BACKEND_PUBLIC_IP" != "None" && "$BACKEND_PUBLIC_IP" != "" ]]; then
+            BACKEND_HEALTH_URL="http://${BACKEND_PUBLIC_IP}:8080/actuator/health"
+          else
+            BACKEND_HEALTH_URL="백엔드 IP 조회 중..."
+          fi
+          
+          # 배포 진행 상태 알림 (URL 제외)
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"#36a64f\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"⚡ *배포 시작됨!* 🎯\\n서비스가 업데이트되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*배포 시간:*\\n⏱️ ${DEPLOY_DURATION}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*상태:*\\n🔄 헬스체크 진행 중\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+  frontend:
+    runs-on: ubuntu-latest
+    needs: [build, deploy, verify]
+    if: always() && needs.verify.result == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for frontend deployment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Frontend
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Frontend to S3
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🎨 프론트엔드 배포 시작... (백엔드 배포 완료 후)\"}" ${{ secrets.SLACK_WEBHOOK }}
+
+          # Get S3 bucket names from Parameter Store
+          S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/frontend-bucket" --query 'Parameter.Value' --output text)
+          IMAGE_S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/images-bucket" --query 'Parameter.Value' --output text)
+          AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
+          
+          echo "📦 Frontend S3 Bucket: $S3_BUCKET"
+          echo "🖼️ Image S3 Bucket: $IMAGE_S3_BUCKET"
+          
+          # Get ALB DNS Name (fixed endpoint)
+          echo "🔍 ALB DNS 이름 조회 중..."
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-prod-infrastructure" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
+            --output text)
+          
+          echo "🌐 ALB DNS: $ALB_DNS"
+          
+          # Build frontend with production environment variables
+          cd frontend
+          npm ci
+          
+          # Get environment variables from Parameter Store
+          KAKAO_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/kakao/client-id" --query 'Parameter.Value' --output text)
+          GOOGLE_MAPS_API_KEY=$(aws ssm get-parameter --name "/wherewego/google/maps-api-key" --with-decryption --query 'Parameter.Value' --output text)
+          GOOGLE_CLIENT_ID=$(aws ssm get-parameter --name "/wherewego/google/client-id" --query 'Parameter.Value' --output text)
+          
+          # Hardcoded OAuth redirect URIs for production
+          GOOGLE_REDIRECT_URI="http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/google/callback"
+          KAKAO_REDIRECT_URI="http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/kakao/callback"
+          
+          # Get additional parameters for environment variables
+          S3_BUCKET=$(aws ssm get-parameter --name "/wherewego/aws/s3/frontend-bucket" --query 'Parameter.Value' --output text)
+          AWS_DEFAULT_REGION=$(aws ssm get-parameter --name "/wherewego/aws/region" --query 'Parameter.Value' --output text)
+          
+          echo "🔧 Frontend URL: http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
+          
+          echo "✅ ALB를 통한 백엔드 연결 설정 완료"
+          
+          cat > .env.production << EOF
+          VITE_API_BASE_URL=http://${ALB_DNS}/api
+          VITE_IMAGE_BUCKET_URL=https://${IMAGE_S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com
+          VITE_KAKAO_APP_KEY=${KAKAO_CLIENT_ID}
+          VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          VITE_DEV_MODE=false
+          VITE_LOG_LEVEL=warn
+          EOF
+          
+          echo "🔧 생성된 환경변수:"
+          cat .env.production
+          
+          npm run build
+          
+          # Upload to S3 with proper website configuration
+          aws s3 sync dist/ s3://$S3_BUCKET --delete
+          
+          # Enable S3 static website hosting
+          aws s3 website s3://$S3_BUCKET --index-document index.html --error-document index.html
+          
+          cd ..
+          
+          # Final success notification with URLs
+          FRONTEND_URL="http://${S3_BUCKET}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com"
+          BACKEND_HEALTH_URL="http://${ALB_DNS}/actuator/health"
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"🎉 *전체 배포 완료!* ✅\\n프론트엔드와 백엔드가 모두 연결되었습니다.\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*🌐 프론트엔드:*\\n<$FRONTEND_URL|웹사이트 열기>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*⚙️ 백엔드 헬스체크:*\\n<$BACKEND_HEALTH_URL|API 상태 확인>\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Verify
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for service stability and final notification
+        run: |
+          VERIFY_START=$(date +%s)
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"🏥 헬스체크 진행 중... (약 3-5분 소요)\"}" ${{ secrets.SLACK_WEBHOOK }}
+          
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            # 서비스 안정화 대기
+            echo "⏳ Waiting for service stability..."
+            aws ecs wait services-stable \
+              --cluster ${{ needs.deploy.outputs.cluster }} \
+              --services ${{ needs.deploy.outputs.service }} \
+              --cli-read-timeout 600 || echo "⚠️ 타임아웃이지만 서비스는 백그라운드에서 계속 진행됩니다"
+          fi
+          
+          VERIFY_END=$(date +%s)
+          VERIFY_DURATION=$((VERIFY_END - VERIFY_START))
+          VERIFY_MIN=$((VERIFY_DURATION / 60))
+          VERIFY_SEC=$((VERIFY_DURATION % 60))
+          
+          # 전체 결과에 따른 메시지 설정
+          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.deploy.result }}" == "success" ]]; then
+            COLOR="good"
+            STATUS="✅ SUCCESS"
+            MESSAGE="배포가 성공적으로 완료되었습니다!"
+            EMOJI="🎉"
+          else
+            COLOR="danger" 
+            STATUS="❌ FAILED"
+            if [[ "${{ needs.build.result }}" == "failure" ]]; then
+              MESSAGE="빌드 중 오류가 발생했습니다."
+            elif [[ "${{ needs.deploy.result }}" == "failure" ]]; then
+              MESSAGE="배포 중 오류가 발생했습니다."
+            else
+              MESSAGE="알 수 없는 오류가 발생했습니다."
+            fi
+            EMOJI="💥"
+          fi
+          
+          # 브랜치에 따른 환경 이모지
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_ICON="🚀"
+            ENV_NAME="Production"
+          else
+            ENV_ICON="🧪"
+            ENV_NAME="Development"
+          fi
+          
+          # 커밋 메시지 가져오기
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 50)
+          
+          # 프론트엔드 URL 가져오기
+          FRONTEND_URL=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-prod-infrastructure" \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendURL`].OutputValue' \
+            --output text 2>/dev/null || echo "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com")
+            
+          # ALB DNS 가져오기
+          echo "🔍 ALB DNS 확인 중..."
+          BACKEND_ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "wherewego-prod-infrastructure" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ALBDNSName`].OutputValue' \
+            --output text 2>/dev/null || echo "ALB 조회 실패")
+          
+          if [[ "$BACKEND_ALB_DNS" != "ALB 조회 실패" && "$BACKEND_ALB_DNS" != "" ]]; then
+            BACKEND_URL="http://${BACKEND_ALB_DNS}/actuator/health"
+            echo "✅ Backend ALB DNS: $BACKEND_ALB_DNS"
+            echo "🔗 Backend Health Check: $BACKEND_URL"
+          else
+            BACKEND_URL="ALB DNS 조회 실패"
+            echo "⚠️ ALB DNS 조회 실패"
+          fi
+          
+          # URL 정보 GitHub Actions 요약에 출력
+          echo "## 🚀 배포 완료!" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 접속 정보" >> $GITHUB_STEP_SUMMARY
+          echo "- **프론트엔드**: $FRONTEND_URL" >> $GITHUB_STEP_SUMMARY  
+          echo "- **백엔드**: $BACKEND_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **환경**: $ENV_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **브랜치**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          
+          # 최종 Slack 메시지 전송
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"$COLOR\",
+              \"blocks\": [{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"$EMOJI $ENV_ICON *WhereWeGo Deployment* $STATUS\\n$MESSAGE\"
+                }
+              }, {
+                \"type\": \"section\",
+                \"fields\": [{
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Environment:*\\n$ENV_NAME\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Branch:*\\n\`${{ github.ref_name }}\`\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*헬스체크:*\\n⏱️ ${VERIFY_MIN}분 ${VERIFY_SEC}초\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Author:*\\n👤 ${{ github.actor }}\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Commit:*\\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|\`$(echo ${{ github.sha }} | cut -c1-8)\`>\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Message:*\\n💬 $COMMIT_MSG\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Frontend:*\\n🌐 $FRONTEND_URL\"
+                }, {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Backend Health Check:*\\n⚙️ $BACKEND_URL\"
+                }]
+              }, {
+                \"type\": \"actions\",
+                \"elements\": [{
+                  \"type\": \"button\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"🔍 View Workflow\"
+                  },
+                  \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                }]
+              }]
+            }]
+          }" ${{ secrets.SLACK_WEBHOOK }}

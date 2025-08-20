@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.wherewego.domain.auth.security.CustomUserDetail;
 import com.example.wherewego.domain.common.enums.OrderStatus;
@@ -41,6 +43,7 @@ import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
 import com.example.wherewego.domain.user.service.UserService;
 import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.response.ImageUploadResponse;
 import com.example.wherewego.global.response.PagedResponse;
 
 import jakarta.validation.Valid;
@@ -123,10 +126,11 @@ public class UserController {
 	 * 인증된 사용자가 작성한 모든 댓글을 페이지단위로 조회합니다.
 	 * 댓글은 작성일 내림차순으로 정렬되며, 해당 코스 정보도 함께 제공됩니다.
 	 * 삭제된 댓글이나 비공개 코스의 댓글도 필터링되어 제공됩니다.
+	 * isMine 필드가 포함되어 본인이 작성한 댓글임을 나타냅니다.
 	 *
 	 * @param userDetail 인증된 사용자 정보
 	 * @param pageable 페이지네이션 정보 (기본: 10개씩, 작성일 내림차순)
-	 * @return 페이지네이션된 댓글 목록
+	 * @return 페이지네이션된 댓글 목록 (isMine 필드 포함)
 	 */
 	@GetMapping("/mypage/comments")
 	public ApiResponse<PagedResponse<CommentResponseDto>> getMyComments(
@@ -134,7 +138,7 @@ public class UserController {
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		Long userId = userDetail.getUser().getId();
-		PagedResponse<CommentResponseDto> response = commentService.getCommentsByUser(userId, pageable);
+		PagedResponse<CommentResponseDto> response = commentService.getCommentsByUser(userId, pageable, userId);
 
 		return ApiResponse.ok("내가 작성한 댓글 목록 조회에 성공했습니다.", response);
 	}
@@ -241,7 +245,7 @@ public class UserController {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-		PagedResponse<CourseListResponseDto> response = courseService.getCoursesByUser(userId, pageable);
+		PagedResponse<CourseListResponseDto> response = courseService.getCoursesByUser(userId, userId, pageable);
 
 		return ApiResponse.ok("내가 만든 코스 목록 조회 성공", response);
 	}
@@ -253,11 +257,12 @@ public class UserController {
 	 *
 	 * 인증된 사용자가 북마크한 코스 목록을 조회합니다.
 	 * 각 코스에 대한 기본 정보와 북마크한 날짜를 포함하여 반환합니다.
+	 * isMine 필드가 포함되어 본인이 생성한 코스인지 구분할 수 있습니다.
 	 *
 	 * @param userDetail 인증된 사용자 정보
 	 * @param page 페이지 번호 (기본: 0)
 	 * @param size 페이지당 아이템 수 (기본: 20)
-	 * @return 북마크한 코스 목록과 페이지네이션 정보
+	 * @return 북마크한 코스 목록과 페이지네이션 정보 (isMine 필드 포함)
 	 */
 	@GetMapping("/mypage/coursebookmark")
 	public ApiResponse<PagedResponse<UserCourseBookmarkListDto>> getMyCourseBookmarks(
@@ -373,6 +378,53 @@ public class UserController {
 		notificationService.deleteAllRead(userId);
 
 		return ApiResponse.noContent("읽은 알림이 전체 삭제 되었습니다.");
+	}
+
+	/**
+	 * 프로필 이미지 업로드 API
+	 *
+	 * POST /api/users/profile/image
+	 *
+	 * 인증된 사용자의 프로필 이미지를 S3에 업로드하고 DB를 업데이트합니다.
+	 * 기존 프로필 이미지가 있다면 S3에서 삭제 후 새 이미지로 교체합니다.
+	 * 10MB 이하의 이미지 파일만 업로드 가능하며, JPEG, PNG, GIF, WebP 형식을 지원합니다.
+	 *
+	 * @param userDetail 인증된 사용자 정보
+	 * @param file 업로드할 이미지 파일
+	 * @return 업로드된 이미지 URL과 성공 메시지
+	 */
+	@PostMapping("/profile/image")
+	public ApiResponse<ImageUploadResponse> uploadProfileImage(
+		@AuthenticationPrincipal CustomUserDetail userDetail,
+		@RequestParam("file") MultipartFile file
+	) {
+		try {
+			String imageUrl = userService.updateProfileImage(userDetail.getUser().getId(), file);
+			return ApiResponse.ok("프로필 이미지가 성공적으로 업로드되었습니다.",
+				ImageUploadResponse.success(imageUrl));
+		} catch (Exception e) {
+			return ApiResponse.error(e.getMessage());
+		}
+	}
+
+	/**
+	 * 프로필 이미지 삭제 API
+	 *
+	 * DELETE /api/users/profile/image
+	 *
+	 * 인증된 사용자의 프로필 이미지를 S3에서 삭제하고 DB에서 URL을 제거합니다.
+	 * 프로필 이미지가 없는 경우에도 정상 응답을 반환합니다.
+	 *
+	 * @param userDetail 인증된 사용자 정보
+	 * @return 성공 메시지
+	 */
+	@DeleteMapping("/profile/image")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public ApiResponse<Void> deleteProfileImage(
+		@AuthenticationPrincipal CustomUserDetail userDetail
+	) {
+		userService.deleteProfileImage(userDetail.getUser().getId());
+		return ApiResponse.noContent("프로필 이미지가 성공적으로 삭제되었습니다.");
 	}
 
 }

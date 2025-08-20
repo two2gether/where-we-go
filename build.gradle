@@ -43,6 +43,10 @@ dependencies {
     // 외부 라이브러리
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // LocalDateTime을 JSON으로 변환
+    
+    // AWS S3
+    implementation 'software.amazon.awssdk:s3:2.20.162'
+    implementation 'software.amazon.awssdk:sts:2.20.162' // AWS 인증
 
     // 개발 도구
     compileOnly 'org.projectlombok:lombok'

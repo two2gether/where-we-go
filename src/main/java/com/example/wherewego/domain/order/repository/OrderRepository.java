@@ -98,4 +98,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 	int updateStatusIfCurrent(@Param("orderId") Long orderId, @Param("toStatus") OrderStatus toStatus,
 		@Param("fromStatuses") Collection<OrderStatus> fromStatuses
 	);
+
 }

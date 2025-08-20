@@ -2,6 +2,7 @@ package com.example.wherewego.domain.courses.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +28,9 @@ import com.example.wherewego.domain.courses.entity.PlacesOrder;
 import com.example.wherewego.domain.courses.mapper.CourseMapper;
 import com.example.wherewego.domain.courses.repository.CourseRepository;
 import com.example.wherewego.domain.courses.repository.PlacesOrderRepository;
+import com.example.wherewego.domain.courses.repository.CourseLikeRepository;
+import com.example.wherewego.domain.courses.repository.CourseBookmarkRepository;
+import com.example.wherewego.domain.courses.repository.CourseRatingRepository;
 import com.example.wherewego.domain.places.service.PlaceService;
 import com.example.wherewego.domain.user.entity.User;
 import com.example.wherewego.domain.user.service.UserService;
@@ -47,6 +51,9 @@ public class CourseService {
 	private final UserService userService;
 	private final PlaceService placeService;
 	private final PlacesOrderRepository placesOrderRepository;
+	private final CourseLikeRepository courseLikeRepository;
+	private final CourseBookmarkRepository courseBookmarkRepository;
+	private final CourseRatingRepository courseRatingRepository;
 
 	/**
 	 * 새로운 여행 코스를 생성합니다.
@@ -99,25 +106,36 @@ public class CourseService {
 	 *
 	 * @param filterDto 검색 필터 (지역, 테마 조건)
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
-	 * @return 페이징된 코스 목록과 메타데이터
+	 * @param userId 현재 로그인한 사용자 ID (null 가능)
+	 * @return 페이징된 코스 목록과 메타데이터 (사용자별 상태 포함)
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<CourseListResponseDto> getCourseList(
 		CourseListFilterDto filterDto,
-		Pageable pageable
+		Pageable pageable,
+		Long userId
 	) {
 		// 1. 데이터 준비
 		String region = filterDto.getRegion();
 		List<CourseTheme> themes = filterDto.getThemes();
 
-		// 2. 성능 최적화된 지역 검색 로직
+		// 2. 지역 및 테마에 따른 검색 로직
 		Page<Course> coursePage;
-		if (themes != null && !themes.isEmpty()) {
-			// 테마가 있을 경우: 현재는 기존 로직 유지 (LIKE %region%)
-			coursePage = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes, pageable);
+		
+		if (isAllRegion(region)) {
+			// 지역 필터 없음 - 전체 코스 조회 (null, 빈값, "전체" 모두 처리)
+			if (themes != null && !themes.isEmpty()) {
+				coursePage = courseRepository.findAllPublicCoursesByThemes(themes, pageable);
+			} else {
+				coursePage = courseRepository.findAllPublicCourses(pageable);
+			}
 		} else {
-			// 테마가 없을 경우: 스마트 검색 전략 적용
-			coursePage = searchCoursesByOptimizedRegion(region, pageable);
+			// 지역 필터 있음 - 기존 로직
+			if (themes != null && !themes.isEmpty()) {
+				coursePage = courseRepository.findByRegionAndThemesInAndIsPublicTrue(region, themes, pageable);
+			} else {
+				coursePage = searchCoursesByOptimizedRegion(region, pageable);
+			}
 		}
 
 		// 4. N+1 쿼리 문제 해결: 모든 코스의 장소들을 한 번에 조회
@@ -133,7 +151,33 @@ public class CourseService {
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		// 4-3. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 포함
+		// 4-3. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+		
+		// 4-4. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		Map<Long, Boolean> userLikes = new HashMap<>();
+		Map<Long, Boolean> userBookmarks = new HashMap<>();  
+		Map<Long, Double> userRatings = new HashMap<>();
+
+		if (userId != null && !courseIds.isEmpty()) {
+			// 좋아요 상태 조회
+			courseIds.forEach(courseId -> {
+				userLikes.put(courseId, courseLikeRepository.existsByUserIdAndCourseId(userId, courseId));
+			});
+			
+			// 북마크 상태 조회
+			courseIds.forEach(courseId -> {
+				userBookmarks.put(courseId, courseBookmarkRepository.existsByUserIdAndCourseId(userId, courseId));
+			});
+			
+			// 평점 조회
+			courseIds.forEach(courseId -> {
+				courseRatingRepository.findByUserIdAndCourseId(userId, courseId)
+					.ifPresent(rating -> userRatings.put(courseId, (double) rating.getRating()));
+			});
+		}
+
+		// 4-5. [엔티티 -> 응답 dto 변환] (map 활용) + 장소 정보 + 사용자별 상태 포함
 		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
 				// 해당 코스의 장소 순서 가져오기 (이미 조회된 데이터에서)
@@ -149,8 +193,17 @@ public class CourseService {
 					placeIds, null, null
 				);
 
-				// 매퍼로 DTO 변환
-				return CourseMapper.toListWithPlaces(course, places);
+				// 사용자별 상태 정보 가져오기
+				Long courseId = course.getId();
+				Boolean isLiked = userLikes.get(courseId);
+				Boolean isBookmarked = userBookmarks.get(courseId);
+				Double myRating = userRatings.get(courseId);
+				
+				// 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
+
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
@@ -208,14 +261,16 @@ public class CourseService {
 	 * @param courseId 조회할 코스 ID
 	 * @param userLatitude 사용자 현재 위도 (루트 계산용, null 가능)
 	 * @param userLongitude 사용자 현재 경도 (루트 계산용, null 가능)
-	 * @return 코스 상세 정보 (장소 목록, 루트 정보 포함)
+	 * @param userId 현재 로그인한 사용자 ID (null 가능)
+	 * @return 코스 상세 정보 (장소 목록, 루트 정보, 사용자별 상태 포함)
 	 * @throws CustomException 코스를 찾을 수 없는 경우
 	 */
 	@Transactional
 	public CourseDetailResponseDto getCourseDetail(
 		Long courseId,
 		Double userLatitude,
-		Double userLongitude
+		Double userLongitude,
+		Long userId
 	) {
 		// 1. 코스 조회
 		Course findCourse = courseRepository.findByIdWithThemes(courseId)
@@ -234,8 +289,25 @@ public class CourseService {
 		List<CoursePlaceInfo> placesForCourseWithRoute = placeService.getPlacesForCourseWithRoute(placeIds,
 			userLatitude, userLongitude);
 
-		// 4. 매퍼 사용하여 DTO 변환 후 반환
-		return CourseMapper.toDetailDto(findCourse, placesForCourseWithRoute);
+		// 4. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		Boolean isLiked = null;
+		Boolean isBookmarked = null;
+		Double myRating = null;
+		
+		if (userId != null) {
+			isLiked = courseLikeRepository.existsByUserIdAndCourseId(userId, courseId);
+			isBookmarked = courseBookmarkRepository.existsByUserIdAndCourseId(userId, courseId);
+			myRating = courseRatingRepository.findByUserIdAndCourseId(userId, courseId)
+				.map(rating -> (double) rating.getRating())
+				.orElse(null);
+		}
+
+		// 5. 매퍼 사용하여 DTO 변환 후 반환 (사용자별 상태 포함)
+		if (userId != null) {
+			return CourseMapper.toDetailDtoWithUserStatus(findCourse, placesForCourseWithRoute, isLiked, isBookmarked, myRating);
+		} else {
+			return CourseMapper.toDetailDto(findCourse, placesForCourseWithRoute);
+		}
 	}
 
 	/**
@@ -322,12 +394,14 @@ public class CourseService {
 	 *
 	 * @param filterDto 검색 필터 (지역, 테마 조건)
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
-	 * @return 북마크 수 순으로 정렬된 인기 코스 목록
+	 * @param userId 현재 로그인한 사용자 ID (null 가능)
+	 * @return 북마크 수 순으로 정렬된 인기 코스 목록 (사용자별 상태 포함)
 	 */
 	@Transactional(readOnly = true)
 	public PagedResponse<CourseListResponseDto> getPopularCourseList(
 		CourseListFilterDto filterDto,
-		Pageable pageable
+		Pageable pageable,
+		Long userId
 	) {
 		// 1. 데이터 준비
 		String region = filterDto.getRegion();
@@ -344,17 +418,71 @@ public class CourseService {
 
 		// 3. 조건에 따라 인기 코스 조회 (이달 북마크 수 기준)
 		Page<Course> coursePage;
-		if (themes != null && !themes.isEmpty()) {
-			coursePage = courseRepository.findPopularCoursesByRegionAndThemesThisMonth(
-				region, themes, startOfMonth, now, pageable
-			);
+		
+		if (isAllRegion(region)) {
+			// 지역 필터 없음 - 전체 인기 코스 조회 (null, 빈값, "전체" 모두 처리)
+			if (themes != null && !themes.isEmpty()) {
+				coursePage = courseRepository.findAllPopularCoursesByThemesThisMonth(
+					themes, startOfMonth, now, pageable
+				);
+			} else {
+				coursePage = courseRepository.findAllPopularCoursesThisMonth(
+					startOfMonth, now, pageable
+				);
+			}
 		} else {
-			coursePage = courseRepository.findPopularCoursesByRegionThisMonth(
-				region, startOfMonth, now, pageable
-			);
+			// 지역 필터 있음 - 기존 로직
+			if (themes != null && !themes.isEmpty()) {
+				coursePage = courseRepository.findPopularCoursesByRegionAndThemesThisMonth(
+					region, themes, startOfMonth, now, pageable
+				);
+			} else {
+				coursePage = courseRepository.findPopularCoursesByRegionThisMonth(
+					region, startOfMonth, now, pageable
+				);
+			}
 		}
 
-		// 4. [엔티티 -> 응답 dto 변환] - 코스별 장소 조회 및 매핑
+		// 4. 코스 ID 목록 추출
+		List<Long> courseIds = coursePage.getContent().stream()
+			.map(Course::getId)
+			.toList();
+
+		// 4-1. 🔧 Lazy Loading 해결: themes를 명시적으로 로딩
+		if (!courseIds.isEmpty()) {
+			coursePage.getContent().forEach(course -> {
+				// themes 컬렉션 강제 초기화 (Hibernate.initialize 대신 size() 호출)
+				course.getThemes().size();
+			});
+		}
+
+		// 5. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+		
+		// 6. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		Map<Long, Boolean> userLikes = new HashMap<>();
+		Map<Long, Boolean> userBookmarks = new HashMap<>();
+		Map<Long, Double> userRatings = new HashMap<>();
+
+		if (userId != null && !courseIds.isEmpty()) {
+			// 좋아요 상태 조회
+			courseIds.forEach(courseId -> {
+				userLikes.put(courseId, courseLikeRepository.existsByUserIdAndCourseId(userId, courseId));
+			});
+			
+			// 북마크 상태 조회
+			courseIds.forEach(courseId -> {
+				userBookmarks.put(courseId, courseBookmarkRepository.existsByUserIdAndCourseId(userId, courseId));
+			});
+			
+			// 평점 조회
+			courseIds.forEach(courseId -> {
+				courseRatingRepository.findByUserIdAndCourseId(userId, courseId)
+					.ifPresent(rating -> userRatings.put(courseId, (double) rating.getRating()));
+			});
+		}
+
+		// 6. [엔티티 -> 응답 dto 변환] - 코스별 장소 조회 및 매핑 + 사용자별 상태 포함
 		List<CourseListResponseDto> dtoList = coursePage.stream()
 			.map(course -> {
 				List<PlacesOrder> placeOrders = placesOrderRepository.findByCourseIdOrderByVisitOrderAsc(
@@ -368,15 +496,60 @@ public class CourseService {
 					placeIds, null, null
 				);
 
-				return CourseMapper.toListWithPlaces(course, places);
+				// 사용자별 상태 정보 가져오기
+				Long courseId = course.getId();
+				Boolean isLiked = userLikes.get(courseId);
+				Boolean isBookmarked = userBookmarks.get(courseId);
+				Double myRating = userRatings.get(courseId);
+				
+				// 🔖 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
+
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
-		// 5. PageImpl로 Page 객체 생성
+		// 7. PageImpl로 Page 객체 생성
 		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 
-		// 6. 커스텀 페이지네이션 응답 DTO로 변환 후 반환
+		// 8. 커스텀 페이지네이션 응답 DTO로 변환 후 반환
 		return PagedResponse.from(dtoPage);
+	}
+
+	/**
+	 * 지역 값이 전체 조회를 의미하는지 확인합니다.
+	 * null, 빈 문자열, "전체" 모두 전체 조회로 처리합니다.
+	 *
+	 * @param region 확인할 지역 값
+	 * @return 전체 조회 여부
+	 */
+	private boolean isAllRegion(String region) {
+		return region == null || region.trim().isEmpty() || "전체".equals(region.trim());
+	}
+	
+	/**
+	 * 여러 코스의 북마크 수를 한 번에 조회합니다. (N+1 문제 해결)
+	 *
+	 * @param courseIds 북마크 수를 조회할 코스 ID 목록
+	 * @return 코스 ID를 키로 하고 북마크 수를 값으로 하는 Map
+	 */
+	private Map<Long, Integer> getBookmarkCountsForCourses(List<Long> courseIds) {
+		if (courseIds == null || courseIds.isEmpty()) {
+			return new HashMap<>();
+		}
+		
+		List<Object[]> results = courseBookmarkRepository.countBookmarksByCourseIds(courseIds);
+		Map<Long, Integer> bookmarkCounts = new HashMap<>();
+		
+		// 결과를 Map으로 변환
+		for (Object[] result : results) {
+			Long courseId = (Long) result[0];
+			Long count = (Long) result[1];
+			bookmarkCounts.put(courseId, count.intValue());
+		}
+		
+		return bookmarkCounts;
 	}
 
 	/**
@@ -384,13 +557,15 @@ public class CourseService {
 	 *
 	 * 사용자가 직접 생성한 코스 목록을 페이징하여 조회합니다.
 	 * 각 코스에 포함된 장소 정보도 함께 반환합니다.
+	 * N+1 쿼리 문제를 해결하기 위해 배치 로딩을 사용합니다.
 	 *
-	 * @param userId 조회할 사용자 ID
+	 * @param userId 조회할 사용자 ID (코스 생성자)
+	 * @param currentUserId 현재 로그인한 사용자 ID (null 가능)
 	 * @param pageable 페이징 정보 (페이지 번호, 크기, 정렬)
-	 * @return 내가 생성한 코스 목록과 페이지네이션 정보
+	 * @return 내가 생성한 코스 목록과 페이지네이션 정보 (사용자별 상태 포함)
 	 */
 	@Transactional(readOnly = true)
-	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Pageable pageable) {
+	public PagedResponse<CourseListResponseDto> getCoursesByUser(Long userId, Long currentUserId, Pageable pageable) {
 		// 1. 내가 만든 코스 목록 페이징 조회
 		Page<Course> coursePage = courseRepository.findByUserIdAndIsDeletedFalse(userId, pageable);
 
@@ -398,6 +573,13 @@ public class CourseService {
 		List<Long> courseIds = coursePage.getContent().stream()
 			.map(Course::getId)
 			.toList();
+
+		// 2-1. 🔧 Lazy Loading 방지: themes를 명시적으로 로딩 (안전장치)
+		if (!courseIds.isEmpty()) {
+			coursePage.getContent().forEach(course -> {
+				course.getThemes().size(); // themes 컬렉션 강제 초기화
+			});
+		}
 
 		// 3. 장소 순서 정보 일괄 조회
 		List<PlacesOrder> allPlaceOrders = placesOrderRepository.findByCourseIdInOrderByCourseIdAscVisitOrderAsc(
@@ -407,18 +589,54 @@ public class CourseService {
 		Map<Long, List<PlacesOrder>> placeOrdersByCourse = allPlaceOrders.stream()
 			.collect(Collectors.groupingBy(PlacesOrder::getCourseId));
 
-		// 5. 각 Course → CourseListResponseDto로 변환 (장소 포함)
+		// 5. 북마크 수 일괄 조회 (N+1 문제 해결)
+		Map<Long, Integer> bookmarkCounts = getBookmarkCountsForCourses(courseIds);
+
+		// 6. 사용자별 상태 정보 조회 (로그인한 경우에만)
+		Map<Long, Boolean> userLikes = new HashMap<>();
+		Map<Long, Boolean> userBookmarks = new HashMap<>();
+		Map<Long, Double> userRatings = new HashMap<>();
+
+		if (currentUserId != null && !courseIds.isEmpty()) {
+			// 좋아요 상태 조회
+			courseIds.forEach(courseId -> {
+				userLikes.put(courseId, courseLikeRepository.existsByUserIdAndCourseId(currentUserId, courseId));
+			});
+			
+			// 북마크 상태 조회
+			courseIds.forEach(courseId -> {
+				userBookmarks.put(courseId, courseBookmarkRepository.existsByUserIdAndCourseId(currentUserId, courseId));
+			});
+			
+			// 평점 조회
+			courseIds.forEach(courseId -> {
+				courseRatingRepository.findByUserIdAndCourseId(currentUserId, courseId)
+					.ifPresent(rating -> userRatings.put(courseId, (double) rating.getRating()));
+			});
+		}
+
+		// 7. 각 Course → CourseListResponseDto로 변환 (장소 포함 + 사용자별 상태 + 북마크 수)
 		List<CourseListResponseDto> dtoList = coursePage.getContent().stream()
 			.map(course -> {
 				List<PlacesOrder> orders = placeOrdersByCourse.getOrDefault(course.getId(), new ArrayList<>());
 				List<String> placeIds = orders.stream().map(PlacesOrder::getPlaceId).toList();
 				List<CoursePlaceInfo> places = placeService.getPlacesForCourseWithRoute(placeIds, null, null);
 
-				return CourseMapper.toListWithPlaces(course, places);
+				// 사용자별 상태 정보 가져오기
+				Long courseId = course.getId();
+				Boolean isLiked = userLikes.get(courseId);
+				Boolean isBookmarked = userBookmarks.get(courseId);
+				Double myRating = userRatings.get(courseId);
+				
+				// 북마크 수 가져오기 (이미 일괄 조회된 데이터에서)
+				Integer bookmarkCount = bookmarkCounts.getOrDefault(courseId, 0);
+
+				// 매퍼로 DTO 변환 (사용자별 상태 + 북마크 수 포함)
+				return CourseMapper.toListWithPlacesAndUserStatus(course, places, isLiked, isBookmarked, myRating, bookmarkCount);
 			})
 			.toList();
 
-		// 6. 최종 페이지 생성 및 반환
+		// 8. 최종 페이지 생성 및 반환
 		Page<CourseListResponseDto> dtoPage = new PageImpl<>(dtoList, pageable, coursePage.getTotalElements());
 		return PagedResponse.from(dtoPage);
 	}

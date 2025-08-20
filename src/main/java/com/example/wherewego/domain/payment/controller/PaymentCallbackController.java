@@ -12,7 +12,9 @@ import com.example.wherewego.domain.payment.service.PaymentService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/payments")
@@ -27,11 +29,12 @@ public class PaymentCallbackController {
 	 * return(X) 서버에서는 HTTP 200 OK 만 반환하면 됨.
 	 */
 	@PostMapping("/callback")
-	@ResponseStatus(HttpStatus.OK) // 200 OK만 반환
-	public void paymentCallback(
-		@RequestBody @Valid CallbackRequestDto requestDto
-	) {
-		// 비즈니스 로직 처리: 주문 상태 변경, 결제 정보 저장 등
+	@ResponseStatus(HttpStatus.OK)
+	public void paymentCallback(@RequestBody @Valid CallbackRequestDto requestDto) {
+		log.info("토스페이 콜백 수신 - orderNo: {}, status: {}", requestDto.getOrderNo(), requestDto.getStatus());
+		
 		paymentService.processPaymentApproval(requestDto);
+		
+		log.debug("콜백 처리 완료 - orderNo: {}", requestDto.getOrderNo());
 	}
 }

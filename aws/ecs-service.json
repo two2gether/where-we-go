@@ -1,0 +1,30 @@
+{
+  "serviceName": "wherewego-app-service",
+  "cluster": "wherewego-prod-cluster",
+  "taskDefinition": "wherewego-app",
+  "desiredCount": 1,
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-xxxxxxxxx",
+        "subnet-yyyyyyyyy"
+      ],
+      "securityGroups": [
+        "sg-xxxxxxxxx"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  },
+  "enableExecuteCommand": true,
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "prod"
+    },
+    {
+      "key": "Project",
+      "value": "wherewego"
+    }
+  ]
+}

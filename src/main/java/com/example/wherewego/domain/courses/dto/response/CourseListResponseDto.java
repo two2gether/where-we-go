@@ -52,6 +52,10 @@ public class CourseListResponseDto {
 	 */
 	private int likeCount;
 	/**
+	 * 코스 북마크 수
+	 */
+	private int bookmarkCount;
+	/**
 	 * 코스 평균 평점
 	 */
 	private double averageRating;
@@ -63,4 +67,16 @@ public class CourseListResponseDto {
 	 * 코스 생성 일시
 	 */
 	private LocalDateTime createdAt;
+	/**
+	 * 현재 사용자의 좋아요 여부
+	 */
+	private Boolean isLiked;
+	/**
+	 * 현재 사용자의 북마크 여부
+	 */
+	private Boolean isBookmarked;
+	/**
+	 * 현재 사용자의 평점
+	 */
+	private Double myRating;
 }
