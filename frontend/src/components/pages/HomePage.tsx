@@ -1,19 +1,14 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GitHubLayout } from '../layout';
-import { useCourses, usePopularCourses } from '../../hooks/useCourses';
-import { usePlaces } from '../../hooks/usePlaces';
+import { usePopularCourses } from '../../hooks/useCourses';
 import { useLocationStore } from '../../store/locationStore';
 import { isGeolocationAvailable, getGeolocationUnavailableReason } from '../../utils/geolocation';
 import { Button, Spinner } from '../base';
 
 const HomePage = () => {
-  // 실제 백엔드 인기 코스 API 사용 (북마크 수 기반 인기도)
-  const { data: popularCoursesData, isLoading: isPopularLoading } = usePopularCourses('전체', [], 3);
-  const { data: placesData } = usePlaces({ page: 0, size: 10 });
-  
-  // 전체 통계용 일반 코스 데이터도 가져옴
-  const { data: allCoursesData } = useCourses({ page: 0, size: 1 });
+  // 실제 백엔드 인기 코스 API 사용 (북마크 수 기반 인기도) - 안전한 공개 API 호출
+  const { data: popularCoursesData, isLoading: isPopularLoading, error: popularCoursesError } = usePopularCourses('전체', [], 3);
   
   // 위치 스토어에서 상태 가져오기
   const { latitude, longitude, isPermissionGranted, isLoading, error, requestLocation } = useLocationStore();
@@ -22,10 +17,8 @@ const HomePage = () => {
   const [isLocationSectionHidden, setIsLocationSectionHidden] = React.useState(false);
 
 
-  // 실제 통계 데이터 계산
-  const totalCourses = allCoursesData?.totalElements || 0;
-  const totalPlaces = placesData?.totalElements || 0;
-  const popularCourses = popularCoursesData?.content || [];
+  // 인기 코스 데이터 (에러 시 기본값 사용)
+  const popularCourses = popularCoursesError ? [] : (popularCoursesData?.content || []);
 
   // 디버깅을 위한 데이터 출력 (개발 환경에서만)
   React.useEffect(() => {
@@ -41,125 +34,6 @@ const HomePage = () => {
       subtitle="나만의 여행 코스를 만들고 공유하세요. 다른 여행자들의 추천 코스를 발견하고 함께 특별한 여행을 계획해보세요."
     >
       <div className="space-y-12">
-        {/* Notion 스타일 Statistics Section - 실제 데이터 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 text-center">
-          <div 
-            className="text-center p-6 rounded-lg border"
-            style={{
-              background: 'var(--notion-white)',
-              border: '1px solid var(--notion-gray-light)',
-              borderRadius: '8px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div 
-              style={{
-                fontSize: '32px',
-                fontWeight: '700',
-                color: 'var(--notion-blue)',
-                marginBottom: '8px'
-              }}
-            >
-              {totalCourses}+
-            </div>
-            <div 
-              style={{
-                fontSize: '14px',
-                fontWeight: '500',
-                color: 'var(--notion-text-light)'
-              }}
-            >
-              등록된 코스
-            </div>
-          </div>
-          <div 
-            className="text-center p-6 rounded-lg border"
-            style={{
-              background: 'var(--notion-white)',
-              border: '1px solid var(--notion-gray-light)',
-              borderRadius: '8px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div 
-              style={{
-                fontSize: '32px',
-                fontWeight: '700',
-                color: 'var(--notion-blue)',
-                marginBottom: '8px'
-              }}
-            >
-              {totalPlaces}+
-            </div>
-            <div 
-              style={{
-                fontSize: '14px',
-                fontWeight: '500',
-                color: 'var(--notion-text-light)'
-              }}
-            >
-              추천 장소
-            </div>
-          </div>
-          <div 
-            className="text-center p-6 rounded-lg border"
-            style={{
-              background: 'var(--notion-white)',
-              border: '1px solid var(--notion-gray-light)',
-              borderRadius: '8px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div 
-              style={{
-                fontSize: '32px',
-                fontWeight: '700',
-                color: 'var(--notion-blue)',
-                marginBottom: '8px'
-              }}
-            >
-              {popularCourses.reduce((sum, course) => sum + (course.bookmarkCount || 0), 0)}+
-            </div>
-            <div 
-              style={{
-                fontSize: '14px',
-                fontWeight: '500',
-                color: 'var(--notion-text-light)'
-              }}
-            >
-              총 북마크
-            </div>
-          </div>
-          <div 
-            className="text-center p-6 rounded-lg border"
-            style={{
-              background: 'var(--notion-white)',
-              border: '1px solid var(--notion-gray-light)',
-              borderRadius: '8px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div 
-              style={{
-                fontSize: '32px',
-                fontWeight: '700',
-                color: 'var(--notion-blue)',
-                marginBottom: '8px'
-              }}
-            >
-              {popularCourses.reduce((sum, course) => sum + (course.ratingCount || 0), 0)}+
-            </div>
-            <div 
-              style={{
-                fontSize: '14px',
-                fontWeight: '500',
-                color: 'var(--notion-text-light)'
-              }}
-            >
-              총 평점 수
-            </div>
-          </div>
-        </div>
 
         {/* 위치 권한 요청 섹션 */}
         {!isPermissionGranted && !isLocationSectionHidden && (

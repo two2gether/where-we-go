@@ -34,24 +34,34 @@ api.interceptors.request.use(
     (config) => {
         const startTime = Date.now();
 
-        // 인증이 필요 없는 엔드포인트 확인
+        // 인증이 필요 없는 엔드포인트 확인 (SecurityConfig와 일치)
         const publicEndpoints = [
             'auth/login',
-            'auth/signup',
+            'auth/signup', 
             'auth/refresh',
             'auth/googlelogin',
             'auth/kakaologin',
             'places/search',
             'places/',
             'places',
+            'courses',
             'courses/',
-            'courses'
+            'courses/popular',
+            'comments'
         ];
 
         const requestUrl = config.url || '';
-        const isPublicEndpoint = publicEndpoints.some(endpoint =>
-            requestUrl.includes(endpoint)
-        );
+        const isPublicEndpoint = publicEndpoints.some(endpoint => {
+            // GET 메소드인 경우 더 정확한 매칭 로직 적용
+            if (config.method?.toUpperCase() === 'GET') {
+                return requestUrl.startsWith(endpoint) || 
+                       requestUrl === endpoint ||
+                       requestUrl.startsWith(endpoint + '/') ||
+                       requestUrl.startsWith(endpoint + '?');
+            }
+            // POST/PUT/DELETE 등은 정확한 매칭
+            return requestUrl.includes(endpoint);
+        });
 
         // 토큰이 있으면 Authorization 헤더에 추가
         const {token, isAuthenticated, logout} = useAuthStore.getState();
@@ -150,28 +160,38 @@ api.interceptors.response.use(
             updateLogError(requestId, error.response?.data || error.message, error.response?.status, duration);
         }
 
-        // 비로그인 상태에서 접근 가능한 API 엔드포인트 정의
+        // 비로그인 상태에서 접근 가능한 API 엔드포인트 정의 (SecurityConfig와 일치)
         const publicEndpoints = [
+            'auth/login',
+            'auth/signup',
+            'auth/refresh', 
+            'auth/googlelogin',
+            'auth/kakaologin',
             'places/search',
             'places/',
             'places',
-            'courses/',
             'courses',
-            'auth/login',
-            'auth/signup',
-            'auth/refresh',
-            'auth/googlelogin',
-            'auth/kakaologin'
+            'courses/',
+            'courses/popular',
+            'comments'
         ];
 
         // 현재 요청이 public 엔드포인트인지 확인
         const requestUrl = originalRequest.url || '';
-        const isPublicEndpoint = publicEndpoints.some(endpoint =>
-            requestUrl.includes(endpoint)
-        );
+        const isPublicEndpoint = publicEndpoints.some(endpoint => {
+            // GET 메소드인 경우 더 정확한 매칭 로직 적용
+            if (originalRequest.method?.toUpperCase() === 'GET') {
+                return requestUrl.startsWith(endpoint) || 
+                       requestUrl === endpoint ||
+                       requestUrl.startsWith(endpoint + '/') ||
+                       requestUrl.startsWith(endpoint + '?');
+            }
+            // POST/PUT/DELETE 등은 정확한 매칭
+            return requestUrl.includes(endpoint);
+        });
 
         if (import.meta.env.DEV) {
-            // Endpoint accessibility check performed
+            console.log(`🔍 Public endpoint check: ${requestUrl} -> ${isPublicEndpoint ? 'PUBLIC' : 'PRIVATE'}`);
         }
 
         // 401/403 에러 처리
@@ -217,18 +237,22 @@ api.interceptors.response.use(
                         return api(originalRequest);
                     }
 
-                    // Private endpoint라면 로그아웃
+                    // Private endpoint라면 로그아웃 (홈페이지에서는 리다이렉트 방지)
                     logout();
-                    window.location.href = '/login';
+                    if (!window.location.pathname.startsWith('/login') && window.location.pathname !== '/') {
+                        window.location.href = '/login';
+                    }
                 }
             } else {
                 // 리프레시 토큰이 없는 경우
                 // No refresh token available
 
-                // Public endpoint가 아닌 경우에만 로그아웃 처리
+                // Public endpoint가 아닌 경우에만 로그아웃 처리 (홈페이지에서는 리다이렉트 방지)
                 if (!isPublicEndpoint) {
                     logout();
-                    window.location.href = '/login';
+                    if (!window.location.pathname.startsWith('/login') && window.location.pathname !== '/') {
+                        window.location.href = '/login';
+                    }
                 }
             }
         }

@@ -137,12 +137,12 @@ export const PlacesPage: React.FC = () => {
   const scrollPosition = useScrollPosition();
   const isSearchSticky = scrollPosition > 150; // 150px 이상 스크롤하면 sticky 활성화
 
-  // 북마크된 장소를 API로 조회 (카운트용 - 항상 호출)
+  // 북마크된 장소를 API로 조회 (카운트용 - 인증된 사용자만 호출)
   const bookmarkedPlacesQuery = useBookmarkedPlaces({
     page: 0,
     size: 1 // 카운트만 필요하므로 1개만 조회
   }, {
-    enabled: isAuthenticated // 인증된 사용자일 때 항상 호출
+    enabled: isAuthenticated // 인증된 사용자일 때만 호출하여 리다이렉트 방지
   });
   
   // 북마크 탭용 전체 데이터 조회 (탭 활성화 시에만)

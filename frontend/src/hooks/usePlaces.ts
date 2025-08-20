@@ -41,28 +41,37 @@ export const useInfinitePlaces = (params: Omit<PlaceSearchRequest, 'page'> = {})
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      console.log('📄 Determining next page from (20개 기준):', lastPage);
-      console.log(`  - Current page: ${lastPage?.number}`);
-      console.log(`  - Is last: ${lastPage?.last}`);
-      console.log(`  - Content length: ${lastPage?.content?.length || 0}`);
-      console.log(`  - Total pages: ${lastPage?.totalPages}`);
-      console.log(`  - Total elements: ${lastPage?.totalElements}`);
+      console.log('📄 Determining next page from:', lastPage);
       
-      // Google API 20개 기준으로 종료 조건 체크
-      if (lastPage?.last || lastPage?.content?.length === 0) {
-        console.log('❌ No more pages (reached end of Google API results)');
+      // lastPage가 없거나 올바르지 않은 경우 종료
+      if (!lastPage) {
+        console.log('❌ No lastPage data');
         return undefined;
       }
       
-      const nextPage = (lastPage?.number || 0) + 1;
-      
-      // 총 페이지 수를 초과하지 않도록 체크 (20개 기준)
-      if (nextPage >= (lastPage?.totalPages || 0)) {
-        console.log('❌ No more pages (exceeded total pages for 20 results)');
+      // content가 없거나 빈 배열인 경우 종료
+      if (!lastPage.content || lastPage.content.length === 0) {
+        console.log('❌ No content in last page');
         return undefined;
       }
       
-      console.log(`✅ Next page: ${nextPage} (expecting up to 2 pages for 20 results)`);
+      // 마지막 페이지인 경우 종료
+      if (lastPage.last === true) {
+        console.log('❌ Reached last page');
+        return undefined;
+      }
+      
+      const currentPage = lastPage.number || 0;
+      const totalPages = lastPage.totalPages || 0;
+      const nextPage = currentPage + 1;
+      
+      // 다음 페이지가 총 페이지 수를 초과하는 경우 종료
+      if (nextPage >= totalPages) {
+        console.log('❌ Next page exceeds total pages');
+        return undefined;
+      }
+      
+      console.log(`✅ Next page: ${nextPage} (current: ${currentPage}, total: ${totalPages})`);
       return nextPage;
     },
     staleTime: 5 * 60 * 1000,

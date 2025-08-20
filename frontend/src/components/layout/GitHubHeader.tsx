@@ -10,8 +10,8 @@ export const GitHubHeader: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // 알림 관련 상태
-  const { data: unreadCount = 0 } = useUnreadNotificationCount();
+  // 알림 관련 상태 - 로그인된 사용자만 호출
+  const { data: unreadCount = 0 } = useUnreadNotificationCount(isAuthenticated);
 
   const handleLogout = () => {
     logout();

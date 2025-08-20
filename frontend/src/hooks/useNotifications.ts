@@ -18,12 +18,13 @@ export const useNotifications = (params: PaginationParams = {}) => {
 };
 
 // 읽지 않은 알림 개수 조회
-export const useUnreadNotificationCount = () => {
+export const useUnreadNotificationCount = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationService.getUnreadCount(),
+    enabled, // 인증된 사용자에게만 호출
     staleTime: 30 * 1000, // 30초
-    refetchInterval: 60 * 1000, // 1분마다 자동 갱신
+    refetchInterval: enabled ? 60 * 1000 : false, // 인증된 사용자만 자동 갱신
   });
 };
 
@@ -34,24 +35,8 @@ export const useMarkNotificationAsRead = () => {
   return useMutation({
     mutationFn: (notificationId: number) => notificationService.markAsRead(notificationId),
     onSuccess: (updatedNotification, notificationId) => {
-      // 캐시를 즉시 업데이트
-      queryClient.setQueriesData<PageResponse<Notification>>(
-        { queryKey: ['notifications'] },
-        (oldData) => {
-          if (!oldData) return oldData;
-          
-          return {
-            ...oldData,
-            content: oldData.content.map(notification => 
-              notification.notificationId === notificationId
-                ? { ...notification, isRead: true }
-                : notification
-            )
-          };
-        }
-      );
-      
-      // 읽지 않은 알림 개수 캐시 무효화
+      // 모든 notifications 관련 캐시 무효화 (queryKey 불일치 문제 해결)
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     },
     onError: (error) => {
