@@ -59,38 +59,39 @@ export const useRequestRefund = () => {
   });
 };
 
+// TODO: 백엔드에서 결제 검증/취소 API 구현 후 활성화
 // 결제 검증 (토스페이먼츠 성공 콜백용)
-export const useVerifyPayment = () => {
-  const queryClient = useQueryClient();
+// export const useVerifyPayment = () => {
+//   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ paymentKey, orderId, amount }: { 
-      paymentKey: string; 
-      orderId: string; 
-      amount: number; 
-    }) => paymentService.verifyPayment(paymentKey, orderId, amount),
-    onSuccess: (paymentDetail) => {
-      // 검증된 결제 정보를 캐시에 저장
-      queryClient.setQueryData(
-        paymentKeys.detail(paymentDetail.orderId),
-        paymentDetail
-      );
-    },
-    onError: (error) => {
-      console.error('Payment verification failed:', error);
-    },
-  });
-};
+//   return useMutation({
+//     mutationFn: ({ paymentKey, orderId, amount }: { 
+//       paymentKey: string; 
+//       orderId: string; 
+//       amount: number; 
+//     }) => paymentService.verifyPayment(paymentKey, orderId, amount),
+//     onSuccess: (paymentDetail) => {
+//       // 검증된 결제 정보를 캐시에 저장
+//       queryClient.setQueryData(
+//         paymentKeys.detail(paymentDetail.orderId),
+//         paymentDetail
+//       );
+//     },
+//     onError: (error) => {
+//       console.error('Payment verification failed:', error);
+//     },
+//   });
+// };
 
 // 결제 취소 (결제 실패 시)
-export const useCancelPayment = () => {
-  return useMutation({
-    mutationFn: ({ paymentKey, cancelReason }: { 
-      paymentKey: string; 
-      cancelReason: string; 
-    }) => paymentService.cancelPayment(paymentKey, cancelReason),
-    onError: (error) => {
-      console.error('Payment cancellation failed:', error);
-    },
-  });
-};
+// export const useCancelPayment = () => {
+//   return useMutation({
+//     mutationFn: ({ paymentKey, cancelReason }: { 
+//       paymentKey: string; 
+//       cancelReason: string; 
+//     }) => paymentService.cancelPayment(paymentKey, cancelReason),
+//     onError: (error) => {
+//       console.error('Payment cancellation failed:', error);
+//     },
+//   });
+// };

@@ -1,12 +1,10 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useVerifyPayment, usePaymentDetail } from '../hooks/usePayments';
 import { GitHubLayout } from '../components/layout/GitHubLayout';
 
 const PaymentSuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const verifyPaymentMutation = useVerifyPayment();
 
   // URL에서 토스페이먼츠 파라미터 추출 (토스의 실제 콜백 파라미터)
   const status = searchParams.get('status');
@@ -21,7 +19,7 @@ const PaymentSuccessPage: React.FC = () => {
     // 결제 완료 상태 확인
     if (status === 'PAY_COMPLETE' && orderNo) {
       console.log('토스 결제 성공 콜백:', { status, orderNo, payMethod, bankCode });
-      // 실제로는 백엔드에서 토스 콜백을 통해 결제 상태가 이미 업데이트되어 있어야 함
+      // 백엔드에서 토스 콜백을 통해 결제 상태가 업데이트되어 있어야 함
     } else if (status && status !== 'PAY_COMPLETE') {
       console.error('결제 실패 상태:', status);
     }

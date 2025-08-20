@@ -213,17 +213,48 @@ const PaymentDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 환불 요청 버튼 */}
-            {paymentDetail.paymentStatus === 'DONE' && (
-              <div className="mt-8 pt-6 border-t border-github-border">
+            {/* 환불 관련 정보 */}
+            <div className="mt-8 pt-6 border-t border-github-border">
+              {paymentDetail.paymentStatus === 'REFUNDED' && paymentDetail.refundedAt && (
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-medium text-purple-800 mb-1">환불 완료</p>
+                      <p className="text-purple-700">환불일시: {new Date(paymentDetail.refundedAt).toLocaleString()}</p>
+                      {paymentDetail.refundReason && (
+                        <p className="text-purple-700 mt-1">환불사유: {paymentDetail.refundReason}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {paymentDetail.paymentStatus === 'DONE' && paymentDetail.refundable && (
                 <button
                   onClick={() => setShowRefundModal(true)}
                   className="px-6 py-2 text-red-600 border border-red-300 rounded-md hover:bg-red-50"
                 >
                   환불 요청
                 </button>
-              </div>
-            )}
+              )}
+
+              {paymentDetail.paymentStatus === 'DONE' && !paymentDetail.refundable && paymentDetail.refundUnavailableReason && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-700 mb-1">환불 불가</p>
+                      <p className="text-gray-600">{paymentDetail.refundUnavailableReason}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

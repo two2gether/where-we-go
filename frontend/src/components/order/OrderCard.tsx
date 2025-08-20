@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Badge, Button } from '../base';
+import { RefundButton } from '../payment';
 import { formatDate } from '../../utils/dateUtils';
 import type { MyOrderResponseDto } from '../../api/services/order.service';
 
@@ -169,6 +170,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               >
                 주문취소
               </Button>
+            )}
+            {order.status === 'DONE' && (
+              <RefundButton orderId={order.orderId} size="sm" />
             )}
           </div>
         </div>

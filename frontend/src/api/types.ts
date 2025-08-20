@@ -329,7 +329,6 @@ export interface FileUploadResponse {
 
 // 결제 관련 타입 (백엔드 PaymentRequestDto와 매칭)
 export interface PaymentRequest {
-  apiKey: string;
   orderNo: string;
   amount: number;
   amountTaxFree: number;
@@ -339,7 +338,6 @@ export interface PaymentRequest {
   autoExecute: boolean;
   resultCallback?: string;
   callbackVersion?: string;
-  productId?: number;
   quantity?: number;
 }
 
@@ -362,6 +360,11 @@ export interface PaymentDetailResponse {
   paidTs: string;
   paymentStatus: 'PENDING' | 'DONE' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
   transactionId: string;
+  // 환불 관련 정보
+  refundable?: boolean;
+  refundReason?: string;
+  refundedAt?: string;
+  refundUnavailableReason?: string;
   cardInfo?: {
     cardNumber: string;
     cardCompanyCode: number;
