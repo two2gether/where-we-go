@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOrderDetail } from '../hooks';
 import { Button, Spinner, Card } from '../components/base';
-import { RefundButton } from '../components/payment';
+import { RefundButton } from '../components/payment/RefundButton';
 import { GitHubLayout } from '../components/layout';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 
