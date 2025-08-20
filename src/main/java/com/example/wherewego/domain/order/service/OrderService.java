@@ -1,7 +1,6 @@
 package com.example.wherewego.domain.order.service;
 
 import java.util.EnumSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -48,18 +47,15 @@ public class OrderService {
 			throw new CustomException(ErrorCode.ONLY_ONE_ITEM_ALLOWED);
 		}
 
-		// SELECT FOR UPDATE로 동시성 제어 강화
-		Set<OrderStatus> activeStatuses = EnumSet.of(
+		// 재주문 금지 대상
+		Set<OrderStatus> blockedStatus = EnumSet.of(
 			OrderStatus.PENDING,
 			OrderStatus.READY,
 			OrderStatus.DONE
 		);
-
-		// 락을 걸고 활성 주문 존재 체크
-		Optional<Order> existingActiveOrder = orderRepository.findActiveOrderForUpdate(
-			userId, requestDto.getProductId(), activeStatuses);
-
-		if (existingActiveOrder.isPresent()) {
+		
+		if (orderRepository.existsByUserIdAndEventProductIdAndStatusIn(
+			userId, requestDto.getProductId(), blockedStatus)) {
 			throw new CustomException(ErrorCode.ORDER_ALREADY_EXISTS_FOR_USER);
 		}
 

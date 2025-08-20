@@ -99,23 +99,4 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 		@Param("fromStatuses") Collection<OrderStatus> fromStatuses
 	);
 
-	/**
-	 * 활성 주문 존재 체크 후 새 주문 생성 (원자적 연산)
-	 * SELECT FOR UPDATE로 동시성 제어
-	 * 
-	 * @param userId 사용자 ID
-	 * @param productId 상품 ID  
-	 * @param activeStatuses 활성 주문 상태들
-	 * @return 활성 주문이 존재하면 해당 주문, 없으면 empty
-	 */
-	@Query("""
-		SELECT o FROM Order o 
-		WHERE o.user.id = :userId 
-		AND o.eventProduct.id = :productId 
-		AND o.status IN :activeStatuses
-		FOR UPDATE
-		""")
-	Optional<Order> findActiveOrderForUpdate(@Param("userId") Long userId, 
-											@Param("productId") Long productId,
-											@Param("activeStatuses") Collection<OrderStatus> activeStatuses);
 }
