@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   useNotifications, 
-  useMarkNotificationAsRead, 
-  useMarkAllNotificationsAsRead
+  useMarkNotificationAsRead
 } from '../hooks/useNotifications';
-import { notificationService } from '../api/services/notification.service';
+import { useDeleteReadNotifications } from '../hooks/useUser';
 import LinearLayout from '../components/layout/LinearLayout';
 
 const NotificationsPage: React.FC = () => {
@@ -18,22 +17,7 @@ const NotificationsPage: React.FC = () => {
   // Hooks - 백엔드 API 확인 완료, 정상 작동
   const { data: notificationsData, isLoading, error } = useNotifications({ page: currentPage, size: 10 });
   const markAsReadMutation = useMarkNotificationAsRead();
-  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
-  
-  // 백엔드에는 읽은 알림 전체 삭제만 있음 (개별 삭제 없음)
-  const deleteReadNotificationsMutation = useMutation({
-    mutationFn: () => notificationService.deleteReadNotifications(),
-    onSuccess: () => {
-      alert('읽은 알림이 모두 삭제되었습니다.');
-      // 목록 새로고침
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-    },
-    onError: (error) => {
-      console.error('읽은 알림 삭제 실패:', error);
-      alert('읽은 알림 삭제에 실패했습니다.');
-    }
-  });
+  const deleteReadNotificationsMutation = useDeleteReadNotifications();
 
   const notifications = notificationsData?.content || [];
   const totalElements = notificationsData?.totalElements || 0;
@@ -48,15 +32,6 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleMarkAllAsRead = async () => {
-    if (confirm('모든 알림을 읽음 처리하시겠습니까?')) {
-      try {
-        await markAllAsReadMutation.mutateAsync();
-      } catch (error) {
-        console.error('모든 알림 읽음 처리 실패:', error);
-      }
-    }
-  };
 
   const handleDeleteReadNotifications = async () => {
     if (confirm('읽은 알림을 모두 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
@@ -115,7 +90,7 @@ const NotificationsPage: React.FC = () => {
           borderRadius: '8px'
         }}
       >
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col space-y-2">
           <h2 
             style={{
               fontSize: '20px',
@@ -126,28 +101,19 @@ const NotificationsPage: React.FC = () => {
           >
             📢 알림 {totalElements > 0 && `(${totalElements}개)`}
           </h2>
+          <p 
+            style={{
+              fontSize: '13px',
+              color: 'var(--notion-text-light)',
+              margin: 0,
+              lineHeight: '1.4'
+            }}
+          >
+            💡 읽음 처리는 각 알림의 "✅ 읽음" 버튼을 개별적으로 클릭해주세요.
+          </p>
         </div>
 
         <div className="flex items-center space-x-2">
-          <button
-            onClick={handleMarkAllAsRead}
-            disabled={markAllAsReadMutation.isPending}
-            style={{
-              color: 'var(--notion-blue)',
-              background: 'transparent',
-              border: '1px solid var(--notion-gray-light)',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ✅ {markAllAsReadMutation.isPending ? '처리중...' : '모두 읽음'}
-          </button>
-
           <button
             onClick={handleDeleteReadNotifications}
             disabled={deleteReadNotificationsMutation.isPending}
@@ -230,15 +196,15 @@ const NotificationsPage: React.FC = () => {
           {notifications.map((notification) => (
             <div 
               key={notification.notificationId}
-              className={`p-4 rounded-lg transition-all cursor-pointer ${
+              className={`p-4 rounded-lg transition-all ${
                 !notification.isRead ? 'ring-2 ring-blue-100' : ''
               }`}
               style={{
                 background: notification.isRead ? 'var(--notion-white)' : 'var(--notion-blue-bg)',
                 border: `1px solid ${notification.isRead ? 'var(--notion-gray-light)' : 'var(--notion-blue-light)'}`,
-                borderRadius: '8px'
+                borderRadius: '8px',
+                cursor: 'default' // 클릭 가능한 커서 제거
               }}
-              onClick={() => !notification.isRead && handleMarkAsRead(notification.notificationId)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3 flex-1">
@@ -261,14 +227,29 @@ const NotificationsPage: React.FC = () => {
                         {getNotificationTypeText(notification.type)}
                       </span>
                       {!notification.isRead && (
-                        <span 
+                        <div
                           style={{
-                            width: '8px',
-                            height: '8px',
                             background: 'var(--notion-red)',
-                            borderRadius: '50%'
+                            color: 'var(--notion-white)',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px'
                           }}
-                        />
+                        >
+                          <span 
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              background: 'var(--notion-white)',
+                              borderRadius: '50%'
+                            }}
+                          />
+                          안읽음
+                        </div>
                       )}
                     </div>
                     
@@ -309,35 +290,42 @@ const NotificationsPage: React.FC = () => {
                       }}
                       disabled={markAsReadMutation.isPending}
                       style={{
-                        color: 'var(--notion-blue)',
-                        background: 'transparent',
-                        border: '1px solid var(--notion-gray-light)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
+                        color: 'var(--notion-white)',
+                        background: 'var(--notion-blue)',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
                         fontSize: '12px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: '500'
                       }}
-                      title="읽음 처리"
+                      title="클릭하여 읽음 처리"
                     >
-                      ✅
+                      ✅ 읽음
                     </button>
                   )}
                   
-                  {/* 개별 알림 삭제는 백엔드에서 미지원 - 읽은 알림만 일괄 삭제 가능 */}
+                  {/* 읽음 상태 표시 */}
                   {notification.isRead && (
                     <div
                       style={{
-                        color: 'var(--notion-text-light)',
-                        background: 'transparent',
-                        border: '1px solid var(--notion-gray-light)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        opacity: 0.7
+                        color: 'var(--notion-green)',
+                        background: 'var(--notion-green-bg)',
+                        border: '1px solid var(--notion-green-light)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: '500'
                       }}
-                      title="상단의 '읽은 알림 삭제' 버튼을 이용해주세요"
+                      title="읽음 완료"
                     >
-                      읽음
+                      ✅ 읽음완료
                     </div>
                   )}
                 </div>

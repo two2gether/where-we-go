@@ -56,15 +56,15 @@ export const useLogin = () => {
       };
     },
     onSuccess: (data) => {
+      // 1. 먼저 모든 기존 캐시를 완전히 초기화 (이전 사용자 데이터 제거)
+      queryClient.clear();
+      
+      // 2. 새 사용자 정보 설정
       setUser(data.user);
       setRefreshToken(data.refreshToken);
       
-      // 사용자 정보 캐시 업데이트
+      // 3. 새 사용자 정보를 캐시에 설정
       queryClient.setQueryData(authKeys.me, data.user);
-      
-      // 다른 관련 쿼리 무효화
-      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-      queryClient.invalidateQueries({ queryKey: ['courses', 'my'] });
     },
     onError: (error) => {
       console.error('Login failed:', error);

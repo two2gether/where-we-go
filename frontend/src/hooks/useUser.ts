@@ -26,10 +26,53 @@ export const userKeys = {
 
 // 마이페이지 정보 조회
 export const useMyPage = () => {
+  const { isAuthenticated, logout, user: currentUser } = useAuthStore();
+  const queryClient = useQueryClient();
+  
   return useQuery({
     queryKey: userKeys.mypage(),
-    queryFn: userService.getMyPage,
+    queryFn: async () => {
+      // 현재 인증된 사용자 정보 확인
+      if (!currentUser) {
+        logout();
+        throw new Error('No authenticated user');
+      }
+      
+      const data = await userService.getMyPage();
+      
+      // 응답 받은 데이터의 사용자 ID와 현재 로그인한 사용자 ID가 일치하는지 확인
+      if (data.user?.userId && currentUser.userId && data.user.userId !== currentUser.userId) {
+        // 캐시 완전 초기화 후 새로고침
+        queryClient.clear();
+        window.location.reload();
+        throw new Error('User mismatch detected');
+      }
+      
+      return data;
+    },
     staleTime: 5 * 60 * 1000, // 5분
+    enabled: isAuthenticated && !!currentUser, // 인증과 사용자 정보가 모두 있어야 실행
+    retry: (failureCount, error: any) => {
+      // 401/403 에러의 경우 재시도하지 않음
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.warn('Authentication failed in useMyPage, logging out');
+        logout();
+        return false;
+      }
+      // 사용자 불일치 에러의 경우 재시도하지 않음
+      if (error?.message === 'User mismatch detected' || error?.message === 'No authenticated user') {
+        return false;
+      }
+      // 다른 에러의 경우 최대 2번 재시도
+      return failureCount < 2;
+    },
+    onError: (error: any) => {
+      console.error('MyPage data fetch error:', error);
+      // 401/403 에러 시 추가 로그아웃 처리 (혹시 retry에서 누락된 경우)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        logout();
+      }
+    },
   });
 };
 
@@ -200,19 +243,21 @@ export const useMarkNotificationAsRead = () => {
   });
 };
 
-// 모든 알림 읽음 처리
-export const useMarkAllNotificationsAsRead = () => {
+// 읽은 알림 전체 삭제
+export const useDeleteReadNotifications = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: userService.markAllNotificationsAsRead,
+    mutationFn: userService.deleteReadNotifications,
     onSuccess: () => {
       // 알림 관련 모든 캐시 무효화
       queryClient.invalidateQueries({ queryKey: userKeys.notifications() });
       queryClient.invalidateQueries({ queryKey: userKeys.unreadCount() });
+      alert('읽은 알림이 모두 삭제되었습니다.');
     },
     onError: (error) => {
-      console.error('Mark all notifications as read failed:', error);
+      console.error('Delete read notifications failed:', error);
+      alert('읽은 알림 삭제에 실패했습니다.');
     },
   });
 };

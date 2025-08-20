@@ -10,10 +10,10 @@ import {
   useMyCourses,
   useMyCourseBookmarks,
   useMyCourseLikes,
-  useMarkNotificationAsRead,
-  useMarkAllNotificationsAsRead
+  useMarkNotificationAsRead
 } from '../hooks/useUser';
 import { useNotifications } from '../hooks/useNotifications';
+import { useAuthStore } from '../store/authStore';
 import LinearLayout from '../components/layout/LinearLayout';
 import { ProfileImageUploader } from '../components/common/ProfileImageUploader';
 import type { MyPageUpdateRequest, WithdrawRequest } from '../api/types';
@@ -24,22 +24,57 @@ const MyPage: React.FC = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawPassword, setWithdrawPassword] = useState('');
 
+  // 인증 상태 확인
+  const { user, isAuthenticated, validateCurrentSession, logout } = useAuthStore();
+
   // 프로필 정보
-  const { data: myPageData, isLoading } = useMyPage();
+  const { data: myPageData, isLoading, error } = useMyPage();
+
+  // 컴포넌트 마운트 시 인증 상태 검증
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isValid = await validateCurrentSession();
+        if (!isValid) {
+          console.warn('Invalid session detected in MyPage, redirecting to login');
+          navigate('/login', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Session validation failed:', error);
+        navigate('/login', { replace: true });
+      }
+    };
+    
+    if (!isAuthenticated || !user) {
+      console.warn('User not authenticated, redirecting to login');
+      navigate('/login', { replace: true });
+      return;
+    }
+    
+    checkAuth();
+  }, [isAuthenticated, user, navigate, validateCurrentSession]);
+
+  // 마이페이지 데이터 로딩 중 인증 에러 감지
+  React.useEffect(() => {
+    if (error && error?.response?.status === 401) {
+      console.warn('Authentication error in MyPage data, redirecting to login');
+      navigate('/login', { replace: true });
+    }
+  }, [error, navigate]);
   const updateMyPageMutation = useUpdateMyPage();
   const withdrawMutation = useWithdraw();
 
   // 알림 기능
   const markNotificationAsReadMutation = useMarkNotificationAsRead();
-  const markAllNotificationsAsReadMutation = useMarkAllNotificationsAsRead();
 
   // 탭별 데이터
-  const { data: commentsData } = useMyComments(0, 10);
-  const { data: bookmarksData } = useMyBookmarks(0, 20);
-  const { data: reviewsData } = useMyReviews(0, 10);
-  const { data: coursesData } = useMyCourses(0, 20);
-  const { data: courseBookmarksData } = useMyCourseBookmarks(0, 20);
-  const { data: likesData } = useMyCourseLikes(0, 10);
+  const { data: commentsData, isLoading: commentsLoading, error: commentsError } = useMyComments(0, 10);
+  const { data: bookmarksData, isLoading: bookmarksLoading, error: bookmarksError } = useMyBookmarks(0, 20);
+  const { data: reviewsData, isLoading: reviewsLoading, error: reviewsError } = useMyReviews(0, 10);
+  const { data: coursesData, isLoading: coursesLoading, error: coursesError } = useMyCourses(0, 20);
+  const { data: courseBookmarksData, isLoading: courseBookmarksLoading, error: courseBookmarksError } = useMyCourseBookmarks(0, 20);
+  const { data: likesData, isLoading: likesLoading, error: likesError } = useMyCourseLikes(0, 10);
   // 백엔드 알림 API 복원 완료
   const { data: notificationsData } = useNotifications({ page: 0, size: 10 });
 
@@ -96,8 +131,11 @@ const MyPage: React.FC = () => {
 
     try {
       await withdrawMutation.mutateAsync(withdrawData);
-      alert('회원탈퇴가 완료되었습니다.');
-      navigate('/');
+      alert('회원탈퇴가 완료되었습니다. 그동안 이용해주셔서 감사합니다.');
+      
+      // 로그아웃 처리 및 홈으로 이동
+      logout();
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('회원탈퇴 실패:', error);
       alert('회원탈퇴에 실패했습니다. 비밀번호를 확인해주세요.');
@@ -116,6 +154,11 @@ const MyPage: React.FC = () => {
   };
 
 
+  // 인증되지 않은 상태에서는 아무것도 렌더링하지 않음 (useEffect에서 리다이렉트 처리)
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <LinearLayout title="마이페이지" breadcrumbs={[{ label: '마이페이지' }]}>
@@ -132,6 +175,83 @@ const MyPage: React.FC = () => {
                 style={{ background: 'var(--notion-gray-light)' }}
               />
             ))}
+          </div>
+        </div>
+      </LinearLayout>
+    );
+  }
+
+  // API 에러 처리 개선
+  if (error) {
+    return (
+      <LinearLayout title="마이페이지" breadcrumbs={[{ label: '마이페이지' }]}>
+        <div className="text-center py-12">
+          <div 
+            className="max-w-md mx-auto p-6 rounded-lg"
+            style={{
+              background: 'var(--notion-white)',
+              border: '1px solid var(--notion-red-light)',
+              borderRadius: '8px'
+            }}
+          >
+            <div 
+              style={{
+                fontSize: '48px',
+                marginBottom: '16px'
+              }}
+            >
+              ⚠️
+            </div>
+            <h2 
+              style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: 'var(--notion-text)',
+                marginBottom: '8px'
+              }}
+            >
+              마이페이지를 불러올 수 없습니다
+            </h2>
+            <p 
+              style={{
+                fontSize: '14px',
+                color: 'var(--notion-text-light)',
+                marginBottom: '16px',
+                lineHeight: '1.5'
+              }}
+            >
+              로그인 세션이 만료되었거나 서버에 문제가 발생했습니다.
+            </p>
+            <div className="flex space-x-3 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '8px 16px',
+                  color: 'var(--notion-text)',
+                  background: 'transparent',
+                  border: '1px solid var(--notion-gray-light)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                새로고침
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--notion-blue)',
+                  color: 'var(--notion-white)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                다시 로그인
+              </button>
+            </div>
           </div>
         </div>
       </LinearLayout>
@@ -338,7 +458,12 @@ const MyPage: React.FC = () => {
   );
 
   return (
-    <LinearLayout title="마이페이지" breadcrumbs={[{ label: '마이페이지' }]}>
+    <LinearLayout 
+      title="마이페이지" 
+      breadcrumbs={[{ label: '마이페이지' }]}
+      showWithdrawButton={true}
+      onWithdrawClick={() => setShowWithdrawModal(true)}
+    >
       {/* 프로필 섹션 */}
       {renderProfileSection()}
       
@@ -586,9 +711,9 @@ const MyPage: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {commentsData?.content?.slice(0, 3).map((comment) => (
+            {commentsData?.content?.slice(0, 3).map((comment, index) => (
               <div 
-                key={comment.id}
+                key={comment.id || comment.commentId || `comment-${index}`}
                 className="p-3 rounded"
                 style={{
                   background: 'var(--notion-gray-bg)',
@@ -671,49 +796,59 @@ const MyPage: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {reviewsData?.content?.slice(0, 3).map((review) => (
-              <div 
-                key={review.reviewId}
-                className="p-3 rounded"
-                style={{
-                  background: 'var(--notion-gray-bg)',
-                  border: '1px solid var(--notion-gray-light)',
-                  borderRadius: '6px'
-                }}
-              >
-                <Link 
-                  to={`/places/${review.place.placeId}`}
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: 'var(--notion-text)',
-                    textDecoration: 'none'
-                  }}
-                >
-                  {review.place.name}
-                </Link>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--notion-text-light)',
-                    marginTop: '4px',
-                    lineHeight: '1.4'
-                  }}
-                >
-                  {review.content.length > 60 ? `${review.content.slice(0, 60)}...` : review.content}
-                </p>
-                <div 
-                  className="flex items-center space-x-3 mt-2"
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--notion-text-light)'
-                  }}
-                >
-                  <span>⭐ {review.rating}</span>
-                  <span>{new Date(review.createdAt).toLocaleDateString()}</span>
-                </div>
+            {reviewsLoading ? (
+              <div className="text-center py-4" style={{ color: 'var(--notion-text-light)' }}>
+                데이터를 불러오는 중...
               </div>
-            ))}
+            ) : reviewsError ? (
+              <div className="text-center py-4" style={{ color: 'var(--notion-red)' }}>
+                리뷰 데이터를 불러오는데 실패했습니다.
+              </div>
+            ) : (
+              reviewsData?.content?.slice(0, 3).filter(review => review).map((review) => (
+                <div 
+                  key={review.reviewId}
+                  className="p-3 rounded"
+                  style={{
+                    background: 'var(--notion-gray-bg)',
+                    border: '1px solid var(--notion-gray-light)',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <Link 
+                    to={`/places/${review.placeId || review.place?.placeId || ''}`}
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'var(--notion-text)',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    {review.placeName || review.place?.name || '리뷰한 장소 보기'}
+                  </Link>
+                  <p 
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--notion-text-light)',
+                      marginTop: '4px',
+                      lineHeight: '1.4'
+                    }}
+                  >
+                    {review.content.length > 60 ? `${review.content.slice(0, 60)}...` : review.content}
+                  </p>
+                  <div 
+                    className="flex items-center space-x-3 mt-2"
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--notion-text-light)'
+                    }}
+                  >
+                    <span>⭐ {review.rating}</span>
+                    <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
             {(!reviewsData?.content || reviewsData.content.length === 0) && (
               <div 
                 className="text-center py-8"
@@ -757,48 +892,58 @@ const MyPage: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {bookmarksData?.content?.slice(0, 3).map((bookmark) => (
-              <div 
-                key={bookmark.bookmarkId}
-                className="p-3 rounded"
-                style={{
-                  background: 'var(--notion-gray-bg)',
-                  border: '1px solid var(--notion-gray-light)',
-                  borderRadius: '6px'
-                }}
-              >
-                <Link 
-                  to={`/places/${bookmark.place.placeId}`}
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: 'var(--notion-text)',
-                    textDecoration: 'none'
-                  }}
-                >
-                  {bookmark.place.name}
-                </Link>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--notion-text-light)',
-                    marginTop: '4px'
-                  }}
-                >
-                  {bookmark.place.address}
-                </p>
-                <div 
-                  className="flex items-center space-x-3 mt-2"
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--notion-text-light)'
-                  }}
-                >
-                  <span>⭐ {bookmark.place.averageRating?.toFixed(1) || '0.0'}</span>
-                  <span>리뷰 {bookmark.place.reviewCount || 0}개</span>
-                </div>
+            {bookmarksLoading ? (
+              <div className="text-center py-4" style={{ color: 'var(--notion-text-light)' }}>
+                데이터를 불러오는 중...
               </div>
-            ))}
+            ) : bookmarksError ? (
+              <div className="text-center py-4" style={{ color: 'var(--notion-red)' }}>
+                북마크 데이터를 불러오는데 실패했습니다.
+              </div>
+            ) : (
+              bookmarksData?.content?.slice(0, 3).filter(bookmark => bookmark).map((bookmark) => (
+                <div 
+                  key={bookmark.bookmarkId}
+                  className="p-3 rounded"
+                  style={{
+                    background: 'var(--notion-gray-bg)',
+                    border: '1px solid var(--notion-gray-light)',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <Link 
+                    to={`/places/${bookmark.place?.placeId || bookmark.placeId || ''}`}
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'var(--notion-text)',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    {bookmark.place?.name || bookmark.placeName || '장소 정보 없음'}
+                  </Link>
+                  <p 
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--notion-text-light)',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {bookmark.place?.address || bookmark.address || '주소 정보 없음'}
+                  </p>
+                  <div 
+                    className="flex items-center space-x-3 mt-2"
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--notion-text-light)'
+                    }}
+                  >
+                    <span>⭐ {bookmark.place?.averageRating?.toFixed(1) || bookmark.averageRating?.toFixed(1) || '0.0'}</span>
+                    <span>리뷰 {bookmark.place?.reviewCount || bookmark.reviewCount || 0}개</span>
+                  </div>
+                </div>
+              ))
+            )}
             {(!bookmarksData?.content || bookmarksData.content.length === 0) && (
               <div 
                 className="text-center py-8"
@@ -969,7 +1114,7 @@ const MyPage: React.FC = () => {
                     color: 'var(--notion-text-light)'
                   }}
                 >
-                  <span>⭐ {courseBookmark.averageRating.toFixed(1)}</span>
+                  <span>⭐ {courseBookmark.averageRating?.toFixed(1) || '0.0'}</span>
                   <span>❤️ {courseBookmark.likeCount}</span>
                   <span>📍 {courseBookmark.region}</span>
                 </div>
@@ -1018,9 +1163,9 @@ const MyPage: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {likesData?.content?.slice(0, 3).map((like) => (
+            {likesData?.content?.slice(0, 3).map((like, index) => (
               <div 
-                key={like.id}
+                key={like.id || like.likeId || `like-${index}`}
                 className="p-3 rounded"
                 style={{
                   background: 'var(--notion-gray-bg)',
@@ -1029,7 +1174,7 @@ const MyPage: React.FC = () => {
                 }}
               >
                 <Link 
-                  to={`/courses/${like.courseListDto.courseId}`}
+                  to={`/courses/${like.courseListDto?.courseId || ''}`}
                   style={{
                     fontSize: '14px',
                     fontWeight: '500',
@@ -1037,7 +1182,7 @@ const MyPage: React.FC = () => {
                     textDecoration: 'none'
                   }}
                 >
-                  {like.courseListDto.title}
+                  {like.courseListDto?.title || '코스 정보 없음'}
                 </Link>
                 <p 
                   style={{
@@ -1046,9 +1191,9 @@ const MyPage: React.FC = () => {
                     marginTop: '4px'
                   }}
                 >
-                  {like.courseListDto.description && like.courseListDto.description.length > 50 
+                  {like.courseListDto?.description && like.courseListDto.description.length > 50 
                     ? `${like.courseListDto.description.slice(0, 50)}...` 
-                    : like.courseListDto.description || '설명 없음'}
+                    : like.courseListDto?.description || '설명 없음'}
                 </p>
                 <div 
                   className="flex items-center space-x-3 mt-2"
@@ -1057,9 +1202,9 @@ const MyPage: React.FC = () => {
                     color: 'var(--notion-text-light)'
                   }}
                 >
-                  <span>⭐ {like.courseListDto.averageRating.toFixed(1)}</span>
-                  <span>❤️ {like.courseListDto.likeCount}</span>
-                  <span>📍 {like.courseListDto.region}</span>
+                  <span>⭐ {like.courseListDto?.averageRating?.toFixed(1) || '0.0'}</span>
+                  <span>❤️ {like.courseListDto?.likeCount || 0}</span>
+                  <span>📍 {like.courseListDto?.region || '지역 정보 없음'}</span>
                 </div>
               </div>
             ))}
@@ -1098,6 +1243,41 @@ const MyPage: React.FC = () => {
             </h3>
             
             <div className="mb-4">
+              <div 
+                className="mb-4 p-4 rounded-lg"
+                style={{
+                  background: 'var(--notion-red-bg)',
+                  border: '1px solid var(--notion-red-light)',
+                  borderRadius: '6px'
+                }}
+              >
+                <p 
+                  style={{
+                    fontSize: '14px',
+                    color: 'var(--notion-red)',
+                    lineHeight: '1.5',
+                    fontWeight: '500',
+                    margin: 0
+                  }}
+                >
+                  ⚠️ 회원탈퇴 시 다음 데이터가 영구 삭제됩니다:
+                </p>
+                <ul 
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--notion-text-light)',
+                    lineHeight: '1.5',
+                    marginTop: '8px',
+                    marginBottom: 0,
+                    paddingLeft: '20px'
+                  }}
+                >
+                  <li>작성한 모든 코스 및 여행 계획</li>
+                  <li>작성한 댓글 및 리뷰</li>
+                  <li>북마크 및 좋아요 정보</li>
+                  <li>프로필 및 계정 정보</li>
+                </ul>
+              </div>
               <p 
                 className="mb-4"
                 style={{
@@ -1107,7 +1287,6 @@ const MyPage: React.FC = () => {
                 }}
               >
                 회원탈퇴를 진행하시려면 비밀번호를 입력해주세요.
-                탈퇴 후에는 모든 데이터가 삭제되며 복구할 수 없습니다.
               </p>
               <label 
                 className="block mb-2"

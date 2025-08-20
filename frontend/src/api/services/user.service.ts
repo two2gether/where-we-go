@@ -125,9 +125,10 @@ export const userService = {
     apiRequest.patch<any>(`/users/mypage/notifications/${notificationId}`)
       .then(response => response.data),
 
-  // 모든 알림 읽음 처리 - 백엔드에 이 API가 없음, 개별 처리만 가능
-  markAllNotificationsAsRead: (): Promise<void> =>
-    Promise.reject(new Error('모든 알림 읽음 처리 API는 백엔드에 구현되지 않음')),
+  // 읽은 알림 전체 삭제 - 백엔드 API 복원
+  deleteReadNotifications: (): Promise<void> =>
+    apiRequest.delete<void>('/users/mypage/notifications/read')
+      .then(response => response.data),
 
   // 읽지 않은 알림 개수 - apiRequest가 이미 래퍼 처리함
   getUnreadNotificationCount: (): Promise<{ count: number }> =>

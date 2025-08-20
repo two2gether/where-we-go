@@ -33,14 +33,8 @@ export const useMarkNotificationAsRead = () => {
   
   return useMutation({
     mutationFn: (notificationId: number) => notificationService.markAsRead(notificationId),
-    onSuccess: (_, notificationId) => {
-      // 알림 목록 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      
-      // 읽지 않은 알림 개수 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-      
-      // 특정 알림의 읽음 상태를 즉시 업데이트
+    onSuccess: (updatedNotification, notificationId) => {
+      // 캐시를 즉시 업데이트
       queryClient.setQueriesData<PageResponse<Notification>>(
         { queryKey: ['notifications'] },
         (oldData) => {
@@ -56,6 +50,9 @@ export const useMarkNotificationAsRead = () => {
           };
         }
       );
+      
+      // 읽지 않은 알림 개수 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     },
     onError: (error) => {
       console.error('Failed to mark notification as read:', error);
@@ -63,24 +60,6 @@ export const useMarkNotificationAsRead = () => {
   });
 };
 
-// 모든 알림 읽음 처리
-export const useMarkAllNotificationsAsRead = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: () => notificationService.markAllAsRead(),
-    onSuccess: () => {
-      // 모든 알림 관련 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      
-      // 읽지 않은 알림 개수를 0으로 즉시 업데이트
-      queryClient.setQueryData(['notifications', 'unread-count'], 0);
-    },
-    onError: (error) => {
-      console.error('Failed to mark all notifications as read:', error);
-    }
-  });
-};
 
 // 알림 삭제
 export const useDeleteNotification = () => {

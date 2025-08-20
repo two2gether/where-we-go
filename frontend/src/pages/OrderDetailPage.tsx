@@ -205,24 +205,14 @@ const OrderDetailPage: React.FC = () => {
           </Button>
           
           {order.status === 'DONE' && (
-            <>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => navigate(`/payments/${order.orderId}`)}
-                className="text-blue-600 border-blue-300 hover:bg-blue-50"
-              >
-                결제 상세 보기
-              </Button>
-              <RefundButton 
-                orderId={order.orderId} 
-                size="lg" 
-                onRefundSuccess={() => {
-                  // 환불 성공 시 페이지 새로고침
-                  window.location.reload();
-                }}
-              />
-            </>
+            <RefundButton 
+              orderId={order.orderId} 
+              size="lg" 
+              onRefundSuccess={() => {
+                // 환불 성공 시 페이지 새로고침
+                window.location.reload();
+              }}
+            />
           )}
           
           {(order.status === 'PENDING' || order.status === 'READY') && (

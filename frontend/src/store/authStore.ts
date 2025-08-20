@@ -70,6 +70,17 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           lastLoginTime: null,
         });
         
+        // React Query 캐시 초기화 (import는 필요 시에만)
+        try {
+          // queryClient가 있으면 캐시 초기화
+          const { queryClient } = require('../providers/QueryProvider');
+          if (queryClient) {
+            queryClient.clear();
+          }
+        } catch (error) {
+          // 무시 가능한 에러
+        }
+        
         // Dispatch logout event for other tabs
         window.dispatchEvent(new CustomEvent('logout'));
       },

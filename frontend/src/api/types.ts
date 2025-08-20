@@ -450,6 +450,7 @@ export interface CreateCommentRequest {
 export interface PlaceReview {
   reviewId: number;
   placeId: string;
+  placeName: string; // 백엔드에서 제공하는 장소 이름
   reviewer: {
     userId: number;
     nickname: string;

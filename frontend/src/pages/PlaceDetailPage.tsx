@@ -12,8 +12,19 @@ const PlaceDetailPage: React.FC = () => {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'info' | 'reviews'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'reviews' | 'map'>('info');
+  const [scrollY, setScrollY] = useState(0);
   const queryClient = useQueryClient();
+
+  // 스크롤 감지
+  React.useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // 스티키 탭 표시 여부 결정 (600px 이상 스크롤하면 표시)
+  const showStickyTabs = scrollY > 600;
 
   // 장소 상세 정보 조회
   const { data: place, isLoading, error } = useQuery({
@@ -79,18 +90,6 @@ const PlaceDetailPage: React.FC = () => {
     }
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: place?.name,
-        text: `${place?.name} - Where We Go`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('링크가 복사되었습니다.');
-    }
-  };
 
   if (isLoading) {
     return (
@@ -128,13 +127,62 @@ const PlaceDetailPage: React.FC = () => {
     );
   }
 
+  // 탭 클릭 시 해당 섹션으로 부드럽게 스크롤
+  const handleTabClick = (tabName: 'info' | 'reviews' | 'map') => {
+    setActiveTab(tabName);
+    // 탭 컨텐츠 영역으로 스크롤 (약간 위쪽으로 오프셋)
+    const tabContentElement = document.getElementById('tab-content');
+    if (tabContentElement) {
+      const offsetTop = tabContentElement.offsetTop - 100; // 100px 여유 공간
+      window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+    }
+  };
+
   const tabs = [
-    { label: '장소 정보', href: '#info', active: activeTab === 'info' },
-    { label: `리뷰 (${place.reviewCount})`, href: '#reviews', active: activeTab === 'reviews' },
+    { label: '장소 정보', href: '#info', active: activeTab === 'info', onClick: () => handleTabClick('info') },
+    { label: `리뷰 (${place.reviewCount})`, href: '#reviews', active: activeTab === 'reviews', onClick: () => handleTabClick('reviews') },
+    { label: '지도보기', href: '#map', active: activeTab === 'map', onClick: () => handleTabClick('map') },
   ];
 
   return (
     <GitHubLayout title={place.name} tabs={tabs}>
+      {/* 스티키 탭 네비게이션 */}
+      <div className={`fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-github-border transition-all duration-300 ${
+        showStickyTabs ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+      }`}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 text-sm text-github-neutral-muted hover:text-github-neutral"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                이전으로
+              </button>
+              <span className="text-sm font-medium text-github-neutral truncate">{place.name}</span>
+            </div>
+            <div className="flex gap-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.href}
+                  onClick={tab.onClick}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    tab.active 
+                      ? 'bg-primary-100 text-primary-700' 
+                      : 'text-github-neutral-muted hover:text-github-neutral hover:bg-github-canvas-subtle'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto">
         {/* 뒤로가기 버튼 */}
         <div className="mb-6">
@@ -245,48 +293,31 @@ const PlaceDetailPage: React.FC = () => {
                 </svg>
                 <span>길찾기</span>
               </button>
-
-              <button
-                onClick={handleShare}
-                className="flex items-center space-x-2 px-4 py-2 text-github-neutral border border-github-border rounded-md hover:bg-github-canvas-subtle transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                </svg>
-                <span>공유</span>
-              </button>
             </div>
           </div>
         </div>
 
         {/* 탭 네비게이션 */}
-        <div className="mb-6">
+        <div className="mb-6" id="tab-content">
           <nav className="flex space-x-1 bg-github-canvas-subtle p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('info')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'info'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              장소 정보
-            </button>
-            <button
-              onClick={() => setActiveTab('reviews')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'reviews'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-github-neutral-muted hover:text-github-neutral'
-              }`}
-            >
-              리뷰 ({place.reviewCount})
-            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.href}
+                onClick={tab.onClick}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  tab.active
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-github-neutral-muted hover:text-github-neutral'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </nav>
         </div>
 
         {/* 탭 컨텐츠 */}
-        <div>
+        <div className="space-y-6">
           {activeTab === 'info' && (
             <div className="bg-white rounded-lg border border-github-border p-6">
               <h2 className="text-xl font-semibold text-github-neutral mb-4">장소 정보</h2>
@@ -343,6 +374,44 @@ const PlaceDetailPage: React.FC = () => {
               averageRating={place.averageRating}
             />
           )}
+
+          {activeTab === 'map' && (
+            <div className="bg-white rounded-lg border border-github-border p-6">
+              <h2 className="text-xl font-semibold text-github-neutral mb-4">지도 위치</h2>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="text-sm">지도 영역</p>
+                    <p className="text-xs mt-1">Google Maps 통합 예정</p>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-github-neutral-muted">
+                  <p><strong>주소:</strong> {place.address}</p>
+                  {place.roadAddress && place.roadAddress !== place.address && (
+                    <p><strong>도로명:</strong> {place.roadAddress}</p>
+                  )}
+                  <p><strong>좌표:</strong> {place.latitude}, {place.longitude}</p>
+                </div>
+
+                <button
+                  onClick={handleDirections}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  <span>Google Maps에서 길찾기</span>
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </GitHubLayout>

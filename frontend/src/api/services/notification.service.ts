@@ -28,10 +28,11 @@ export const notificationService = {
         return response.data || 0;
       }),
 
-  // 알림 읽음 처리 - apiRequest가 이미 래퍼 처리함
-  markAsRead: (notificationId: number): Promise<void> =>
-    apiRequest.patch<any>(`/users/mypage/notifications/${notificationId}`)
+  // 알림 읽음 처리 - 백엔드가 직접 NotificationResponseDto를 반환
+  markAsRead: (notificationId: number): Promise<Notification> =>
+    apiRequest.patch<Notification>(`/users/mypage/notifications/${notificationId}`)
       .then(response => response.data),
+
 
   // 읽은 알림 전체 삭제 - apiRequest가 이미 래퍼 처리함
   deleteReadNotifications: (): Promise<void> =>

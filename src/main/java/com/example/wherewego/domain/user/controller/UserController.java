@@ -42,8 +42,8 @@ import com.example.wherewego.domain.user.dto.MyPageResponseDto;
 import com.example.wherewego.domain.user.dto.MyPageUpdateRequestDto;
 import com.example.wherewego.domain.user.dto.WithdrawRequestDto;
 import com.example.wherewego.domain.user.service.UserService;
-import com.example.wherewego.global.response.ImageUploadResponse;
 import com.example.wherewego.global.response.ApiResponse;
+import com.example.wherewego.global.response.ImageUploadResponse;
 import com.example.wherewego.global.response.PagedResponse;
 
 import jakarta.validation.Valid;
@@ -400,7 +400,7 @@ public class UserController {
 	) {
 		try {
 			String imageUrl = userService.updateProfileImage(userDetail.getUser().getId(), file);
-			return ApiResponse.ok("프로필 이미지가 성공적으로 업로드되었습니다.", 
+			return ApiResponse.ok("프로필 이미지가 성공적으로 업로드되었습니다.",
 				ImageUploadResponse.success(imageUrl));
 		} catch (Exception e) {
 			return ApiResponse.error(e.getMessage());

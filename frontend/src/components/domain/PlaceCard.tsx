@@ -15,7 +15,6 @@ export interface PlaceCardProps {
   tags: string[];
   onBookmarkToggle?: (id: string) => void;
   onViewDetails?: (id: string) => void;
-  onAddToCourse?: (id: string) => void;
   // 선택 모드 관련
   isSelectionMode?: boolean;
   isSelected?: boolean;
@@ -37,7 +36,6 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
   tags,
   onBookmarkToggle,
   onViewDetails,
-  onAddToCourse,
   // 선택 모드 관련
   isSelectionMode = false,
   isSelected = false,
@@ -82,14 +80,6 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
     }
   };
 
-  const handleViewDetails = () => {
-    onViewDetails?.(id);
-  };
-
-  const handleAddToCourse = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddToCourse?.(id);
-  };
 
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -212,26 +202,6 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
             )}
           </div>
           
-          {/* 액션 버튼 */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleViewDetails}
-              className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
-            >
-              상세보기
-            </button>
-            {!isSelectionMode && (
-              <button
-                onClick={handleAddToCourse}
-                className="px-4 py-2.5 bg-github-canvas-subtle hover:bg-github-canvas text-github-neutral font-medium rounded-lg border border-github-border transition-colors duration-200"
-                title="코스에 추가"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
