@@ -62,7 +62,7 @@ const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
         구글로 로그인
       </button>
 
-      {/* 카카오 로그인 버튼 */}
+      {/* 카카오 로그인 버튼 - DISABLED
       <button
         onClick={() => handleSocialLogin('kakao')}
         className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-yellow-400 text-sm font-medium text-gray-900 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-colors"
@@ -72,17 +72,17 @@ const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
         </svg>
         카카오로 로그인
       </button>
+      */}
       
       {/* 환경변수 설정 안내 (개발 환경에서만) */}
       {import.meta.env.DEV && (
-        (!import.meta.env.VITE_GOOGLE_CLIENT_ID || !import.meta.env.VITE_KAKAO_CLIENT_ID) && (
+        !import.meta.env.VITE_GOOGLE_CLIENT_ID && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-sm text-yellow-800">
-              <strong>개발자 안내:</strong> 소셜 로그인을 사용하려면 다음 환경변수를 설정하세요:
+              <strong>개발자 안내:</strong> 구글 로그인을 사용하려면 다음 환경변수를 설정하세요:
             </p>
             <ul className="mt-2 text-xs text-yellow-700 list-disc list-inside">
               {!import.meta.env.VITE_GOOGLE_CLIENT_ID && <li>VITE_GOOGLE_CLIENT_ID</li>}
-              {!import.meta.env.VITE_KAKAO_CLIENT_ID && <li>VITE_KAKAO_CLIENT_ID</li>}
             </ul>
           </div>
         )

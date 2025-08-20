@@ -70,14 +70,6 @@
         {
           "name": "SPRING_DATA_REDIS_PORT",
           "value": "6379"
-        },
-        {
-          "name": "KAKAO_REDIRECT_URI",
-          "value": "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/kakao/callback"
-        },
-        {
-          "name": "GOOGLE_REDIRECT_URI",
-          "value": "http://wherewego-prod-frontend.s3-website.ap-northeast-2.amazonaws.com/auth/google/callback"
         }
       ],
       "secrets": [
@@ -102,10 +94,6 @@
           "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/maps-api-key"
         },
         {
-          "name": "KAKAO_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/kakao/client-id"
-        },
-        {
           "name": "GOOGLE_CLIENT_ID",
           "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/client-id"
         },
@@ -116,6 +104,10 @@
         {
           "name": "TOSS_SECRET_KEY",
           "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/toss/secret-key"
+        },
+        {
+          "name": "GOOGLE_REDIRECT_URI",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:729705323525:parameter/wherewego/google/redirect-uri"
         }
       ],
       "healthCheck": {
