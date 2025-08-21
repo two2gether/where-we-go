@@ -2,7 +2,7 @@ name: Optimized Deploy to AWS ECS
 
 on:
   push:
-    branches: [ main, feat/frontend-ui-improvements ]  # main 및 현재 피처 브랜치에서 배포
+    branches: [ main ]  # main 브랜치에서만 배포
 
 env:
   AWS_REGION: ap-northeast-2
@@ -190,7 +190,7 @@ jobs:
 
   backend-deploy:
     runs-on: ubuntu-latest
-    needs: [detect-changes, build]
+    needs: [ detect-changes, build ]
     if: needs.detect-changes.outputs.backend == 'true'
     outputs:
       cluster: ${{ steps.set-deploy-vars.outputs.cluster }}
@@ -269,7 +269,7 @@ jobs:
 
   frontend-deploy:
     runs-on: ubuntu-latest
-    needs: [detect-changes, build]
+    needs: [ detect-changes, build ]
     if: needs.detect-changes.outputs.frontend == 'true'
     
     steps:
@@ -335,7 +335,7 @@ jobs:
 
   verify:
     runs-on: ubuntu-latest
-    needs: [detect-changes, build, backend-deploy, frontend-deploy]
+    needs: [ detect-changes, build, backend-deploy, frontend-deploy ]
     if: always() && needs.detect-changes.outputs.any-changes == 'true'
     
     steps:
