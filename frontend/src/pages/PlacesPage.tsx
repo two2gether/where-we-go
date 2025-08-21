@@ -8,7 +8,6 @@ import { RegionFilter } from '../components/common/RegionFilter';
 import { useInfinitePlaces, useNearbyPlaces, placeKeys } from '../hooks/usePlaces';
 import { useToggleBookmark, useBookmarkedPlaces, bookmarkKeys } from '../hooks/useBookmarks';
 import { useDebounce } from '../hooks/useDebounce';
-import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { useScrollPosition } from '../hooks/useScrollPosition';
 import { useAuthStore } from '../store/authStore';
 import { useLocationStore } from '../store/locationStore';
@@ -126,12 +125,6 @@ export const PlacesPage: React.FC = () => {
     }
   }, [shouldUseNearby, nearbyPlacesQuery.data, infinitePlacesData]);
 
-  // 무한 스크롤 적용 (근처 장소 모드가 아닐 때만)
-  const observerTarget = useInfiniteScroll({
-    hasNextPage: shouldUseNearby ? false : hasNextPage, // 근처 장소 모드에서는 무한 스크롤 비활성화
-    isFetchingNextPage: shouldUseNearby ? false : isFetchingNextPage,
-    fetchNextPage: shouldUseNearby ? () => {} : fetchNextPage,
-  });
 
   // 스크롤 위치 추적 (sticky 검색바용)
   const scrollPosition = useScrollPosition();
@@ -607,10 +600,21 @@ export const PlacesPage: React.FC = () => {
               <option value="">전체</option>
               <option value="관광지">관광지</option>
               <option value="맛집">맛집</option>
+              <option value="카페">카페</option>
               <option value="숙박">숙박</option>
+              <option value="쇼핑몰">쇼핑몰</option>
+              <option value="편의점">편의점</option>
+              <option value="병원">병원</option>
+              <option value="약국">약국</option>
+              <option value="은행">은행</option>
+              <option value="주유소">주유소</option>
+              <option value="영화관">영화관</option>
+              <option value="헬스장">헬스장</option>
+              <option value="공원">공원</option>
+              <option value="미용실">미용실</option>
+              <option value="주차장">주차장</option>
               <option value="문화재">문화재</option>
               <option value="시장">시장</option>
-              <option value="카페">카페</option>
             </select>
           </div>
 
@@ -912,33 +916,12 @@ export const PlacesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Original Search and Filters */}
+      {/* Search Only */}
       <SearchFilter
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchPlaceholder="장소 이름이나 태그로 검색하세요..."
-        filters={[
-          {
-            label: '카테고리',
-            value: selectedCategory,
-            options: [
-              { value: '', label: '전체' },
-              { value: '관광지', label: '관광지' },
-              { value: '맛집', label: '맛집' },
-              { value: '숙박', label: '숙박' },
-              { value: '문화재', label: '문화재' },
-              { value: '시장', label: '시장' },
-              { value: '카페', label: '카페' }
-            ],
-            onChange: setSelectedCategory
-          },
-          {
-            label: '지역',
-            value: selectedRegion,
-            options: [{ value: '', label: '전체' }], // 간소화된 옵션
-            onChange: setSelectedRegion
-          }
-        ]}
+        filters={[]}
       />
 
         {/* Selection Mode Controls */}
@@ -1094,22 +1077,16 @@ export const PlacesPage: React.FC = () => {
               })}
             </div>
 
-            {/* 무한 스크롤 트리거 및 로딩 표시 */}
-            <div ref={observerTarget} className="py-8 flex justify-center">
-              {!shouldUseNearby && isFetchingNextPage && (
-                <div className="flex items-center space-x-2 text-gray-500">
-                  <Spinner size="sm" />
-                  <span className="text-sm">더 많은 장소를 불러오는 중...</span>
-                </div>
-              )}
+            {/* 결과 요약 표시 */}
+            <div className="py-8 flex justify-center">
               {shouldUseNearby && places.length > 0 && (
                 <div className="text-sm text-blue-600">
                   📍 주변 {places.length}개 장소 (10km 반경 내)
                 </div>
               )}
-              {!shouldUseNearby && !hasNextPage && !isFetchingNextPage && places.length > 0 && (
+              {!shouldUseNearby && places.length > 0 && (
                 <div className="text-sm text-gray-500">
-                  모든 장소를 불러왔습니다.
+                  총 {places.length}개 장소를 찾았습니다.
                 </div>
               )}
             </div>

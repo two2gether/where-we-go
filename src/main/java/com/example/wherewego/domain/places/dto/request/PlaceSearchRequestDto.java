@@ -23,36 +23,17 @@ import lombok.NoArgsConstructor;
  *
  * 기본 검색 요청 예시:
  * {
- *   "query": "스타벅스 강남구청정문점"
+ *   "query": "서울 강남구 스타벅스"
  * }
  *
  * 위치 기반 검색 요청 예시:
  * {
- *   "query": "스타벅스 강남구청정문점",
+ *   "query": "서울 강남구 스타벅스",
  *   "userLocation": {
  *     "latitude": 37.498011,
  *     "longitude": 127.020102,
  *     "radius": 2000
  *   }
- * }
- *
- * 전체 옵션 포함 요청 예시:
- * {
- *   "query": "강남 스타벅스",
- *   "region": {
- *     "depth1": "서울특별시",
- *     "depth2": "강남구"
- *   },
- *   "userLocation": {
- *     "latitude": 37.5665,
- *     "longitude": 126.9780,
- *     "radius": 1000
- *   },
- *   "pagination": {
- *     "page": 1,
- *     "size": 15
- *   },
- *   "sort": "distance"
  * }
  */
 @Getter
@@ -63,56 +44,26 @@ public class PlaceSearchRequestDto {
 
 	/**
 	 * 장소 검색 키워드 (1-100자)
+	 * 프론트엔드에서 "카테고리 + 지역 + 검색어" 형태로 조합된 문자열
 	 */
 	@NotBlank(message = "검색 키워드는 필수입니다")
 	@Size(min = 1, max = 100, message = "검색 키워드는 1-100자 이내여야 합니다")
 	private String query;
 
 	/**
-	 * 검색 대상 지역 정보
+	 * 장소 카테고리 (선택사항)
+	 * Google Places API의 type 파라미터로 사용됩니다.
+	 * 예: "restaurant", "cafe", "tourist_attraction" 등
 	 */
-	@Valid
-	private Region region;
+	@Size(max = 50, message = "카테고리는 50자 이하여야 합니다")
+	private String category;
 
 	/**
-	 * 사용자 현재 위치 정보
+	 * 사용자 현재 위치 정보 (선택사항)
+	 * 제공된 경우 Google API의 location, radius 파라미터로 사용됩니다.
 	 */
 	@Valid
 	private UserLocation userLocation;
-
-	/**
-	 * 페이지네이션 정보
-	 */
-	@Valid
-	private Pagination pagination;
-
-	/**
-	 * 정렬 방식 (distance: 거리순, relevance: 연관도순)
-	 */
-	private String sort;
-
-	/**
-	 * 지역 정보를 담는 내부 클래스
-	 */
-	@Getter
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Builder
-	public static class Region {
-
-		/**
-		 * 1단계 행정구역 (예: 서울특별시)
-		 */
-		@Size(max = 50, message = "1단계 행정구역은 50자 이하여야 합니다")
-		private String depth1;
-
-		/**
-		 * 2단계 행정구역 (예: 강남구)
-		 */
-		@Size(max = 50, message = "2단계 행정구역은 50자 이하여야 합니다")
-		private String depth2;
-
-	}
 
 	/**
 	 * 사용자 위치 정보를 담는 내부 클래스
@@ -145,28 +96,5 @@ public class PlaceSearchRequestDto {
 		@Min(value = 100, message = "검색 반경은 100m 이상이어야 합니다")
 		@Max(value = 20000, message = "검색 반경은 20km 이하여야 합니다")
 		private Integer radius;
-	}
-
-	/**
-	 * 페이징 정보를 담는 내부 클래스
-	 */
-	@Getter
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Builder
-	public static class Pagination {
-
-		/**
-		 * 페이지 번호 (1 이상)
-		 */
-		@Min(value = 1, message = "페이지 번호는 1 이상이어야 합니다")
-		private Integer page;
-
-		/**
-		 * 페이지당 결과 수 (1 ~ 45)
-		 */
-		@Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다")
-		@Max(value = 45, message = "페이지 크기는 45 이하여야 합니다")
-		private Integer size;
 	}
 }

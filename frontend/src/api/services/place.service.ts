@@ -5,30 +5,63 @@ import type {
   CreatePlaceRequest,
   PageResponse
 } from '../types';
+import { buildSearchQueryWithCategory, getGoogleSearchType } from '../../utils/googleCategoryConverter';
 
 export const placeService = {
   // 장소 검색 (POST 요청) - 클라이언트 사이드 페이지네이션
   getPlaces: (params: PlaceSearchRequest = {}): Promise<PageResponse<Place>> => {
-    // 검색 쿼리 조합 - query 또는 keyword 사용
-    let query = params.query || params.keyword || '맛집'; // 기본 검색어
+    // Google API type 파라미터용 영어 카테고리 변환
+    const googleCategory = params.category ? getGoogleSearchType(params.category) : undefined;
     
-    // 카테고리가 선택되었으면 쿼리에 추가
-    if (params.category) {
-      query += ` ${params.category}`;
-    }
-    
-    // 지역이 선택되었으면 쿼리에 추가
-    if (params.region) {
-      query += ` ${params.region}`;
+    // type 파라미터가 있을 때는 query에서 카테고리 제외 (중복 방지)
+    let query: string;
+    if (googleCategory) {
+      // type 파라미터로 카테고리를 보내므로 query에서는 제외
+      query = buildSearchQueryWithCategory(
+        params.keyword,
+        undefined, // 카테고리 제외
+        params.region
+      );
+    } else {
+      // type 파라미터가 없을 때는 query에 카테고리 포함
+      query = buildSearchQueryWithCategory(
+        params.keyword,
+        params.category,
+        params.region
+      );
     }
 
-    // 백엔드 API 형식에 맞게 요청 데이터 변환 (페이지네이션 제거)
+    // 검색어가 비어있을 때 카테고리에 맞는 기본값 설정
+    let finalQuery = query.trim();
+    if (!finalQuery) {
+      if (params.category && params.category !== '') {
+        // 선택된 카테고리가 있으면 해당 카테고리를 기본 검색어로 사용
+        finalQuery = params.category;
+      } else {
+        // 카테고리도 선택되지 않았으면 일반적인 여행지 검색
+        finalQuery = '여행지';
+      }
+    }
+
+    // 백엔드 API 형식에 맞게 요청 데이터 변환
     const searchRequest: any = {
-      query: query.trim(), // 공백 제거
-      sort: 'distance'
+      query: finalQuery,
+      category: googleCategory, // Google API type 파라미터용
+      userLocation: params.latitude && params.longitude ? {
+        latitude: params.latitude,
+        longitude: params.longitude,
+        radius: params.radius || 10000
+      } : undefined
     };
 
-    console.log('Place search request (no pagination):', searchRequest);
+    console.log('🔍 Smart Google API request:', {
+      originalParams: params,
+      queryStrategy: googleCategory ? 'query+type분리' : 'query통합',
+      queryBeforeDefault: query,
+      finalQuery: finalQuery,
+      googleType: googleCategory,
+      finalRequest: searchRequest
+    });
 
     return apiRequest.post<any>('/places/search', searchRequest)
       .then(response => {
@@ -45,33 +78,25 @@ export const placeService = {
           allPlaces = [];
         }
 
-        // 클라이언트 사이드 페이지네이션 적용 (20개 기준)
-        const page = params.page || 0;
-        const size = params.size || 10; // 20개를 2페이지로 나누기 위해 10개씩
-        const startIndex = page * size;
-        const endIndex = startIndex + size;
+        // 이미지 URL 디버깅
+        console.log('🖼️ Places with images:', allPlaces.slice(0, 3).map(place => ({
+          name: place.name,
+          photo: place.photo,
+          hasPhoto: !!place.photo
+        })));
+
+        console.log(`📍 Total places found: ${allPlaces.length}`);
         
-        // 요청된 페이지에 해당하는 데이터 추출
-        const pageContent = allPlaces.slice(startIndex, endIndex);
-        
-        // Google API 최대 결과 60개 기준으로 페이지네이션 처리
-        const totalElements = allPlaces.length;
-        const totalPages = Math.ceil(totalElements / size);
-        const isLast = endIndex >= totalElements;
-        
-        console.log(`Client-side pagination (20개 기준): page=${page}, size=${size}, start=${startIndex}, end=${endIndex}, total=${totalElements}`);
-        console.log(`Page content: ${pageContent.length} items, isLast=${isLast}`);
-        console.log(`Google API results: ${totalElements} (max 20)`);
-        
+        // 페이지네이션 없이 모든 결과 반환
         return {
-          content: pageContent,
-          number: page,
-          size: size,
-          totalElements: totalElements,
-          totalPages: totalPages,
-          first: page === 0,
-          last: isLast,
-          empty: pageContent.length === 0
+          content: allPlaces,
+          number: 0,
+          size: allPlaces.length,
+          totalElements: allPlaces.length,
+          totalPages: 1,
+          first: true,
+          last: true,
+          empty: allPlaces.length === 0
         } as PageResponse<Place>;
       });
   },

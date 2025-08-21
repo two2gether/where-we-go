@@ -89,6 +89,12 @@ public class GooglePlaceSearchService {
 					.queryParam("query", request.getQuery())
 					.queryParam("key", googleApiKey);
 
+				// 카테고리 타입 파라미터 추가 (더 정확한 검색 결과)
+				if (request.getCategory() != null && !request.getCategory().trim().isEmpty()) {
+					uriBuilder.queryParam("type", request.getCategory().trim());
+					log.info("Google API 요청에 카테고리 추가 - type: {}", request.getCategory());
+				}
+
 				// 위치 기반 검색 파라미터 추가 (정렬 우선순위용)
 				if (request.getUserLocation() != null) {
 					Double lat = request.getUserLocation().getLatitude();

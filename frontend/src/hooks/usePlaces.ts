@@ -31,48 +31,20 @@ export const usePlaces = (params: PlaceSearchRequest = {}) => {
   });
 };
 
-// 무한 스크롤을 위한 장소 목록 조회 (20개 기준 클라이언트 사이드 페이지네이션)
+// 장소 목록 조회 (pagination 제거 - 모든 결과를 한 번에 가져옴)
 export const useInfinitePlaces = (params: Omit<PlaceSearchRequest, 'page'> = {}) => {
   return useInfiniteQuery({
     queryKey: [...placeKeys.lists(), 'infinite', params],
     queryFn: ({ pageParam = 0 }) => {
-      console.log(`🔄 Fetching places page ${pageParam} with params:`, { ...params, page: pageParam });
-      return placeService.getPlaces({ ...params, page: pageParam, size: 10 }); // 20개를 2페이지로 나누기 위해 10개씩
+      console.log(`🔍 Fetching places (all results) with params:`, params);
+      // pageParam은 무시하고 모든 결과를 한 번에 가져옴
+      return placeService.getPlaces(params);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      console.log('📄 Determining next page from:', lastPage);
-      
-      // lastPage가 없거나 올바르지 않은 경우 종료
-      if (!lastPage) {
-        console.log('❌ No lastPage data');
-        return undefined;
-      }
-      
-      // content가 없거나 빈 배열인 경우 종료
-      if (!lastPage.content || lastPage.content.length === 0) {
-        console.log('❌ No content in last page');
-        return undefined;
-      }
-      
-      // 마지막 페이지인 경우 종료
-      if (lastPage.last === true) {
-        console.log('❌ Reached last page');
-        return undefined;
-      }
-      
-      const currentPage = lastPage.number || 0;
-      const totalPages = lastPage.totalPages || 0;
-      const nextPage = currentPage + 1;
-      
-      // 다음 페이지가 총 페이지 수를 초과하는 경우 종료
-      if (nextPage >= totalPages) {
-        console.log('❌ Next page exceeds total pages');
-        return undefined;
-      }
-      
-      console.log(`✅ Next page: ${nextPage} (current: ${currentPage}, total: ${totalPages})`);
-      return nextPage;
+      // 모든 결과를 한 번에 가져오므로 다음 페이지는 없음
+      console.log('📄 All results fetched in single request - no next page');
+      return undefined;
     },
     staleTime: 5 * 60 * 1000,
   });
