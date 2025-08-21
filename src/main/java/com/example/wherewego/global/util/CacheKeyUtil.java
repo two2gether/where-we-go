@@ -29,6 +29,11 @@ public class CacheKeyUtil {
         
         keyBuilder.append(sanitizeForKey(request.getQuery()));
         
+        // 카테고리 정보 추가
+        if (request.getCategory() != null && !request.getCategory().trim().isEmpty()) {
+            keyBuilder.append(DELIMITER).append("cat").append(sanitizeForKey(request.getCategory()));
+        }
+        
         if (request.getUserLocation() != null) {
             // 위치를 그리드 단위로 반올림하여 근접 위치의 캐시 재사용
             Double lat = request.getUserLocation().getLatitude();
@@ -50,16 +55,6 @@ public class CacheKeyUtil {
                 int standardRadius = standardizeRadius(radius);
                 keyBuilder.append("r").append(standardRadius);
             }
-        }
-        
-        // 페이징 정보는 첫 페이지만 캐싱 (성능 최적화)
-        if (request.getPagination() != null && request.getPagination().getPage() <= 1) {
-            keyBuilder.append(DELIMITER).append("page1")
-                .append("size").append(request.getPagination().getSize());
-        }
-        
-        if (request.getSort() != null) {
-            keyBuilder.append(DELIMITER).append("sort").append(request.getSort());
         }
         
         return keyBuilder.toString();

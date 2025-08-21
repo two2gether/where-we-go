@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Badge, Button } from '../base';
 
 export interface PlaceCardProps {
@@ -42,9 +42,10 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
   onSelect,
   className = ''
 }) => {
-  // 이미지 로딩 상태 관리 - 기본값을 true로 설정하여 깜빡임 방지
-  const [imageLoaded, setImageLoaded] = useState(true);
+  // 이미지 로딩 상태 관리
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
   
   // 카테고리별 기본 placeholder 이미지
   const getDefaultImageByCategory = (category: string) => {
@@ -81,18 +82,55 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
   };
 
 
-  const handleImageLoad = () => {
-    setImageLoaded(true);
-    setImageError(false);
-  };
-
-  const handleImageError = () => {
-    setImageError(true);
-    setImageLoaded(false);
-  };
 
   // 실제 사용할 이미지 URL 결정
-  const imageUrl = (imageError || !image) ? defaultImage : image;
+  const hasValidImage = image && typeof image === 'string' && image.trim() !== '';
+  const shouldUseDefaultImage = imageError || !hasValidImage;
+  const imageUrl = shouldUseDefaultImage ? defaultImage : image;
+  
+  // 디버깅용 로그
+  console.log(`🖼️ PlaceCard [${name}]:`, {
+    image,
+    hasValidImage,
+    isPreloading,
+    imageError,
+    imageLoaded,
+    shouldUseDefaultImage,
+    imageUrl: imageUrl?.substring(0, 100) + '...'
+  });
+  
+  // 이미지 preloading 효과
+  useEffect(() => {
+    if (!hasValidImage) {
+      setImageLoaded(true);
+      setImageError(false);
+      setIsPreloading(false);
+      return;
+    }
+
+    // 이미지가 있는 경우 preload 시작
+    setIsPreloading(true);
+    setImageLoaded(false);
+    setImageError(false);
+
+    const img = new Image();
+    img.onload = () => {
+      setImageLoaded(true);
+      setImageError(false);
+      setIsPreloading(false);
+    };
+    img.onerror = () => {
+      setImageError(true);
+      setImageLoaded(false);
+      setIsPreloading(false);
+    };
+    img.src = image;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [hasValidImage, image]);
 
   return (
     <div 
@@ -102,13 +140,21 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
       onClick={handleCardClick}
     >
       {/* 이미지 컨테이너 */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden h-56 bg-github-canvas-subtle">
+        {/* 로딩 스피너 - preloading 중일 때만 표시 */}
+        {isPreloading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-github-canvas-subtle">
+            <div className="w-8 h-8 border-2 border-github-border-muted border-t-primary-500 rounded-full animate-spin"></div>
+          </div>
+        )}
+        
+        {/* 실제 이미지 */}
         <img
           src={imageUrl}
           alt={name}
-          className="w-full h-56 object-cover transition-transform duration-300 group-hover:scale-105"
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+          className={`w-full h-56 object-cover transition-all duration-500 group-hover:scale-105 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           loading="lazy"
         />
         

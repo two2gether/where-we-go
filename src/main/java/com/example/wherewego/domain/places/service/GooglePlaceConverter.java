@@ -108,6 +108,7 @@ public class GooglePlaceConverter {
 
         // 사진 정보 추가 (Text Search의 경우 제한적)
         String photoUrl = extractPhotoUrl(result.getPhotos());
+        log.debug("🖼️ Place [{}] photo URL: {}", result.getName(), photoUrl);
         builder.photo(photoUrl);
 
         return builder.build();
