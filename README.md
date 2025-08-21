@@ -95,7 +95,7 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 기본 계정 관리 외에도 소셜 로그인으로 접근성을 높였습니다.
 
 - **기본 계정 관리**: 로그인 / 회원가입 / 로그아웃 / 회원탈퇴
-- **소셜 로그인**: 카카오, 구글 계정 연동
+- **소셜 로그인**: 구글 계정 연동
 
 ### **🏠 마이페이지 기능**
 
@@ -142,11 +142,11 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 
 ## 4. [ERD](https://www.erdcloud.com/d/F89pnoZpa5S8po6YG)
 
-<img src="https://github.com/user-attachments/assets/0b958036-4ecc-4905-a485-de4e20bf555a" style="width:600px;" />
+<img src="https://github.com/user-attachments/assets/76c5b7d7-b1e3-44d5-8044-87aca72286dc" style="width:600px;" />
 
 ## 5. [아키텍처](https://www.notion.so/teamsparta/Where-We-Go-23b2dc3ef514807a970deadce5bf8484?source=copy_link)
 
-<img src="https://github.com/user-attachments/assets/0cd13206-af3f-4092-8183-22b1ed6cac35" style="width:600px;" />
+<img src="https://github.com/user-attachments/assets/11833298-d8f0-4278-bc44-69cdc748add1" style="width:600px;" />
 
 ## 6. [성능 개선 & 트러블슈팅](https://www.notion.so/teamsparta/2542dc3ef51480f9b3f0cf961dc80e80?source=copy_link)
 
