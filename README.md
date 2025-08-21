@@ -142,7 +142,7 @@ Where We Go는 사용자가 원하는 장소를 탐색하고, 이를 기반으�
 
 ## 4. [ERD](https://www.erdcloud.com/d/F89pnoZpa5S8po6YG)
 
-<img src="https://github.com/user-attachments/assets/0b958036-4ecc-4905-a485-de4e20bf555a" style="width:600px;" />
+<img src="https://github.com/user-attachments/assets/76c5b7d7-b1e3-44d5-8044-87aca72286dc" style="width:600px;" />
 
 ## 5. [아키텍처](https://www.notion.so/teamsparta/Where-We-Go-23b2dc3ef514807a970deadce5bf8484?source=copy_link)
 
